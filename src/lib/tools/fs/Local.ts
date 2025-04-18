@@ -4,7 +4,7 @@ import * as path from "path";
 /**
  * Provides methods for interacting with the local file system using Node.js standard libraries.
  */
-export class LocalFS {
+export default class LocalFS {
   /**
    * Lists the contents of a directory.
    * @param dirPath - The path to the directory.
@@ -28,7 +28,6 @@ export class LocalFS {
   async createDirectory(dirPath: string): Promise<void> {
     try {
       await fs.mkdir(dirPath, { recursive: true });
-      console.log(`Directory created: ${dirPath}`);
     } catch (error: any) {
       // Handle specific errors like 'EEXIST' (directory already exists) if needed
       throw error;
@@ -44,7 +43,6 @@ export class LocalFS {
     try {
       // Use rm for modern Node.js versions, which handles recursive deletion well
       await fs.rm(dirPath, { recursive: true, force: true }); // force: true suppresses errors if path doesn't exist
-      console.log(`Directory deleted: ${dirPath}`);
     } catch (error: any) {
       throw error;
     }
@@ -62,7 +60,6 @@ export class LocalFS {
       // Ensure the directory exists before writing the file
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(filePath, content);
-      console.log(`File created/written: ${filePath}`);
     } catch (error: any) {
       throw error;
     }
@@ -76,7 +73,6 @@ export class LocalFS {
   async deleteFile(filePath: string): Promise<void> {
     try {
       await fs.unlink(filePath);
-      console.log(`File deleted: ${filePath}`);
     } catch (error: any) {
       // Handle specific errors like 'ENOENT' (file not found) gracefully
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -122,7 +118,6 @@ export class LocalFS {
       const dir = path.dirname(filePath);
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(filePath, content);
-      console.log(`File written: ${filePath}`);
     } catch (error: any) {
       throw error;
     }
