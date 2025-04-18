@@ -183,7 +183,14 @@ export class Tool {
 
     // Instantiate Invocation before calling the method
     // Use the actual implementation name (base name)
-    const invocation = new Invocation(toolName, implementationName, methodName);
+    const invocation = new Invocation(
+      toolName,
+      implementationName,
+      methodName,
+      toolMethod, // Pass the actual method function
+      toolInstance, // Pass the instance
+      args // Pass the arguments
+    );
 
     // Check if the invocation is allowed using the instance's allow method
     const isAllowed = await this.allow(invocation);
@@ -194,8 +201,8 @@ export class Tool {
       );
     }
 
-    // Call the method on the *newly created* tool instance
-    return await toolMethod.apply(toolInstance, args);
+    // Call the invoke method on the Invocation instance (no args needed here)
+    return await invocation.invoke();
   }
 
   /**
