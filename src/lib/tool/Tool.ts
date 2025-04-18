@@ -3,22 +3,36 @@ import * as path from "path";
 import { fileURLToPath } from "url"; // Needed for __dirname in ESM
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
-// LocalFS is no longer statically imported here, it will be loaded dynamically
+import { Invocation } from "./Invocation.js"; // Assuming .js extension based on others
+// Tool classes will be loaded dynamically
 
 // Helper to get __dirname in ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export class Tool {
-  private static availableTools: Record<string, any> | null = null; // Static property, initialized to null
-  // Removed unused user and config instance properties
+  // availableTools remains static to hold the loaded tool *classes* globally
+  // Use a generic constructor type that accepts any arguments
+  private static availableTools: Record<
+    string,
+    Record<string, new (...args: any[]) => any> // Store generic constructors
+  > | null = null;
+  // Add instance properties for user and config
+  private user: User;
+  private config: Config;
 
-  constructor() {
-    // Constructor is now empty as properties are static or removed
+  constructor(user: User, config: Config) {
+    this.user = user;
+    this.config = config;
+    // Constructor now initializes user and config
   }
 
-  static async init(): Promise<Record<string, any>> {
-    // Static method, returns map
+  // Update return type to reflect the generic constructor structure
+  // init is now an instance method
+  async init(): Promise<
+    Record<string, Record<string, new (...args: any[]) => any>>
+  > {
+    // Instance method, returns map of generic constructors
     if (Tool.availableTools !== null) {
       // Check if already initialized
       console.log("Tools already initialized, returning cached list.");
@@ -74,11 +88,18 @@ export class Tool {
               if (
                 ToolClass &&
                 typeof ToolClass === "function" &&
-                Tool.availableTools
+                Tool.availableTools // Check if the outer map is initialized
               ) {
-                Tool.availableTools[toolType] = new ToolClass(); // Use static property
+                // Ensure the inner map for the toolType exists
+                if (!Tool.availableTools[toolType]) {
+                  Tool.availableTools[toolType] = {};
+                }
+                // Ensure base filename (without extension) is used as the key
+                const toolBaseName = path.basename(toolFileName, ".js");
+                // Store the ToolClass constructor directly, not an instance
+                Tool.availableTools[toolType][toolBaseName] = ToolClass;
                 console.log(
-                  `Successfully loaded and initialized tool: ${toolType}`
+                  `Successfully loaded tool class: ${toolType} (${toolBaseName})` // Log base name
                 );
               } else {
                 console.warn(
@@ -105,8 +126,8 @@ export class Tool {
     }
     console.log(
       "Tool initialization complete. Available tools:",
-      // Use static property, handle potential null case (though unlikely here after init)
-      Object.keys(Tool.availableTools ?? {})
+      // Use JSON.stringify to log the full tool map structure
+      JSON.stringify(Tool.availableTools ?? {}, null, 2) // Added null, 2 for pretty printing
     );
     // Return the static map, handle potential null case
     return Tool.availableTools ?? {};
@@ -114,36 +135,78 @@ export class Tool {
 
   /**
    * Invokes a method on a specified tool.
-   * @param toolType - The type of tool (e.g., "fs").
-   * @param method - The name of the method to invoke on the tool instance.
+   * @param toolName - The type/category of the tool (e.g., "fs").
+   * @param methodName - The name of the method to invoke on the tool.
    * @param args - Arguments to pass to the tool method.
    * @returns The result of the invoked tool method.
    */
-  static async invoke(
-    toolType: string,
-    method: string,
+  // invoke is now an instance method
+  async invoke(
+    toolName: string,
+    methodName: string,
     ...args: any[]
   ): Promise<any> {
-    // Static method
-    const tools = await Tool.init(); // Ensure tools are loaded and get the map
-    const toolInstance = tools[toolType];
+    // Instance method
+    // Call init() on the instance to ensure tool classes are loaded
+    const toolClasses = await this.init(); // Use this.init()
+    const toolTypeMap = toolClasses[toolName]; // Get the inner map for the type
 
-    if (!toolInstance) {
-      // Consider if init() failed and tools is empty
+    if (!toolTypeMap) {
       throw new Error(
-        `Tool type "${toolType}" not found or tools failed to initialize.`
+        `Tool type "${toolName}" not found or failed to initialize.`
       );
     }
 
-    const toolMethod = toolInstance[method];
+    // Assuming one implementation per type for now, based on current init logic
+    const implementationName = Object.keys(toolTypeMap)[0]; // Get the key (e.g., 'Local')
+    const ToolClass = toolTypeMap[implementationName]; // Get the constructor
+
+    if (!ToolClass || typeof ToolClass !== "function") {
+      // This case might occur if the inner map is empty or contains non-constructors
+      throw new Error(
+        `Tool class for type "${toolName}" (implementation "${implementationName}") not found or invalid.`
+      );
+    }
+
+    // Instantiate a new tool instance for this specific invocation
+    // Pass user and config from the Tool instance to the tool's constructor
+    const toolInstance = new ToolClass(this.user, this.config);
+
+    // Get the method from the newly created instance
+    const toolMethod = toolInstance[methodName];
 
     if (typeof toolMethod !== "function") {
       throw new Error(
-        `Method "${method}" not found on tool type "${toolType}".`
+        `Method "${methodName}" not found on tool "${toolName}" (implementation "${implementationName}").`
       );
     }
 
-    // Call the method on the tool instance with the provided arguments
+    // Instantiate Invocation before calling the method
+    // Use the actual implementation name (base name)
+    const invocation = new Invocation(toolName, implementationName, methodName);
+
+    // Check if the invocation is allowed using the instance's allow method
+    const isAllowed = await this.allow(invocation);
+    if (!isAllowed) {
+      // Optionally, provide more context in the error message
+      throw new Error(
+        `Invocation not allowed for tool "${toolName}", method "${methodName}".`
+      );
+    }
+
+    // Call the method on the *newly created* tool instance
     return await toolMethod.apply(toolInstance, args);
+  }
+
+  /**
+   * Determines if a tool invocation is allowed.
+   * Currently, always returns true.
+   * @param invocation - The details of the tool invocation.
+   * @returns A promise that resolves to true if the invocation is allowed, false otherwise.
+   */
+  async allow(invocation: Invocation): Promise<boolean> {
+    // TODO: Implement actual permission logic based on user, config, or invocation details
+    console.log(`Checking allow for invocation: ${JSON.stringify(invocation)}`);
+    return true; // Always allow for now
   }
 }

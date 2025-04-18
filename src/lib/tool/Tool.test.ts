@@ -24,23 +24,28 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename); // Use standard path import
 
 describe("Tool", () => {
-  let mockUser: Mocked<User>; // Use Mocked<T>
-  let mockConfig: Mocked<Config>; // Use Mocked<T>
-  // Use the imported LocalFS type again
+  let mockUser: Mocked<User>;
+  let mockConfig: Mocked<Config>;
   let mockLocalFSInstance: Mocked<LocalFS>;
+  let toolInstance: Tool; // Add instance variable for Tool
 
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks();
 
     // Create fresh mocks for each test
-    mockUser = new User() as Mocked<User>; // Use Mocked<T>
-    mockConfig = new Config("", mockUser) as Mocked<Config>; // Use Mocked<T>
+    mockUser = new User() as Mocked<User>;
+    mockConfig = new Config("", mockUser) as Mocked<Config>;
+    // Instantiate Tool with mocks
+    toolInstance = new Tool(mockUser, mockConfig);
 
     // Mock the LocalFS constructor and its methods directly
-    // Use 'any' cast for readFile mock assignment remains as a precaution
     mockLocalFSInstance = {
-      readFile: vi.fn() as any,
+      // Correctly type the mock function signature
+      readFile:
+        vi.fn<
+          ([path, encoding]: [string, string?]) => Promise<string | Buffer>
+        >(),
       writeFile: vi.fn(),
       // Add mocks for other LocalFS methods if needed for tests
     } as unknown as Mocked<LocalFS>;
@@ -103,7 +108,8 @@ describe("Tool", () => {
     // Spy on console.log
     const consoleSpy = vi.spyOn(console, "log");
 
-    await Tool.init(); // Run static initialization which should use the mocks
+    // Call init on the instance
+    await toolInstance.init();
 
     // Assertions
     expect(consoleSpy).toHaveBeenCalledWith("Initializing tools...");
@@ -114,87 +120,131 @@ describe("Tool", () => {
         "Attempting to load tool: fs from ../tools/fs/index.js"
       )
     );
-    // Check that the correct tool (LocalFS from index.js/Local.js) was loaded
+    // Check that the correct tool class (LocalFS from index.js) was loaded and logged
     expect(consoleSpy).toHaveBeenCalledWith(
-      "Successfully loaded and initialized tool: fs"
+      "Successfully loaded tool class: fs (index)" // Expect base filename and "class" in log
     );
+    // Check the final log message (checking the exact stringified output of constructors is brittle)
     expect(consoleSpy).toHaveBeenCalledWith(
       "Tool initialization complete. Available tools:",
-      ["fs"]
+      expect.any(String) // Check that it logs *something* as the stringified map
     );
 
-    // Verify that the mocked LocalFS constructor was called during init
-    expect(LocalFS).toHaveBeenCalledTimes(1);
-    // Verify the instance in the static availableTools is the one created by the mock constructor
+    // Verify that the mocked LocalFS constructor was NOT called during init (only stored)
+    expect(LocalFS).not.toHaveBeenCalled();
+    // Verify the constructor in the static availableTools using the two-level structure
     expect(Tool["availableTools"]).toHaveProperty("fs");
-    expect(Tool["availableTools"]!["fs"]).toBe(mockLocalFSInstance); // Use non-null assertion
+    expect(Tool["availableTools"]!["fs"]).toHaveProperty("index");
+    // Check that the stored value is the mocked constructor itself
+    expect(Tool["availableTools"]!["fs"]["index"]).toBe(LocalFS);
 
     // Clean up spy
     consoleSpy.mockRestore();
     // Restore default mock implementations if needed, though beforeEach handles resets
   });
 
+  // Tests for the instance method 'invoke'
   describe("invoke", () => {
-    // No tool instance needed for static methods
+    // toolInstance is created in the outer beforeEach
 
     beforeEach(() => {
       // Reset the mocked constructor implementation
       vi.mocked(LocalFS).mockClear();
       vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
 
-      // Manually populate static availableTools for invoke tests, bypassing init()
-      Tool["availableTools"] = { fs: mockLocalFSInstance };
+      // Manually populate static availableTools with the mocked *constructor*
+      Tool["availableTools"] = { fs: { index: LocalFS } }; // Store the mocked constructor
     });
 
     it("should invoke a method on a valid tool", async () => {
       const filePath = "test.txt";
       const fileContent = "hello world";
-      // Cast the mockResolvedValue *call* itself to any
-      (mockLocalFSInstance.readFile.mockResolvedValue as any)(fileContent);
+      // Use 'as any' to bypass strict type checking for mockResolvedValue with overloaded return types
+      mockLocalFSInstance.readFile.mockResolvedValue(fileContent as any);
 
-      // Call static invoke
-      const result = await Tool.invoke("fs", "readFile", filePath, "utf8");
+      // Call invoke on the instance
+      const result = await toolInstance.invoke(
+        "fs",
+        "readFile",
+        filePath,
+        "utf8"
+      );
 
+      // Verify the result and that the method on the *instance* was called
       expect(result).toBe(fileContent);
       expect(mockLocalFSInstance.readFile).toHaveBeenCalledWith(
         filePath,
         "utf8"
       );
       expect(mockLocalFSInstance.readFile).toHaveBeenCalledTimes(1);
+      // Verify that the constructor was called *during* invoke
+      expect(LocalFS).toHaveBeenCalledTimes(1);
+      // Verify constructor was called with the correct user and config
+      expect(LocalFS).toHaveBeenCalledWith(mockUser, mockConfig);
     });
 
     it("should throw an error if tool type is not found", async () => {
-      // Ensure init is mocked or bypassed if invoke calls it internally
-      vi.spyOn(Tool, "init").mockResolvedValue(Tool["availableTools"] ?? {}); // Mock init to return current static tools
+      // Ensure init is called if needed, or rely on beforeEach setup
+      // Spy on the instance init method if necessary, but usually covered by beforeEach
+      // const initSpy = vi.spyOn(toolInstance, 'init').mockResolvedValue(Tool["availableTools"] ?? {});
 
-      await expect(Tool.invoke("nonexistent", "someMethod")).rejects.toThrow(
-        'Tool type "nonexistent" not found or tools failed to initialize.' // Updated error message
+      // Reset constructor mock count before this specific test
+      vi.mocked(LocalFS).mockClear();
+
+      await expect(
+        toolInstance.invoke("nonexistent", "someMethod")
+      ).rejects.toThrow(
+        'Tool type "nonexistent" not found or failed to initialize.' // Updated error message
       );
+      // Ensure constructor wasn't called if tool type doesn't exist
+      expect(LocalFS).not.toHaveBeenCalled();
     });
 
     it("should throw an error if method is not found on the tool", async () => {
-      vi.spyOn(Tool, "init").mockResolvedValue(Tool["availableTools"] ?? {}); // Mock init
+      // Ensure init is called if needed, or rely on beforeEach setup
+      // const initSpy = vi.spyOn(toolInstance, 'init').mockResolvedValue(Tool["availableTools"] ?? {});
 
-      await expect(Tool.invoke("fs", "nonexistentMethod")).rejects.toThrow(
-        'Method "nonexistentMethod" not found on tool type "fs".'
+      // Reset constructor mock count before this specific test
+      vi.mocked(LocalFS).mockClear();
+
+      await expect(
+        toolInstance.invoke("fs", "nonexistentMethod")
+      ).rejects.toThrow(
+        'Method "nonexistentMethod" not found on tool "fs" (implementation "index").' // Updated error message
       );
+      // Ensure constructor *was* called because the tool type exists
+      expect(LocalFS).toHaveBeenCalledTimes(1);
     });
 
     it("should pass arguments correctly to the invoked method", async () => {
-      vi.spyOn(Tool, "init").mockResolvedValue(Tool["availableTools"] ?? {}); // Mock init
+      // Ensure init is called if needed, or rely on beforeEach setup
+      // const initSpy = vi.spyOn(toolInstance, 'init').mockResolvedValue(Tool["availableTools"] ?? {});
 
       const filePath = "path/to/file.txt";
       const content = "some data";
-      // Mock writeFile
       mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
 
-      await Tool.invoke("fs", "writeFile", filePath, content);
+      // Call invoke on the instance
+      // Reset constructor mock count before this specific test
+      vi.mocked(LocalFS).mockClear();
 
+      // Removed duplicate declarations below
+
+      mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
+
+      // Call invoke on the instance
+      await toolInstance.invoke("fs", "writeFile", filePath, content);
+
+      // Verify the method on the instance was called correctly
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledWith(
         filePath,
         content
       );
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledTimes(1);
+      // Verify constructor was called
+      expect(LocalFS).toHaveBeenCalledTimes(1);
+      // Verify constructor was called with the correct user and config
+      expect(LocalFS).toHaveBeenCalledWith(mockUser, mockConfig);
     });
   });
 });

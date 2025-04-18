@@ -7,19 +7,21 @@ export class Cassi {
   config: Config;
   repository: Repository;
   user: User;
-  // tool: Tool; // Tool is now static, no instance needed here
+  tool: Tool; // Tool needs to be instantiated
 
   constructor(user: User, configFile: string, repositoryDir: string) {
     this.user = user;
     this.config = new Config(configFile, user);
     this.repository = new Repository(repositoryDir, user);
-    // this.tool = new Tool(this.user, this.config); // Tool is now static
+    // Instantiate Tool with user and config
+    this.tool = new Tool(this.user, this.config);
   }
 
   async init() {
     await this.user.init();
     await this.config.init();
-    await Tool.init(); // Initialize Tool statically after Config
+    // Call init on the Tool instance
+    await this.tool.init();
     await this.repository.init();
   }
 }
