@@ -19,20 +19,28 @@ async function run() {
     console.log("cassi starting");
   }
 
-  async function promptFn(prompt: import("../lib/prompt/Prompt.js").Prompt) {
+  // Updated promptFn to handle the entire Prompt sequence at once
+  async function promptFn(
+    promptSequence: import("../lib/prompt/Prompt.js").Prompt
+  ) {
     const { CLIPromptHandler } = await import(
       "../lib/cli-prompt-handler/CLIPromptHandler.js"
     );
-    const { Prompt } = await import("../lib/prompt/Prompt.js");
-    for (const p of prompt.prompts) {
-      const handler = new CLIPromptHandler(new Prompt([p]));
-      await handler.handlePrompt();
-    }
+    // Create one handler for the whole sequence
+    const handler = new CLIPromptHandler(promptSequence);
+    await handler.handlePrompt(); // Handle all prompts within the sequence
   }
 
   const user = new User(initFn, () => {
+    // The promptFn now handles the sequence, so just pass the Prompt object
     return import("../lib/prompt/Prompt.js").then(({ Prompt }) => {
-      return promptFn(new Prompt([]));
+      // Example: Create a Prompt sequence if needed, or pass an existing one
+      // For now, assuming the User class expects a function that returns a promise
+      // and the actual prompt sequence is determined elsewhere or is empty initially.
+      // If the intention is to always prompt with an empty sequence here, it remains the same.
+      // If a specific sequence should be prompted, it needs to be created here.
+      const initialPromptSequence = new Prompt([]); // Example: empty sequence
+      return promptFn(initialPromptSequence);
     });
   });
   const cassi = new Cassi(user, options.configFile, options.repositoryDir);

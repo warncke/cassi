@@ -1,4 +1,5 @@
 export default class Input {
+  readonly type = "input";
   message: string;
   response: string | null;
 
