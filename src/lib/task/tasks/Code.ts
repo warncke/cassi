@@ -1,3 +1,4 @@
+import crypto from "crypto"; // Import crypto module
 import { Task } from "../Task.js";
 // Removed unused Prompt import
 // import { Prompt } from "../../prompt/Prompt.js";
@@ -10,6 +11,7 @@ import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; /
 export class Code extends Task {
   public prompt: string; // Added prompt property
   public evaluation: any; // Added evaluation property
+  public taskId: string | null = null; // Added taskId property initialized to null
 
   // Added cassi and parentTask to constructor
   constructor(cassi: Cassi, parentTask: Task | null, prompt: string) {
@@ -21,8 +23,21 @@ export class Code extends Task {
   private async initFileTask(): Promise<void> {
     // Convert the summary to kebab-case for the repo slug
     const repoSlug = kebabCase(this.evaluation.summary);
-    console.log(`Executing file modification task for: ${repoSlug}`);
-    // TODO: Implement file modification logic based on the model response
+
+    // Create SHA256 hash of repoSlug + Date.now()
+    const hashInput = `${repoSlug}${Date.now()}`;
+    const hash = crypto.createHash("sha256").update(hashInput).digest("base64");
+
+    // Extract the first 8 alphanumeric characters from the base64 hash
+    const alphanumericHash = hash.replace(/[^a-zA-Z0-9]/g, "");
+    const id = alphanumericHash.substring(0, 8);
+
+    // Set the taskId property
+    this.taskId = `${id}-${repoSlug}`;
+
+    console.log(`Generated ID for file modification task: ${id}`);
+    console.log(`Task ID set to: ${this.taskId}`); // Log the taskId
+    // TODO: Implement file modification logic using the generated id
     // This method will handle the actual file changes
   }
 

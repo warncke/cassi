@@ -1,4 +1,6 @@
 import { User } from "../user/User.js";
+import * as fs from "fs/promises";
+import * as path from "path";
 
 export class Repository {
   repositoryDir: string;
@@ -11,6 +13,8 @@ export class Repository {
   }
 
   async init(): Promise<void> {
-    // Async initialization logic here
+    const workspacesDir = path.join(this.repositoryDir, ".cassi", "workspaces");
+    await fs.mkdir(workspacesDir, { recursive: true });
+    // Other async initialization logic can go here
   }
 }
