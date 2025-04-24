@@ -64,10 +64,9 @@ describe("Code Task", () => {
 
   it("should call newModel, generate, and initFileTask during initTask when modifiesFiles is true", async () => {
     const promptText = "Generate some code.";
-    // Mock generate to return valid JSON including summary for this test
-    mockGenerate.mockResolvedValue(
-      JSON.stringify({ modifiesFiles: true, summary: "Test Summary" })
-    );
+    // Mock generate to return an object directly
+    const mockEvaluation = { modifiesFiles: true, summary: "Test Summary" };
+    mockGenerate.mockResolvedValue(mockEvaluation);
     const codeTask = new Code(mockCassi, null, promptText);
 
     await codeTask.initTask(); // Call the method
@@ -79,47 +78,21 @@ describe("Code Task", () => {
     // Verify the generate method on the mock model was called correctly
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledWith(promptText);
+
+    // Check that the evaluation property is set correctly
+    expect(codeTask.evaluation).toEqual(mockEvaluation);
   });
 
-  it("should log the response from model.generate", async () => {
-    const promptText = "Generate some code.";
-    const mockResponse = "Generated code response";
-    // Configure the mock generate function to return a specific value
-    mockGenerate.mockResolvedValue(mockResponse);
+  // Removed test 'should log the response from model.generate' as it tested JSON parsing failure which is no longer relevant.
 
-    const codeTask = new Code(mockCassi, null, promptText);
-    const consoleSpy = vi.spyOn(console, "log"); // Spy on console.log
-    const consoleErrorSpy = vi.spyOn(console, "error"); // Spy on console.error
-
-    // Expect initTask to throw because the response is not valid JSON
-    // Note: codeTask is already declared above in this scope
-    await expect(codeTask.initTask()).rejects.toThrow(
-      `Failed to parse model response: ${mockResponse}`
-    );
-
-    // Verify console.error was called due to parsing failure
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Failed to parse model response:",
-      expect.any(SyntaxError)
-    );
-    // Verify console.log was NOT called with the outdated message
-    expect(consoleSpy).not.toHaveBeenCalledWith(
-      "Model response:",
-      mockResponse
-    );
-
-    consoleSpy.mockRestore(); // Restore original console.log
-    consoleErrorSpy.mockRestore(); // Restore original console.error
-  });
-
-  it("should log 'Proceeding...' when modifiesFiles is true", async () => {
+  it("should call initFileTask when modifiesFiles is true", async () => {
     const promptText = "Generate code that modifies files.";
-    // Mock generate to return valid JSON including summary for this test
-    const mockJsonResponse = JSON.stringify({
+    // Mock generate to return an object directly
+    const mockEvaluation = {
       modifiesFiles: true,
       summary: "Another Test Summary",
-    });
-    mockGenerate.mockResolvedValue(mockJsonResponse);
+    };
+    mockGenerate.mockResolvedValue(mockEvaluation);
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
@@ -130,11 +103,8 @@ describe("Code Task", () => {
 
     await codeTask.initTask();
 
-    // Check that the parsed response is stored in the evaluation property
-    expect(codeTask.evaluation).toEqual({
-      modifiesFiles: true,
-      summary: "Another Test Summary",
-    }); // Verify summary is stored
+    // Check that the evaluation property is set correctly
+    expect(codeTask.evaluation).toEqual(mockEvaluation);
 
     // Check that initFileTask was called
     expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
@@ -164,8 +134,9 @@ describe("Code Task", () => {
 
   it("should log 'Only file modification tasks supported' and not call initFileTask when modifiesFiles is false", async () => {
     const promptText = "Generate code that does not modify files.";
-    const mockJsonResponse = JSON.stringify({ modifiesFiles: false });
-    mockGenerate.mockResolvedValue(mockJsonResponse);
+    // Mock generate to return an object directly
+    const mockEvaluation = { modifiesFiles: false };
+    mockGenerate.mockResolvedValue(mockEvaluation);
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
@@ -175,8 +146,8 @@ describe("Code Task", () => {
 
     await codeTask.initTask();
 
-    // Check that the parsed response is stored in the evaluation property
-    expect(codeTask.evaluation).toEqual({ modifiesFiles: false });
+    // Check that the evaluation property is set correctly
+    expect(codeTask.evaluation).toEqual(mockEvaluation);
 
     // Check that initFileTask was NOT called
     expect(initFileTaskSpy).not.toHaveBeenCalled();
@@ -196,29 +167,7 @@ describe("Code Task", () => {
     initFileTaskSpy.mockRestore(); // Restore the spy
   });
 
-  it("should throw an error and log error if JSON parsing fails", async () => {
-    const promptText = "Generate invalid JSON.";
-    const invalidJsonResponse = "this is not json";
-    mockGenerate.mockResolvedValue(invalidJsonResponse);
-
-    const codeTask = new Code(mockCassi, null, promptText);
-    const consoleErrorSpy = vi.spyOn(console, "error");
-
-    await expect(codeTask.initTask()).rejects.toThrow(
-      `Failed to parse model response: ${invalidJsonResponse}`
-    );
-
-    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Failed to parse model response:",
-      expect.any(SyntaxError) // Check for SyntaxError specifically
-    );
-
-    // Check that evaluation property is not set after parsing failure
-    expect(codeTask.evaluation).toBeUndefined();
-
-    consoleErrorSpy.mockRestore();
-  });
+  // Removed test 'should throw an error and log error if JSON parsing fails' as JSON parsing is no longer done.
 
   // Modify this test to check invoke calls and logs
   it("should call initFileTask, create branch/worktree, and log details when modifiesFiles is true", async () => {
@@ -226,11 +175,12 @@ describe("Code Task", () => {
     const summaryText = "This Is My Summary";
     const expectedRepoSlug = "this-is-my-summary";
     const mockTimestamp = 1713996743000; // Fixed timestamp for predictable hash
-    const mockJsonResponse = JSON.stringify({
+    // Mock generate to return an object directly
+    const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
-    });
-    mockGenerate.mockResolvedValue(mockJsonResponse);
+    };
+    mockGenerate.mockResolvedValue(mockEvaluation);
 
     // Mock Date.now()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
@@ -243,11 +193,8 @@ describe("Code Task", () => {
 
     await codeTask.initTask();
 
-    // Check that the parsed response is stored
-    expect(codeTask.evaluation).toEqual({
-      modifiesFiles: true,
-      summary: summaryText,
-    });
+    // Check that the evaluation property is set correctly
+    expect(codeTask.evaluation).toEqual(mockEvaluation);
 
     // Check that initFileTask was called
     expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
@@ -314,11 +261,12 @@ describe("Code Task", () => {
     const summaryText = "Generate ID Test";
     const expectedRepoSlug = "generate-id-test";
     const mockTimestamp = 1713996743000; // Fixed timestamp
-    const mockJsonResponse = JSON.stringify({
+    // Mock generate to return an object directly
+    const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
-    });
-    mockGenerate.mockResolvedValue(mockJsonResponse);
+    };
+    mockGenerate.mockResolvedValue(mockEvaluation);
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");

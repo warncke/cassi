@@ -74,30 +74,19 @@ export class Code extends Task {
     // Instantiate the EvaluateCodePrompt model and assert its type
     const model = this.newModel("EvaluateCodePrompt") as EvaluateCodePrompt;
     // Generate the response using the model and the provided prompt
-    const rawResponse = await model.generate(this.prompt);
+    // Assign the response directly to the evaluation property
+    this.evaluation = await model.generate(this.prompt);
 
-    console.log("XXX", rawResponse);
-
-    try {
-      // Parse the JSON response and store it in the evaluation property
-      this.evaluation = JSON.parse(rawResponse);
-
-      // Check the modifiesFiles property using the evaluation property
-      if (this.evaluation.modifiesFiles === true) {
-        // Call the new method to handle file modifications
-        await this.initFileTask();
-      } else {
-        // Log that only file modification tasks are supported
-        console.log(
-          "Model response indicates no file modifications. Only file modification tasks are currently supported."
-        );
-        // Potentially throw an error or handle this case appropriately
-      }
-    } catch (error) {
-      console.error("Failed to parse model response:", error);
-      // Handle JSON parsing error
-      // Maybe throw an error or log a more specific message
-      throw new Error(`Failed to parse model response: ${rawResponse}`);
+    // Check the modifiesFiles property using the evaluation property
+    if (this.evaluation.modifiesFiles === true) {
+      // Call the new method to handle file modifications
+      await this.initFileTask();
+    } else {
+      // Log that only file modification tasks are supported
+      console.log(
+        "Model response indicates no file modifications. Only file modification tasks are currently supported."
+      );
+      // Potentially throw an error or handle this case appropriately
     }
   }
 }
