@@ -52,8 +52,10 @@ describe("Code Task", () => {
 
   it("should call newModel and generate on the model during initTask", async () => {
     const promptText = "Generate some code.";
-    // Mock generate to return valid JSON for this test
-    mockGenerate.mockResolvedValue(JSON.stringify({ modifiesFiles: true }));
+    // Mock generate to return valid JSON including summary for this test
+    mockGenerate.mockResolvedValue(
+      JSON.stringify({ modifiesFiles: true, summary: "Test Summary" })
+    );
     const codeTask = new Code(mockCassi, null, promptText);
 
     await codeTask.initTask(); // Call the method
@@ -100,42 +102,75 @@ describe("Code Task", () => {
 
   it("should log 'Proceeding...' when modifiesFiles is true", async () => {
     const promptText = "Generate code that modifies files.";
-    const mockJsonResponse = JSON.stringify({ modifiesFiles: true });
+    // Mock generate to return valid JSON including summary for this test
+    const mockJsonResponse = JSON.stringify({
+      modifiesFiles: true,
+      summary: "Another Test Summary",
+    });
     mockGenerate.mockResolvedValue(mockJsonResponse);
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
 
+    // Spy on the private method initFileTask
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
+
     await codeTask.initTask();
 
+    // Check that the parsed response is stored in the evaluation property
+    expect(codeTask.evaluation).toEqual({
+      modifiesFiles: true,
+      summary: "Another Test Summary",
+    }); // Verify summary is stored
+
+    // Check that initFileTask was called
+    expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
+
+    // Check the console log inside initFileTask for the correct repoSlug
     expect(consoleSpy).toHaveBeenCalledWith(
-      "Model indicates file modifications. Proceeding..."
+      `Executing file modification task for: another-test-summary` // Check for kebab-cased summary
     );
     expect(consoleSpy).not.toHaveBeenCalledWith(
       "Model response indicates no file modifications. Only file modification tasks are currently supported."
     );
 
     consoleSpy.mockRestore();
+    initFileTaskSpy.mockRestore(); // Restore the spy
   });
 
-  it("should log 'Only file modification tasks supported' when modifiesFiles is false", async () => {
+  it("should log 'Only file modification tasks supported' and not call initFileTask when modifiesFiles is false", async () => {
     const promptText = "Generate code that does not modify files.";
     const mockJsonResponse = JSON.stringify({ modifiesFiles: false });
     mockGenerate.mockResolvedValue(mockJsonResponse);
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
+    // Spy on the private method initFileTask to ensure it's NOT called
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
 
     await codeTask.initTask();
 
+    // Check that the parsed response is stored in the evaluation property
+    expect(codeTask.evaluation).toEqual({ modifiesFiles: false });
+
+    // Check that initFileTask was NOT called
+    expect(initFileTaskSpy).not.toHaveBeenCalled();
+
+    // Check the console log
     expect(consoleSpy).toHaveBeenCalledWith(
       "Model response indicates no file modifications. Only file modification tasks are currently supported."
     );
     expect(consoleSpy).not.toHaveBeenCalledWith(
       "Model indicates file modifications. Proceeding..."
     );
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      "Executing file modification task..."
+    );
 
     consoleSpy.mockRestore();
+    initFileTaskSpy.mockRestore(); // Restore the spy
   });
 
   it("should throw an error and log error if JSON parsing fails", async () => {
@@ -156,6 +191,45 @@ describe("Code Task", () => {
       expect.any(SyntaxError) // Check for SyntaxError specifically
     );
 
+    // Check that evaluation property is not set after parsing failure
+    expect(codeTask.evaluation).toBeUndefined();
+
     consoleErrorSpy.mockRestore();
+  });
+
+  it("should call initFileTask and log the correct repoSlug when modifiesFiles is true", async () => {
+    const promptText = "Generate code that modifies files.";
+    const summaryText = "This Is My Summary";
+    const expectedRepoSlug = "this-is-my-summary"; // kebabCase of summaryText
+    const mockJsonResponse = JSON.stringify({
+      modifiesFiles: true,
+      summary: summaryText,
+    });
+    mockGenerate.mockResolvedValue(mockJsonResponse);
+
+    const codeTask = new Code(mockCassi, null, promptText);
+    const consoleSpy = vi.spyOn(console, "log");
+    // Spy on the private method initFileTask to ensure it's called
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
+
+    await codeTask.initTask();
+
+    // Check that the parsed response is stored in the evaluation property
+    expect(codeTask.evaluation).toEqual({
+      modifiesFiles: true,
+      summary: summaryText,
+    });
+
+    // Check that initFileTask was called
+    expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
+
+    // Check the console log inside initFileTask for the correct repoSlug
+    expect(consoleSpy).toHaveBeenCalledWith(
+      `Executing file modification task for: ${expectedRepoSlug}`
+    );
+
+    consoleSpy.mockRestore();
+    initFileTaskSpy.mockRestore(); // Restore the spy
   });
 });

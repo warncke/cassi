@@ -3,16 +3,27 @@ import { Task } from "../Task.js";
 // import { Prompt } from "../../prompt/Prompt.js";
 // Removed unused Input import
 // import Input from "../../prompt/prompts/Input.js"; // Changed to default import
+import { kebabCase } from "change-case"; // Import kebabCase
 import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; // Import EvaluateCodePrompt
 
 export class Code extends Task {
   public prompt: string; // Added prompt property
+  public evaluation: any; // Added evaluation property
 
   // Added cassi and parentTask to constructor
   constructor(cassi: Cassi, parentTask: Task | null, prompt: string) {
     super(cassi, parentTask); // Pass arguments to super()
     this.prompt = prompt; // Initialize prompt property
+  }
+
+  // New async method for file modification tasks
+  private async initFileTask(): Promise<void> {
+    // Convert the summary to kebab-case for the repo slug
+    const repoSlug = kebabCase(this.evaluation.summary);
+    console.log(`Executing file modification task for: ${repoSlug}`);
+    // TODO: Implement file modification logic based on the model response
+    // This method will handle the actual file changes
   }
 
   public async initTask(): Promise<void> {
@@ -22,14 +33,13 @@ export class Code extends Task {
     const rawResponse = await model.generate(this.prompt);
 
     try {
-      // Parse the JSON response
-      const response = JSON.parse(rawResponse);
+      // Parse the JSON response and store it in the evaluation property
+      this.evaluation = JSON.parse(rawResponse);
 
-      // Check the modifiesFiles property
-      if (response.modifiesFiles === true) {
-        // TODO: Implement file modification logic here
-        // For now, just log that it's proceeding
-        console.log("Model indicates file modifications. Proceeding...");
+      // Check the modifiesFiles property using the evaluation property
+      if (this.evaluation.modifiesFiles === true) {
+        // Call the new method to handle file modifications
+        await this.initFileTask();
       } else {
         // Log that only file modification tasks are supported
         console.log(
