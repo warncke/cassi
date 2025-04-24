@@ -6,6 +6,7 @@ import { User } from "../lib/user/User.js";
 import { InitializeRepository } from "../lib/task/tasks/InitializeRepository.js";
 import Input from "../lib/prompt/prompts/Input.js";
 import { Prompt } from "../lib/prompt/Prompt.js";
+import { Code } from "../lib/task/tasks/Code.js";
 
 const program = new Command();
 
@@ -44,7 +45,12 @@ async function run() {
     const inputPrompt = new Input("Enter your next request:");
     const promptSequence = new Prompt([inputPrompt]);
     await cassi.user.prompt(promptSequence);
-    // TODO: Process the result of the prompt
+    if (inputPrompt.response) {
+      await cassi.newTask(new Code(cassi, null, inputPrompt.response));
+    } else {
+      console.log("No input received, exiting.");
+      break; // Exit the loop if no input is provided
+    }
   }
 }
 

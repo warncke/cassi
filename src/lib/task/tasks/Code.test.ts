@@ -33,5 +33,17 @@ describe("Code Task", () => {
     expect(codeTask.prompt).toBe(promptText);
   });
 
+  it("should log the prompt when initTask is called", async () => {
+    const promptText = "Log this prompt.";
+    const codeTask = new Code(mockCassi, null, promptText);
+    const consoleSpy = vi.spyOn(console, "log"); // Spy on console.log
+
+    await codeTask.initTask(); // Call the method
+
+    expect(consoleSpy).toHaveBeenCalledWith(promptText); // Assert console.log was called with the prompt
+
+    consoleSpy.mockRestore(); // Restore original console.log
+  });
+
   // TODO: Add more tests for getPrompts and main methods
 });

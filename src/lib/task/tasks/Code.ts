@@ -11,4 +11,8 @@ export class Code extends Task {
     super(cassi, parentTask); // Pass arguments to super()
     this.prompt = prompt; // Initialize prompt property
   }
+
+  public async initTask(): Promise<void> {
+    console.log(this.prompt);
+  }
 }
