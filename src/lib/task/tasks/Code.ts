@@ -60,7 +60,7 @@ export class Code extends Task {
     // Add a new worktree linked to the branch
     await this.invoke(
       "git",
-      "addWorkTree",
+      "addWorktree", // Corrected typo
       [this.cassi.repository.repositoryDir],
       [workspaceDir, this.taskId]
     );

@@ -269,11 +269,11 @@ describe("Code Task", () => {
       [taskId]
     );
 
-    // Check that invoke was called correctly for git addWorkTree
+    // Check that invoke was called correctly for git addWorktree
     expect(mockInvoke).toHaveBeenCalledWith(
       expect.any(Code), // Account for 'this' context passed by invoke
       "git",
-      "addWorkTree",
+      "addWorktree", // Corrected typo
       [mockRepositoryDir],
       [expectedWorkspaceDir, taskId]
     );
