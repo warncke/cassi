@@ -2,6 +2,8 @@ import { describe, it, expect, vi, Mocked, beforeEach, Mock } from "vitest"; // 
 import { Tool } from "./Tool.js";
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
+import { Task } from "../task/Task.js"; // Import Task
+import { Cassi } from "../cassi/Cassi.js"; // Import Cassi for mocking Task
 import LocalFS from "../tools/fs/Local.js"; // Re-import LocalFS
 import * as fsPromises from "fs/promises"; // Use alias to avoid conflict
 import { Stats, PathLike } from "fs"; // Import Stats and PathLike types from base 'fs'
@@ -146,8 +148,19 @@ describe("Tool", () => {
   // Tests for the instance method 'invoke'
   describe("invoke", () => {
     // toolInstance is created in the outer beforeEach
+    let mockTask: Task; // Declare mockTask variable
+
+    // Create a mock Task instance to be used in invoke tests
+    // We need a mock Cassi instance for the Task constructor
+    const mockCassiForTask = {
+      // Mock necessary Cassi properties/methods if Task uses them
+      // Assuming Task constructor only needs a Cassi-like object shape
+    } as Cassi;
 
     beforeEach(() => {
+      // Create a fresh mock task for each test
+      mockTask = new Task(mockCassiForTask);
+
       // Reset the mocked constructor implementation
       vi.mocked(LocalFS).mockClear();
       vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
@@ -162,8 +175,9 @@ describe("Tool", () => {
       // Use 'as any' to bypass strict type checking for mockResolvedValue with overloaded return types
       mockLocalFSInstance.readFile.mockResolvedValue(fileContent as any);
 
-      // Call invoke on the instance
+      // Call invoke on the instance, passing the mock task
       const result = await toolInstance.invoke(
+        mockTask, // Pass mock task
         "fs",
         "readFile",
         filePath,
@@ -172,7 +186,9 @@ describe("Tool", () => {
 
       // Verify the result and that the method on the *instance* was called
       expect(result).toBe(fileContent);
+      // The actual tool method (readFile) receives the task as the first arg from Invocation.invoke
       expect(mockLocalFSInstance.readFile).toHaveBeenCalledWith(
+        mockTask, // Expect task as first arg passed by Invocation
         filePath,
         "utf8"
       );
@@ -192,7 +208,7 @@ describe("Tool", () => {
       vi.mocked(LocalFS).mockClear();
 
       await expect(
-        toolInstance.invoke("nonexistent", "someMethod")
+        toolInstance.invoke(mockTask, "nonexistent", "someMethod") // Pass mock task
       ).rejects.toThrow(
         'Tool type "nonexistent" not found or failed to initialize.' // Updated error message
       );
@@ -208,7 +224,7 @@ describe("Tool", () => {
       vi.mocked(LocalFS).mockClear();
 
       await expect(
-        toolInstance.invoke("fs", "nonexistentMethod")
+        toolInstance.invoke(mockTask, "fs", "nonexistentMethod") // Pass mock task
       ).rejects.toThrow(
         'Method "nonexistentMethod" not found on tool "fs" (implementation "index").' // Updated error message
       );
@@ -232,11 +248,13 @@ describe("Tool", () => {
 
       mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
 
-      // Call invoke on the instance
-      await toolInstance.invoke("fs", "writeFile", filePath, content);
+      // Call invoke on the instance, passing the mock task
+      await toolInstance.invoke(mockTask, "fs", "writeFile", filePath, content); // Pass mock task
 
       // Verify the method on the instance was called correctly
+      // The actual tool method (writeFile) receives the task as the first arg from Invocation.invoke
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledWith(
+        mockTask, // Expect task as first arg passed by Invocation
         filePath,
         content
       );

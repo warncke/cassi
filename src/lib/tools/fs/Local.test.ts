@@ -158,4 +158,57 @@ describe("LocalFS", () => {
       await localFs.deleteDirectory(path.join(testDir, "new_dir"));
     });
   });
+
+  test("should return the current working directory", () => {
+    const cwd = localFs.getCurrentWorkingDirectory();
+    // Compare against the actual process cwd
+    expect(cwd).toBe(process.cwd());
+  });
+
+  describe("Working Directory Operations", () => {
+    const originalCwd = process.cwd();
+    const tempDirForCwd = path.join(testDir, "cwd_test_dir");
+
+    beforeAll(async () => {
+      // Create the temp directory once for these tests
+      await localFs.createDirectory(tempDirForCwd);
+    });
+
+    afterAll(async () => {
+      // Clean up the temp directory used for CWD tests
+      await localFs.deleteDirectory(tempDirForCwd);
+    });
+
+    // Restore CWD after each test in this block
+    afterEach(() => {
+      process.chdir(originalCwd);
+    });
+
+    test("should set the current working directory", () => {
+      localFs.setCurrentWorkingDirectory(tempDirForCwd);
+      expect(process.cwd()).toBe(tempDirForCwd);
+    });
+
+    test("should throw an error when setting CWD to a non-existent directory", () => {
+      const nonExistentDir = path.join(testDir, "non_existent_cwd_dir");
+      expect(() => localFs.setCurrentWorkingDirectory(nonExistentDir)).toThrow(
+        /Failed to change directory/
+      );
+      // Ensure CWD didn't actually change
+      expect(process.cwd()).toBe(originalCwd);
+    });
+
+    test("should throw an error when setting CWD to a file path", async () => {
+      const filePath = path.join(tempDirForCwd, "temp_file.txt");
+      await localFs.createFile(filePath, "content"); // Create a file
+
+      expect(() => localFs.setCurrentWorkingDirectory(filePath)).toThrow(
+        /Failed to change directory/
+      );
+      expect(process.cwd()).toBe(originalCwd);
+
+      // Clean up the file
+      await localFs.deleteFile(filePath);
+    });
+  });
 });

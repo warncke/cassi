@@ -3,7 +3,8 @@ import * as path from "path";
 import { fileURLToPath } from "url"; // Needed for __dirname in ESM
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
-import { Invocation } from "./Invocation.js"; // Assuming .js extension based on others
+import { Invocation } from "./Invocation.js";
+import { Task } from "../task/Task.js"; // Import Task
 // Tool classes will be loaded dynamically
 
 // Helper to get __dirname in ES Modules
@@ -138,10 +139,15 @@ export class Tool {
    * @param toolName - The type/category of the tool (e.g., "fs").
    * @param methodName - The name of the method to invoke on the tool.
    * @param args - Arguments to pass to the tool method.
+   * @param task - The task context for this invocation.
+   * @param toolName - The type/category of the tool (e.g., "fs").
+   * @param methodName - The name of the method to invoke on the tool.
+   * @param args - Arguments to pass to the tool method.
    * @returns The result of the invoked tool method.
    */
   // invoke is now an instance method
   async invoke(
+    task: Task, // Add task parameter
     toolName: string,
     methodName: string,
     ...args: any[]
@@ -182,8 +188,9 @@ export class Tool {
     }
 
     // Instantiate Invocation before calling the method
-    // Use the actual implementation name (base name)
+    // Pass the task to the constructor
     const invocation = new Invocation(
+      task, // Pass task here
       toolName,
       implementationName,
       methodName,
@@ -201,7 +208,7 @@ export class Tool {
       );
     }
 
-    // Call the invoke method on the Invocation instance (no args needed here)
+    // Call the invoke method on the Invocation instance (no args needed)
     return await invocation.invoke();
   }
 

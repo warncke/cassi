@@ -122,4 +122,28 @@ export default class LocalFS {
       throw error;
     }
   }
+
+  /**
+   * Gets the current working directory of the Node.js process.
+   * @returns The current working directory path.
+   */
+  getCurrentWorkingDirectory(): string {
+    return process.cwd();
+  }
+
+  /**
+   * Sets the current working directory of the Node.js process.
+   * @param dirPath - The path to the new working directory.
+   * @throws An error if changing the directory fails.
+   */
+  setCurrentWorkingDirectory(dirPath: string): void {
+    try {
+      process.chdir(dirPath);
+    } catch (error: any) {
+      // Handle specific errors like 'ENOENT' (directory not found)
+      throw new Error(
+        `Failed to change directory to ${dirPath}: ${error.message}`
+      );
+    }
+  }
 }

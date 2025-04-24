@@ -3,6 +3,9 @@
 import { Command } from "commander";
 import { Cassi } from "../lib/cassi/Cassi.js";
 import { User } from "../lib/user/User.js";
+import { InitializeRepository } from "../lib/task/tasks/InitializeRepository.js";
+import Input from "../lib/prompt/prompts/Input.js";
+import { Prompt } from "../lib/prompt/Prompt.js";
 
 const program = new Command();
 
@@ -31,20 +34,18 @@ async function run() {
     await handler.handlePrompt(); // Handle all prompts within the sequence
   }
 
-  const user = new User(initFn, () => {
-    // The promptFn now handles the sequence, so just pass the Prompt object
-    return import("../lib/prompt/Prompt.js").then(({ Prompt }) => {
-      // Example: Create a Prompt sequence if needed, or pass an existing one
-      // For now, assuming the User class expects a function that returns a promise
-      // and the actual prompt sequence is determined elsewhere or is empty initially.
-      // If the intention is to always prompt with an empty sequence here, it remains the same.
-      // If a specific sequence should be prompted, it needs to be created here.
-      const initialPromptSequence = new Prompt([]); // Example: empty sequence
-      return promptFn(initialPromptSequence);
-    });
-  });
+  const user = new User(initFn, promptFn);
   const cassi = new Cassi(user, options.configFile, options.repositoryDir);
   await cassi.init();
+  await cassi.newTask(new InitializeRepository(cassi));
+
+  while (true) {
+    await cassi.runTasks();
+    const inputPrompt = new Input("Enter your next request:");
+    const promptSequence = new Prompt([inputPrompt]);
+    await cassi.user.prompt(promptSequence);
+    // TODO: Process the result of the prompt
+  }
 }
 
 run().catch((error) => {
