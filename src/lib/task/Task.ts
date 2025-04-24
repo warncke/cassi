@@ -21,6 +21,10 @@ export class Task {
     // Base implementation is empty, subclasses can override
   }
 
+  async cleanupTask(): Promise<void> {
+    // Base implementation is empty, subclasses can override
+  }
+
   async run(): Promise<void> {
     console.log(`[Task] Starting task: ${this.constructor.name}`); // Log task start
     this.startedAt = new Date();
@@ -47,6 +51,19 @@ export class Task {
       this.error = err instanceof Error ? err : new Error(String(err));
     } finally {
       this.finishedAt = new Date();
+      try {
+        console.log(`[Task] Cleaning up task: ${this.constructor.name}`); // Log cleanupTask call
+        await this.cleanupTask();
+      } catch (cleanupErr) {
+        console.error(
+          `[Task] Error during cleanup for ${this.constructor.name}: ${
+            cleanupErr instanceof Error
+              ? cleanupErr.message
+              : String(cleanupErr)
+          }`
+        );
+        // Optionally decide how to handle cleanup errors, e.g., log or aggregate
+      }
     }
   }
 

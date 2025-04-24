@@ -56,6 +56,13 @@ describe("Task", () => {
     });
   });
 
+  describe("cleanupTask", () => {
+    test("should exist and run without error", async () => {
+      expect(task.cleanupTask).toBeInstanceOf(Function);
+      await expect(task.cleanupTask()).resolves.toBeUndefined();
+    });
+  });
+
   describe("run", () => {
     test("should call initTask before running subtasks", async () => {
       const initTaskSpy = vi.spyOn(task, "initTask");
@@ -184,6 +191,83 @@ describe("Task", () => {
       expect(task.error?.message).toBe(testErrorString);
       expect(task.startedAt).toBeInstanceOf(Date);
       expect(task.finishedAt).toBeInstanceOf(Date);
+    });
+
+    test("should call cleanupTask in finally block on success", async () => {
+      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
+      await task.run();
+      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(task.error).toBeNull(); // Ensure no error was set
+    });
+
+    test("should call cleanupTask in finally block even if initTask throws", async () => {
+      const testError = new Error("Init failed");
+      vi.spyOn(task, "initTask").mockRejectedValue(testError);
+      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
+
+      await task.run();
+
+      expect(task.error).toBe(testError);
+      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+    });
+
+    test("should call cleanupTask in finally block even if a subtask throws", async () => {
+      const testError = new Error("Subtask failed");
+      const subTask1 = new Task(mockCassi);
+      vi.spyOn(subTask1, "run").mockRejectedValue(testError);
+      task.subTasks.push(subTask1);
+      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
+
+      await task.run();
+
+      expect(task.error).toBe(testError);
+      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+    });
+
+    test("should log error if cleanupTask itself throws, but not overwrite original error", async () => {
+      const initError = new Error("Init failed");
+      const cleanupError = new Error("Cleanup failed");
+      vi.spyOn(task, "initTask").mockRejectedValue(initError);
+      const cleanupTaskSpy = vi
+        .spyOn(task, "cleanupTask")
+        .mockRejectedValue(cleanupError);
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {}); // Suppress console output for test
+
+      await task.run();
+
+      expect(task.error).toBe(initError); // Original error should be preserved
+      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `[Task] Error during cleanup for Task: ${cleanupError.message}`
+        )
+      );
+
+      consoleErrorSpy.mockRestore(); // Restore console.error
+    });
+
+    test("should log error if cleanupTask throws when run was successful", async () => {
+      const cleanupError = new Error("Cleanup failed");
+      const cleanupTaskSpy = vi
+        .spyOn(task, "cleanupTask")
+        .mockRejectedValue(cleanupError);
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {}); // Suppress console output for test
+
+      await task.run();
+
+      expect(task.error).toBeNull(); // No error during main execution
+      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `[Task] Error during cleanup for Task: ${cleanupError.message}`
+        )
+      );
+
+      consoleErrorSpy.mockRestore(); // Restore console.error
     });
   });
 

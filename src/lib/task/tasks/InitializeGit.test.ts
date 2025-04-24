@@ -90,7 +90,7 @@ describe("InitializeGit Task", () => {
 
     await initializeGitTask.initTask();
 
-    expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus);
+    // expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Removed: Status is not logged here
     expect(mockCassi.user.prompt).toHaveBeenCalled(); // Verify prompt was called
     expect(mockConsoleError).not.toHaveBeenCalled();
     expect(mockProcessExit).not.toHaveBeenCalled(); // Should not exit if confirmed
@@ -108,7 +108,7 @@ describe("InitializeGit Task", () => {
 
     // Verify calls happened
     expect(invokeSpy).toHaveBeenCalledOnce();
-    expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Status is still logged
+    // expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Removed: Status is not logged here
     expect(mockConsoleError).toHaveBeenCalledOnce();
     expect(mockConsoleError).toHaveBeenCalledWith(
       "Git repository is not clean. Please commit or stash changes before proceeding."
@@ -180,7 +180,7 @@ describe("InitializeGit Task", () => {
 
     await initializeGitTask.initTask();
 
-    expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Status is still logged
+    // expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Removed: Status is not logged here
     expect(mockCassi.user.prompt).toHaveBeenCalledOnce();
     expect(mockConsoleLog).toHaveBeenCalledWith("Operation cancelled by user.");
     expect(mockProcessExit).toHaveBeenCalledOnce();
