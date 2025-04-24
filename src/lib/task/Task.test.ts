@@ -351,7 +351,8 @@ describe("Task", () => {
     });
   });
 
-  describe("getModelInstance", () => {
+  describe("newModel", () => {
+    // Renamed describe block
     let newInstanceSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
@@ -364,7 +365,7 @@ describe("Task", () => {
       const mockModelInstance = new MockModel();
       newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
 
-      task.getModelInstance<MockModel>(modelClassName);
+      task.newModel(modelClassName); // Use newModel (removed type argument)
 
       expect(newInstanceSpy).toHaveBeenCalledOnce();
       expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
@@ -375,9 +376,9 @@ describe("Task", () => {
       const mockModelInstance = new MockModel();
       newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
 
-      const result = task.getModelInstance<MockModel>(modelClassName);
+      const result = task.newModel(modelClassName); // Use newModel (removed type argument)
 
-      expect(result).toBeInstanceOf(MockModel);
+      expect(result).toBeInstanceOf(MockModel); // This assertion should still work
       expect(result).toBe(mockModelInstance);
     });
 
@@ -389,7 +390,8 @@ describe("Task", () => {
       });
 
       // Use MockModel which extends Models to satisfy the constraint
-      expect(() => task.getModelInstance<MockModel>(modelClassName)).toThrow(
+      expect(() => task.newModel(modelClassName)).toThrow(
+        // Use newModel (removed type argument)
         testError
       );
       expect(newInstanceSpy).toHaveBeenCalledOnce();

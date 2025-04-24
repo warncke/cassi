@@ -81,13 +81,13 @@ export class Task {
 
   /**
    * Creates a new instance of a specified model (which extends Models).
+   * Creates a new instance of a specified model (which extends Models).
    * @param modelClassName The name of the model class to instantiate.
-   * @returns A new instance of the specified model, extending Models.
+   * @returns A new instance of the specified model.
    */
-  getModelInstance<T extends Models>(modelClassName: string): T {
-    // Constraint changed to Models
-    // Call newInstance without generic and cast the result
-    // The cast is now valid because newInstance returns Models, and T extends Models
-    return this.cassi.model.newInstance(modelClassName) as T;
+  newModel(modelClassName: string): Models {
+    // Removed generic, changed return type to Models
+    // Call newInstance which returns Models directly
+    return this.cassi.model.newInstance(modelClassName); // Removed cast
   }
 }

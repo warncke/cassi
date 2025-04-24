@@ -1,21 +1,38 @@
 import { Code } from "./Code.js"; // Added .js extension
 import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { Task } from "../Task.js"; // Import Task for parentTask type hint
-import { describe, it, expect, vi } from "vitest"; // Import vitest functions
+import { describe, it, expect, vi, beforeEach } from "vitest"; // Import vitest functions including beforeEach
+import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; // Import the actual model for type hinting if needed
+
+// Mock EvaluateCodePrompt
+const mockGenerate = vi.fn();
+const mockEvaluateCodePrompt = {
+  generate: mockGenerate,
+} as unknown as EvaluateCodePrompt; // Cast to the actual type for safety
 
 // Mock Cassi or create a minimal instance for testing
-// For simplicity, we can cast `null` or an empty object if strict checks aren't needed yet.
-// A more robust approach would use a mocking library like Jest's mocks.
+const mockNewInstance = vi.fn();
 const mockCassi = {
-  // Mock necessary Cassi properties/methods if Code interacts with them
   tool: {
-    // Mock tool invoker if needed
-    invoke: vi.fn(), // Use vitest mock function
+    invoke: vi.fn(),
   },
-  // Add other properties/methods as needed by Task or Code
+  model: {
+    newInstance: mockNewInstance,
+  },
 } as unknown as Cassi;
 
 describe("Code Task", () => {
+  // Reset mocks before each test
+  beforeEach(() => {
+    vi.resetAllMocks();
+    // Configure mockNewInstance to return the mock model when called with 'EvaluateCodePrompt'
+    mockNewInstance.mockImplementation((modelName: string) => {
+      if (modelName === "EvaluateCodePrompt") {
+        return mockEvaluateCodePrompt;
+      }
+      throw new Error(`Unexpected model requested: ${modelName}`);
+    });
+  });
   it("should instantiate with a prompt, cassi instance, and parent task", () => {
     const promptText = "Create a function that adds two numbers.";
     const parentTask: Task | null = null; // Example parent task (or null)
@@ -33,17 +50,38 @@ describe("Code Task", () => {
     expect(codeTask.prompt).toBe(promptText);
   });
 
-  it("should log the prompt when initTask is called", async () => {
-    const promptText = "Log this prompt.";
+  it("should call newModel and generate on the model during initTask", async () => {
+    const promptText = "Generate some code.";
+    const codeTask = new Code(mockCassi, null, promptText);
+
+    await codeTask.initTask(); // Call the method
+
+    // Verify newModel was called correctly
+    expect(mockNewInstance).toHaveBeenCalledTimes(1);
+    expect(mockNewInstance).toHaveBeenCalledWith("EvaluateCodePrompt");
+
+    // Verify the generate method on the mock model was called correctly
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(mockGenerate).toHaveBeenCalledWith(promptText);
+  });
+
+  it("should log the response from model.generate", async () => {
+    const promptText = "Generate some code.";
+    const mockResponse = "Generated code response";
+    // Configure the mock generate function to return a specific value
+    mockGenerate.mockResolvedValue(mockResponse);
+
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log"); // Spy on console.log
 
     await codeTask.initTask(); // Call the method
 
-    expect(consoleSpy).toHaveBeenCalledWith(promptText); // Assert console.log was called with the prompt
+    // Verify console.log was called with the correct message and response
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    expect(consoleSpy).toHaveBeenCalledWith("Model response:", mockResponse);
 
     consoleSpy.mockRestore(); // Restore original console.log
   });
 
-  // TODO: Add more tests for getPrompts and main methods
+  // TODO: Add more tests if needed
 });
