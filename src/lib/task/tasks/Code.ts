@@ -74,15 +74,8 @@ export class Code extends Task {
     // Instantiate the EvaluateCodePrompt model and assert its type
     const model = this.newModel("EvaluateCodePrompt") as EvaluateCodePrompt;
     // Generate the response using the model and the provided prompt
-    // Assign the response directly to the evaluation property
-    this.evaluation = await model.generate(this.prompt);
-
-    console.log(
-      "XXX",
-      JSON.parse(this.evaluation),
-      this.evaluation.modifiesFiles
-    );
-
+    // Parse the JSON response and assign it to the evaluation property
+    this.evaluation = JSON.parse(await model.generate(this.prompt));
     // Check the modifiesFiles property using the evaluation property
     if (this.evaluation.modifiesFiles === true) {
       // Call the new method to handle file modifications

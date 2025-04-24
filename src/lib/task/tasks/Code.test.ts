@@ -64,10 +64,14 @@ describe("Code Task", () => {
 
   it("should call newModel, generate, and initFileTask during initTask when modifiesFiles is true", async () => {
     const promptText = "Generate some code.";
-    // Mock generate to return an object directly
+    // Mock generate to return a JSON string
     const mockEvaluation = { modifiesFiles: true, summary: "Test Summary" };
-    mockGenerate.mockResolvedValue(mockEvaluation);
+    mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
     const codeTask = new Code(mockCassi, null, promptText);
+
+    // Spy on initFileTask
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
 
     await codeTask.initTask(); // Call the method
 
@@ -79,20 +83,50 @@ describe("Code Task", () => {
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledWith(promptText);
 
-    // Check that the evaluation property is set correctly
+    // Check that the evaluation property is set correctly (parsed object)
     expect(codeTask.evaluation).toEqual(mockEvaluation);
+    // Check that initFileTask was called
+    expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
+
+    initFileTaskSpy.mockRestore(); // Restore spy
+  });
+
+  it("should correctly parse the JSON string returned by model.generate", async () => {
+    const promptText = "Generate some code.";
+    // Mock generate to return a JSON *string*
+    const mockJsonResponse = { modifiesFiles: true, summary: "Parsed Summary" };
+    const mockJsonString = JSON.stringify(mockJsonResponse);
+    mockGenerate.mockResolvedValue(mockJsonString); // Return the stringified JSON
+
+    const codeTask = new Code(mockCassi, null, promptText);
+    // Spy on initFileTask to ensure it's called (since modifiesFiles is true in the parsed object)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
+
+    await codeTask.initTask(); // Call the method
+
+    // Verify newModel was called
+    expect(mockNewInstance).toHaveBeenCalledWith("EvaluateCodePrompt");
+    // Verify generate was called
+    expect(mockGenerate).toHaveBeenCalledWith(promptText);
+    // Verify the evaluation property contains the PARSED object, not the string
+    expect(codeTask.evaluation).toEqual(mockJsonResponse);
+    // Verify initFileTask was called because modifiesFiles was true in the parsed object
+    expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
+
+    initFileTaskSpy.mockRestore();
   });
 
   // Removed test 'should log the response from model.generate' as it tested JSON parsing failure which is no longer relevant.
 
   it("should call initFileTask when modifiesFiles is true", async () => {
     const promptText = "Generate code that modifies files.";
-    // Mock generate to return an object directly
+    // Mock generate to return a JSON string
     const mockEvaluation = {
       modifiesFiles: true,
       summary: "Another Test Summary",
     };
-    mockGenerate.mockResolvedValue(mockEvaluation);
+    mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
@@ -134,9 +168,9 @@ describe("Code Task", () => {
 
   it("should log 'Only file modification tasks supported' and not call initFileTask when modifiesFiles is false", async () => {
     const promptText = "Generate code that does not modify files.";
-    // Mock generate to return an object directly
+    // Mock generate to return a JSON string
     const mockEvaluation = { modifiesFiles: false };
-    mockGenerate.mockResolvedValue(mockEvaluation);
+    mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
 
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
@@ -175,12 +209,12 @@ describe("Code Task", () => {
     const summaryText = "This Is My Summary";
     const expectedRepoSlug = "this-is-my-summary";
     const mockTimestamp = 1713996743000; // Fixed timestamp for predictable hash
-    // Mock generate to return an object directly
+    // Mock generate to return a JSON string
     const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
     };
-    mockGenerate.mockResolvedValue(mockEvaluation);
+    mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
 
     // Mock Date.now()
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
@@ -261,12 +295,12 @@ describe("Code Task", () => {
     const summaryText = "Generate ID Test";
     const expectedRepoSlug = "generate-id-test";
     const mockTimestamp = 1713996743000; // Fixed timestamp
-    // Mock generate to return an object directly
+    // Mock generate to return a JSON string
     const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
     };
-    mockGenerate.mockResolvedValue(mockEvaluation);
+    mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
     const codeTask = new Code(mockCassi, null, promptText);
     const consoleSpy = vi.spyOn(console, "log");
