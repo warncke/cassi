@@ -1,7 +1,12 @@
-import { ModelReference } from "genkit";
+import { ModelReference, z } from "genkit";
 import { Models } from "../Models.js"; // Import the base class with .js extension
 import { prototype } from "events";
 
+const EvaluateCodePromptSchema = z.object({
+  summary: z.string(),
+  modifiesFiles: z.boolean(),
+  steps: z.array(z.string()),
+});
 export class EvaluateCodePrompt extends Models {
   // Extend the base class
   constructor(plugin: any, model: ModelReference<any>) {
@@ -32,6 +37,7 @@ The JSON object to OUTPUT is:
      ]
 }            
 `,
+      output: { schema: EvaluateCodePromptSchema },
     });
 
     return text(); // Call the text() function to get the string

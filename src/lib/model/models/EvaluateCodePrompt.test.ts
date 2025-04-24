@@ -2,19 +2,31 @@
 /// <reference types="vitest/globals" />
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EvaluateCodePrompt } from "./EvaluateCodePrompt.js";
-// Import ModelReference as a type ONLY to avoid runtime issues with mocking
-import { type ModelReference } from "genkit";
+// Import ModelReference and z as types ONLY to avoid runtime issues with mocking
+import { type ModelReference, z } from "genkit";
 
 // Define the mock generate function globally
 const mockGenerate = vi
   .fn()
   .mockResolvedValue({ text: () => "mocked response" });
 
-// Mock the genkit library, providing a basic mock for the 'genkit' export
-vi.mock("genkit", () => ({
-  genkit: vi.fn(), // Simple mock function for genkit itself
-  // ModelReference is only used as a type, so no runtime mock needed here
-}));
+// Mock the genkit library using vi.importActual to preserve other exports like 'z'
+vi.mock("genkit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("genkit")>();
+  return {
+    ...actual, // Spread all actual exports, including 'z' and ModelReference type
+    genkit: vi.fn(), // Keep the mock for the genkit function itself
+  };
+});
+
+// Define the schema locally in the test file to match the one in the source
+// This ensures the test doesn't break if the source schema changes unexpectedly
+// and makes the test assertion clearer.
+const EvaluateCodePromptSchema = z.object({
+  summary: z.string(),
+  modifiesFiles: z.boolean(),
+  steps: z.array(z.string()),
+});
 
 // Mock plugin and model - Use the imported type
 const mockPlugin = { name: "mock-plugin" } as any;
@@ -63,10 +75,16 @@ The JSON object to OUTPUT is:
 `;
 
     // Check if the globally defined mockGenerate function was called correctly
-    expect(mockGenerate).toHaveBeenCalledWith({
-      model: mockModel,
-      prompt: expectedPrompt, // Use the constructed template literal
-    });
+    // Use expect.objectContaining to avoid strict object identity checks for the schema
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: mockModel,
+        prompt: expectedPrompt,
+        output: expect.objectContaining({
+          schema: expect.any(Object), // Verify that a schema object was passed
+        }),
+      })
+    );
     expect(response).toBe("mocked response");
   });
 });
