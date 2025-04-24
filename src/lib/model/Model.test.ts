@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Model } from "./Model.js";
-import { Models } from "./models.js"; // Corrected import path
+import { Models } from "./Models.js"; // Corrected import path
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import fs from "fs/promises";

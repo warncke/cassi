@@ -1,5 +1,5 @@
 import { ModelReference } from "genkit";
-import { Models } from "../models.js"; // Import the base class with .js extension
+import { Models } from "../Models.js"; // Import the base class with .js extension
 
 export class EvaluateCodePrompt extends Models {
   // Extend the base class

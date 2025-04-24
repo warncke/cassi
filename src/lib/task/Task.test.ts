@@ -2,7 +2,7 @@ import { Task } from "./Task.js";
 import { Cassi } from "../cassi/Cassi.js";
 import { User } from "../user/User.js";
 import { Model } from "../model/Model.js"; // Keep for error test case
-import { Models } from "../model/models.js"; // Import Models
+import { Models } from "../model/Models.js"; // Import Models
 import { ModelReference } from "genkit/model"; // Import ModelReference
 
 import { describe, expect, test, beforeEach, vi } from "vitest";

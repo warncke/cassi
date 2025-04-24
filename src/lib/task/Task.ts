@@ -1,6 +1,6 @@
 import { Cassi } from "../cassi/Cassi.js";
 import { Model } from "../model/Model.js"; // Keep Model for the class itself
-import { Models } from "../model/models.js"; // Import Models type for instances
+import { Models } from "../model/Models.js"; // Import Models type for instances
 // Remove unused imports if Tool and Invocation are not directly used here anymore
 // import { Tool } from "../tool/Tool.js";
 // import { Invocation } from "../tool/Invocation.js";

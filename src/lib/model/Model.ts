@@ -1,6 +1,6 @@
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
-import { Models } from "./models.js"; // Corrected import path
+import { Models } from "./Models.js"; // Corrected import path
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
