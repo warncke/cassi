@@ -40,6 +40,6 @@ The JSON object to OUTPUT is:
       output: { schema: EvaluateCodePromptSchema },
     });
 
-    return text(); // Call the text() function to get the string
+    return text;
   }
 }
