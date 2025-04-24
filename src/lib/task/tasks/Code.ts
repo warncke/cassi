@@ -76,6 +76,8 @@ export class Code extends Task {
     // Generate the response using the model and the provided prompt
     const rawResponse = await model.generate(this.prompt);
 
+    console.log("XXX", rawResponse);
+
     try {
       // Parse the JSON response and store it in the evaluation property
       this.evaluation = JSON.parse(rawResponse);
