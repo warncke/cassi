@@ -49,9 +49,8 @@ export class Invocation {
     }
     this.startTime = Date.now(); // Set startTime before invocation
     try {
-      // Call the method on the specific tool instance with the stored task and arguments
+      // Call the method on the specific tool instance with the stored arguments
       const result = await this.toolMethod.apply(this.toolInstance, [
-        this.task, // Use stored task
         ...this.methodArgs, // Renamed from args
       ]);
       return result;

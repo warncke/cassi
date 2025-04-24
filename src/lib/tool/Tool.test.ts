@@ -219,9 +219,9 @@ describe("Tool", () => {
 
       // Verify the result and that the method on the *instance* was called
       expect(result).toBe(fileContent);
-      // The actual tool method (readFile) receives the task as the first arg from Invocation.invoke
+      // The actual tool method (readFile) no longer receives the task as the first arg from Invocation.invoke
       expect(mockLocalFSInstance.readFile).toHaveBeenCalledWith(
-        mockTask, // Expect task as first arg passed by Invocation
+        // mockTask, // Task is no longer passed by Invocation
         filePath,
         "utf8"
       );
@@ -267,7 +267,8 @@ describe("Tool", () => {
 
       // 2. Verify Tool Method Call (using the prototype spy)
       expect(methodSpy).toHaveBeenCalledTimes(1);
-      expect(methodSpy).toHaveBeenCalledWith(mockTask, ...mockMethodArgs);
+      // Task is no longer passed by Invocation
+      expect(methodSpy).toHaveBeenCalledWith(...mockMethodArgs);
 
       // 3. Verify Constructor Args via Method Spy Context ('this')
       // Check that the 'this' context within the method spy call corresponds to an instance
@@ -351,9 +352,9 @@ describe("Tool", () => {
       ); // Pass mock task and empty toolArgs
 
       // Verify the method on the instance was called correctly
-      // The actual tool method (writeFile) receives the task as the first arg from Invocation.invoke
+      // The actual tool method (writeFile) no longer receives the task as the first arg from Invocation.invoke
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledWith(
-        mockTask, // Expect task as first arg passed by Invocation
+        // mockTask, // Task is no longer passed by Invocation
         filePath,
         content
       );

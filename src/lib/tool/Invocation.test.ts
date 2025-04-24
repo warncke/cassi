@@ -52,9 +52,9 @@ describe("Invocation", () => {
       const expectedResult = "Success!";
       const arg1 = "hello";
       const arg2 = 123;
-      // Mock method now expects task as the first argument
-      const mockToolMethod = vi.fn(async (task: Task, a: string, b: number) => {
-        expect(task).toBe(mockTask); // Verify task is passed
+      // Mock method no longer expects task as the first argument
+      const mockToolMethod = vi.fn(async (a: string, b: number) => {
+        // Task is no longer passed via apply
         expect(a).toBe(arg1);
         expect(b).toBe(arg2);
         return expectedResult;
@@ -74,7 +74,7 @@ describe("Invocation", () => {
       const result = await invocation.invoke();
 
       expect(result).toBe(expectedResult);
-      expect(mockToolMethod).toHaveBeenCalledWith(mockTask, arg1, arg2); // Verify call signature
+      expect(mockToolMethod).toHaveBeenCalledWith(arg1, arg2); // Verify call signature (no task)
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
@@ -83,9 +83,9 @@ describe("Invocation", () => {
 
     it("should capture errors thrown by the tool method", async () => {
       const errorMessage = "Something went wrong";
-      // Mock method expects task
-      const mockToolMethod = vi.fn(async (task: Task) => {
-        expect(task).toBe(mockTask);
+      // Mock method no longer expects task
+      const mockToolMethod = vi.fn(async () => {
+        // Task is no longer passed via apply
         throw new Error(errorMessage);
       });
       const invocation = new Invocation(
@@ -102,7 +102,7 @@ describe("Invocation", () => {
       // Invoke without task argument
       await expect(invocation.invoke()).rejects.toThrow(errorMessage);
 
-      expect(mockToolMethod).toHaveBeenCalledWith(mockTask); // Verify call still receives task via apply
+      expect(mockToolMethod).toHaveBeenCalledWith(); // Verify call signature (no task)
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
@@ -112,9 +112,9 @@ describe("Invocation", () => {
 
     it("should capture non-Error objects thrown by the tool method", async () => {
       const errorObject = { message: "Just an object" };
-      // Mock method expects task
-      const mockToolMethod = vi.fn(async (task: Task) => {
-        expect(task).toBe(mockTask);
+      // Mock method no longer expects task
+      const mockToolMethod = vi.fn(async () => {
+        // Task is no longer passed via apply
         throw errorObject;
       });
       const invocation = new Invocation(
@@ -131,7 +131,7 @@ describe("Invocation", () => {
       // Invoke without task argument
       await expect(invocation.invoke()).rejects.toEqual(errorObject); // Check if the original object is re-thrown
 
-      expect(mockToolMethod).toHaveBeenCalledWith(mockTask); // Verify call still receives task via apply
+      expect(mockToolMethod).toHaveBeenCalledWith(); // Verify call signature (no task)
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
