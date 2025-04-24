@@ -41,6 +41,6 @@ The JSON object to OUTPUT is:
     });
 
     // Call the text function to get the actual string response
-    return text();
+    return text;
   }
 }

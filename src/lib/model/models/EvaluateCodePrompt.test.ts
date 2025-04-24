@@ -86,7 +86,7 @@ The JSON object to OUTPUT is:
         }),
       })
     );
-    // EvaluateCodePrompt.generate should return the string directly
-    expect(response).toBe("mocked response");
+    // EvaluateCodePrompt.generate returns the text function, call it to get the string
+    expect(response()).toBe("mocked response");
   });
 });
