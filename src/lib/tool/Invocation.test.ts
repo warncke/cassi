@@ -34,7 +34,7 @@ describe("Invocation", () => {
     expect(invocation.toolInstance).toBe(mockToolInstance);
     expect(invocation.task).toBe(mockTaskForConstructor); // Check stored task
     expect(invocation.toolArgs).toEqual(mockToolArgs); // Check stored toolArgs
-    expect(invocation.args).toEqual(mockArgs); // Check stored args
+    expect(invocation.methodArgs).toEqual(mockArgs); // Check stored methodArgs (renamed from args)
     expect(invocation.startTime).toBeNull(); // startTime should be null initially
     expect(invocation.endTime).toBeNull(); // endTime should be null initially
     expect(invocation.error).toBeNull(); // error should be null initially

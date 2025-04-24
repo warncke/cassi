@@ -214,8 +214,7 @@ describe("Tool", () => {
         "fs",
         "readFile",
         [], // Add empty toolArgs
-        filePath,
-        "utf8"
+        [filePath, "utf8"] // Pass method args as an array
       );
 
       // Verify the result and that the method on the *instance* was called
@@ -259,7 +258,7 @@ describe("Tool", () => {
         toolName,
         methodName,
         mockToolArgs,
-        ...mockMethodArgs
+        mockMethodArgs // Pass method args as an array (no spread)
       );
 
       // 1. Verify Tool Constructor Call (Indirectly)
@@ -347,9 +346,8 @@ describe("Tool", () => {
         mockTask,
         "fs",
         "writeFile",
-        [],
-        filePath,
-        content
+        [], // Add empty toolArgs
+        [filePath, content] // Pass method args as an array
       ); // Pass mock task and empty toolArgs
 
       // Verify the method on the instance was called correctly

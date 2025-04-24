@@ -8,7 +8,7 @@ export class Invocation {
   public toolInstance: any; // The instance the method belongs to
   public task: Task; // Added task property
   public toolArgs: any[]; // Arguments for the tool constructor
-  public args: any[]; // Arguments for the method invocation
+  public methodArgs: any[]; // Renamed from args
   public startTime: number | null = null;
   public endTime: number | null = null; // Added endTime property
   public error: Error | null = null; // Added error property
@@ -21,7 +21,7 @@ export class Invocation {
     toolMethod: Function,
     toolInstance: any,
     toolArgs: any[], // Accept toolArgs in constructor
-    args: any[] // Accept args in constructor
+    methodArgs: any[] // Renamed from args
   ) {
     this.task = task; // Store task
     this.toolName = toolName;
@@ -30,7 +30,7 @@ export class Invocation {
     this.toolMethod = toolMethod;
     this.toolInstance = toolInstance;
     this.toolArgs = toolArgs; // Store toolArgs
-    this.args = args; // Store args
+    this.methodArgs = methodArgs; // Renamed from args
   }
 
   /**
@@ -52,7 +52,7 @@ export class Invocation {
       // Call the method on the specific tool instance with the stored task and arguments
       const result = await this.toolMethod.apply(this.toolInstance, [
         this.task, // Use stored task
-        ...this.args,
+        ...this.methodArgs, // Renamed from args
       ]);
       return result;
     } catch (e: any) {

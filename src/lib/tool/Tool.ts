@@ -148,10 +148,11 @@ export class Tool {
     toolName: string,
     methodName: string,
     toolArgs?: any[], // Make toolArgs optional
-    ...args: any[]
+    methodArgs?: any[] // Changed from ...args
   ): Promise<any> {
     // Instance method
     const effectiveToolArgs = toolArgs ?? []; // Default to empty array if undefined
+    const effectiveMethodArgs = methodArgs ?? []; // Default to empty array if undefined
     // Call init() on the instance to ensure tool classes are loaded
     const toolClasses = await this.init(); // Use this.init()
     const toolTypeMap = toolClasses[toolName]; // Get the inner map for the type
@@ -200,7 +201,7 @@ export class Tool {
       toolMethod, // Pass the actual method function
       toolInstance, // Pass the instance
       effectiveToolArgs, // Pass effectiveToolArgs
-      args // Pass the arguments
+      effectiveMethodArgs // Pass the renamed arguments
     );
 
     // Check if the invocation is allowed using the instance's allow method
@@ -228,7 +229,8 @@ export class Tool {
     console.log(
       `Checking allow for invocation: Tool=${invocation.toolName}, Method=${
         invocation.method
-      }, Args=${JSON.stringify(invocation.args)}, Task=${
+      }, Args=${JSON.stringify(invocation.methodArgs)}, Task=${
+        // Updated to methodArgs
         invocation.task.constructor.name
       }`
     );
