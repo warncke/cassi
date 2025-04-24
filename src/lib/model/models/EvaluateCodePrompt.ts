@@ -21,10 +21,10 @@ ${promptText}
 
 The JSON object to output is:
 {
-    "summary": "(( INSERT a 3-5 word summary that is as short as possible))",
-    "modifiesFiles" (( INSERT boolean true if the task described involves modifying files or false if it does not)),
+    "summary": "(( INSERT a 3-5 word summary that is as short as possible. do not include an punctuation.))",
+    "modifiesFiles" (( INSERT boolean true if the task described involves creating or modifying files or false if it does not)),
     "steps": [
-          "(( BREAK down the described task into steps and insert a step string for each step in the task))"
+          "(( BREAK down the described task into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
      ]
 }            
 `,
