@@ -136,9 +136,6 @@ export class Tool {
 
   /**
    * Invokes a method on a specified tool.
-   * @param toolName - The type/category of the tool (e.g., "fs").
-   * @param methodName - The name of the method to invoke on the tool.
-   * @param args - Arguments to pass to the tool method.
    * @param task - The task context for this invocation.
    * @param toolName - The type/category of the tool (e.g., "fs").
    * @param methodName - The name of the method to invoke on the tool.

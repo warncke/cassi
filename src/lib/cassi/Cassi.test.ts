@@ -1,45 +1,62 @@
 import { Cassi } from "./Cassi.js";
 import { User } from "../user/User.js";
-import { Task } from "../task/Task.js"; // Import Task
-import { describe, expect, test, beforeEach, vi } from "vitest";
+import { Task } from "../task/Task.js";
+import { Model } from "../model/Model.js"; // Import Model
+import { describe, expect, test, beforeEach, vi } from "vitest"; // Remove afterEach
 
+// Removed vi.mock for Model as init is now an instance method
 describe("Cassi", () => {
   let cassi: Cassi;
   let user: User;
+  // No modelInitSpy needed here anymore
 
   beforeEach(() => {
+    // No spy setup needed here anymore
+    // No longer need vi.clearAllMocks() for Model mock
     user = new User();
     cassi = new Cassi(user, "config.json", "/repo/dir");
   });
+
+  // No afterEach needed anymore
 
   test("should create an instance with user, configFile and repositoryDir", () => {
     expect(cassi).toBeTruthy();
     expect(cassi.user).toBe(user);
     expect(cassi.config.configFile).toBe("config.json");
     expect(cassi.repository.repositoryDir).toBe("/repo/dir");
+    // Verify model is instantiated
+    expect(cassi.model).toBeInstanceOf(Model);
+    // Removed checks for user/config on model instance
   });
 
-  test("should call init on user, config and repository", async () => {
-    const userInitSpy = vi
-      .spyOn(cassi.user, "init")
-      .mockImplementation(async () => {});
-    const repoInitSpy = vi
-      .spyOn(cassi.repository, "init")
-      .mockImplementation(async () => {});
-    const configInitSpy = vi
-      .spyOn(cassi.config, "init")
-      .mockImplementation(async () => {});
+  test("should call init on user, config, tool, model, and repository", async () => {
+    // Directly mock the init method on the instance for this test
+    // Directly mock the init methods on the instances for this test
+    const modelInitMock = vi.fn().mockResolvedValue(undefined);
+    const userInitMock = vi.fn().mockResolvedValue(undefined);
+    const repoInitMock = vi.fn().mockResolvedValue(undefined);
+    const configInitMock = vi.fn().mockResolvedValue(undefined);
+    const toolInitMock = vi.fn().mockResolvedValue(undefined);
+
+    cassi.model.init = modelInitMock;
+    cassi.user.init = userInitMock;
+    cassi.repository.init = repoInitMock;
+    cassi.config.init = configInitMock;
+    cassi.tool.init = toolInitMock;
+
     await cassi.init();
-    expect(userInitSpy).toHaveBeenCalled();
-    expect(repoInitSpy).toHaveBeenCalled();
-    expect(configInitSpy).toHaveBeenCalled();
-    userInitSpy.mockRestore();
-    repoInitSpy.mockRestore();
-    configInitSpy.mockRestore();
+
+    // Assert calls on the direct mocks
+    expect(userInitMock).toHaveBeenCalledTimes(1);
+    expect(configInitMock).toHaveBeenCalledTimes(1);
+    expect(toolInitMock).toHaveBeenCalledTimes(1);
+    expect(modelInitMock).toHaveBeenCalledTimes(1);
+    expect(repoInitMock).toHaveBeenCalledTimes(1);
+
+    // No need to restore spies as they were direct assignments
   });
 
   test("newTask should add a task to the tasks array", () => {
-    // Create a real Task instance using the cassi instance from beforeEach
     const newTask = new Task(cassi);
     cassi.newTask(newTask);
     expect(cassi.tasks).toHaveLength(1);
@@ -92,16 +109,15 @@ describe("Cassi", () => {
       const error = new Error("Task failed");
 
       const runSpy1 = vi.spyOn(task1, "run").mockResolvedValue();
-      // Mock task2 to simulate failure by setting the error property after run
       const runSpy2 = vi.spyOn(task2, "run").mockImplementation(async () => {
-        task2.startedAt = new Date(); // Mark as started
-        task2.error = error; // Set error after running
+        task2.startedAt = new Date();
+        task2.error = error;
         task2.finishedAt = new Date();
       });
       const runSpy3 = vi.spyOn(task3, "run").mockResolvedValue();
       const errorLogSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {}); // Suppress console output during test
+        .mockImplementation(() => {});
 
       cassi.newTask(task1);
       cassi.newTask(task2);
@@ -111,7 +127,7 @@ describe("Cassi", () => {
 
       expect(runSpy1).toHaveBeenCalledTimes(1);
       expect(runSpy2).toHaveBeenCalledTimes(1);
-      expect(runSpy3).toHaveBeenCalledTimes(1); // Should still run task3
+      expect(runSpy3).toHaveBeenCalledTimes(1);
       expect(errorLogSpy).toHaveBeenCalledWith(
         `Task failed with error: ${error.message}`
       );

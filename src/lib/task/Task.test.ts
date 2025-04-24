@@ -1,8 +1,25 @@
 import { Task } from "./Task.js";
 import { Cassi } from "../cassi/Cassi.js";
-import { User } from "../user/User.js"; // Import User
+import { User } from "../user/User.js";
+import { Model } from "../model/Model.js"; // Keep for error test case
+import { Models } from "../model/models.js"; // Import Models
+import { ModelReference } from "genkit/model"; // Import ModelReference
 
 import { describe, expect, test, beforeEach, vi } from "vitest";
+
+// Mock plugin and model reference for Models constructor
+// Change mockPlugin to be a function as expected by genkit
+const mockPlugin = () => "mockPluginFunction";
+const mockModelRef = { name: "mockModelRef" } as ModelReference<any>;
+
+// Mock Model class for testing, now extending Models
+class MockModel extends Models {
+  constructor() {
+    // Call super with mock plugin and model reference
+    super(mockPlugin, mockModelRef);
+  }
+  // Add any methods needed for testing if necessary
+}
 
 // Mock Cassi instance
 const mockUser = new User(); // Create a mock User
@@ -331,6 +348,52 @@ describe("Task", () => {
 
       // Restore the spy
       invokeSpy.mockRestore();
+    });
+  });
+
+  describe("getModelInstance", () => {
+    let newInstanceSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      // Spy on the newInstance method, casting to 'any' to resolve TS error
+      newInstanceSpy = vi.spyOn(mockCassi.model, "newInstance" as any);
+    });
+
+    test("should call cassi.model.newInstance with the correct model class name", () => {
+      const modelClassName = "MockModel";
+      const mockModelInstance = new MockModel();
+      newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
+
+      task.getModelInstance<MockModel>(modelClassName);
+
+      expect(newInstanceSpy).toHaveBeenCalledOnce();
+      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
+    });
+
+    test("should return the model instance created by cassi.model.newInstance", () => {
+      const modelClassName = "MockModel";
+      const mockModelInstance = new MockModel();
+      newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
+
+      const result = task.getModelInstance<MockModel>(modelClassName);
+
+      expect(result).toBeInstanceOf(MockModel);
+      expect(result).toBe(mockModelInstance);
+    });
+
+    test("should throw an error if cassi.model.newInstance throws", () => {
+      const modelClassName = "NonExistentModel";
+      const testError = new Error(`Model class '${modelClassName}' not found.`);
+      newInstanceSpy.mockImplementation(() => {
+        throw testError; // Mock throwing an error
+      });
+
+      // Use MockModel which extends Models to satisfy the constraint
+      expect(() => task.getModelInstance<MockModel>(modelClassName)).toThrow(
+        testError
+      );
+      expect(newInstanceSpy).toHaveBeenCalledOnce();
+      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
     });
   });
 });
