@@ -1,5 +1,6 @@
 import { ModelReference } from "genkit";
 import { Models } from "../Models.js"; // Import the base class with .js extension
+import { prototype } from "events";
 
 export class EvaluateCodePrompt extends Models {
   // Extend the base class
@@ -13,9 +14,22 @@ export class EvaluateCodePrompt extends Models {
     const { text } = await this.ai.generate({
       // Store the full response
       model: this.model, // Use the stored model
-      prompt: promptText,
+      prompt: `
+Output the following JSON object, substituting in the results of model queries for properties. use the following text for context when generating text for JSON properties:
+
+${promptText}
+
+The JSON object to output is:
+{
+    "summary": "(( INSERT a 3-5 word summary that is as short as possible))",
+    "modifiesFiles" (( INSERT boolean true if the task described involves modifying files or false if it does not)),
+    "steps": [
+          "(( BREAK down the described task into steps and insert a step string for each step in the task))"
+     ]
+}            
+`,
     });
-    console.log(text);
+
     return text; // Call the text() function
   }
 }
