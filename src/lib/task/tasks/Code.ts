@@ -1,3 +1,4 @@
+import path from "path"; // Import path module
 import crypto from "crypto"; // Import crypto module
 import { Task } from "../Task.js";
 // Removed unused Prompt import
@@ -35,10 +36,38 @@ export class Code extends Task {
     // Set the taskId property
     this.taskId = `${id}-${repoSlug}`;
 
+    // Generate workspace directory path
+    const workspaceDir = path.join(
+      this.cassi.repository.repositoryDir,
+      ".cassi",
+      "workspaces",
+      this.taskId
+    );
+
     console.log(`Generated ID for file modification task: ${id}`);
     console.log(`Task ID set to: ${this.taskId}`); // Log the taskId
-    // TODO: Implement file modification logic using the generated id
-    // This method will handle the actual file changes
+    console.log(`Workspace directory set to: ${workspaceDir}`); // Log the workspaceDir
+
+    // Create a new branch for the task
+    await this.invoke(
+      "git",
+      "branch",
+      [this.cassi.repository.repositoryDir],
+      [this.taskId]
+    );
+    console.log(`Created branch: ${this.taskId}`);
+
+    // Add a new worktree linked to the branch
+    await this.invoke(
+      "git",
+      "addWorkTree",
+      [this.cassi.repository.repositoryDir],
+      [workspaceDir, this.taskId]
+    );
+    console.log(`Added worktree at ${workspaceDir} for branch ${this.taskId}`);
+
+    // TODO: Implement file modification logic using the generated id and workspaceDir
+    // This method will handle the actual file changes within the worktree
   }
 
   public async initTask(): Promise<void> {

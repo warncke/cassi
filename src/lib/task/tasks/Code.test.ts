@@ -1,3 +1,4 @@
+import path from "path"; // Import path module
 import { Code } from "./Code.js"; // Added .js extension
 import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { Task } from "../Task.js"; // Import Task for parentTask type hint
@@ -11,13 +12,19 @@ const mockEvaluateCodePrompt = {
 } as unknown as EvaluateCodePrompt; // Cast to the actual type for safety
 
 // Mock Cassi or create a minimal instance for testing
+const mockInvoke = vi.fn(); // Mock for tool invocation
 const mockNewInstance = vi.fn();
+const mockRepositoryDir = "/mock/repo/dir"; // Define mock repo dir
 const mockCassi = {
   tool: {
-    invoke: vi.fn(),
+    invoke: mockInvoke, // Use the specific mock here
   },
   model: {
     newInstance: mockNewInstance,
+  },
+  repository: {
+    // Add mock repository object
+    repositoryDir: mockRepositoryDir,
   },
 } as unknown as Cassi;
 
@@ -32,6 +39,8 @@ describe("Code Task", () => {
       }
       throw new Error(`Unexpected model requested: ${modelName}`);
     });
+    // Reset invoke mock specifically if needed, though resetAllMocks should cover it
+    mockInvoke.mockClear();
   });
   it("should instantiate with a prompt, cassi instance, and parent task", () => {
     const promptText = "Create a function that adds two numbers.";
@@ -211,57 +220,11 @@ describe("Code Task", () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it("should call initFileTask and log the correct repoSlug when modifiesFiles is true", async () => {
+  // Modify this test to check invoke calls and logs
+  it("should call initFileTask, create branch/worktree, and log details when modifiesFiles is true", async () => {
     const promptText = "Generate code that modifies files.";
     const summaryText = "This Is My Summary";
-    const expectedRepoSlug = "this-is-my-summary"; // kebabCase of summaryText
-    const mockJsonResponse = JSON.stringify({
-      modifiesFiles: true,
-      summary: summaryText,
-    });
-    mockGenerate.mockResolvedValue(mockJsonResponse);
-
-    const codeTask = new Code(mockCassi, null, promptText);
-    const consoleSpy = vi.spyOn(console, "log");
-    // Spy on the private method initFileTask to ensure it's called
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
-
-    await codeTask.initTask();
-
-    // Check that the parsed response is stored in the evaluation property
-    expect(codeTask.evaluation).toEqual({
-      modifiesFiles: true,
-      summary: summaryText,
-    });
-
-    // Check that initFileTask was called
-    expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
-
-    // Check the console logs inside initFileTask
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /^Generated ID for file modification task: [a-zA-Z0-9]{8}$/
-      )
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringMatching(
-        /^Task ID set to: [a-zA-Z0-9]{8}-this-is-my-summary$/
-      )
-    );
-    // Ensure the old message is not logged
-    expect(consoleSpy).not.toHaveBeenCalledWith(
-      `Executing file modification task for: ${expectedRepoSlug}`
-    );
-
-    consoleSpy.mockRestore();
-    initFileTaskSpy.mockRestore(); // Restore the spy
-  });
-
-  it("should generate an 8-character alphanumeric ID in initFileTask", async () => {
-    const promptText = "Generate code that modifies files.";
-    const summaryText = "Generate ID Test";
-    const expectedRepoSlug = "generate-id-test";
+    const expectedRepoSlug = "this-is-my-summary";
     const mockTimestamp = 1713996743000; // Fixed timestamp for predictable hash
     const mockJsonResponse = JSON.stringify({
       modifiesFiles: true,
@@ -280,10 +243,93 @@ describe("Code Task", () => {
 
     await codeTask.initTask();
 
+    // Check that the parsed response is stored
+    expect(codeTask.evaluation).toEqual({
+      modifiesFiles: true,
+      summary: summaryText,
+    });
+
     // Check that initFileTask was called
     expect(initFileTaskSpy).toHaveBeenCalledTimes(1);
 
-    // Check the console logs for the generated ID and taskId
+    // Verify taskId property is set correctly (regex check is fine)
+    expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-this-is-my-summary$/);
+    const taskId = codeTask.taskId!; // Assert taskId is not null for use below
+
+    // Calculate expected workspaceDir
+    const expectedWorkspaceDir = path.join(
+      mockRepositoryDir,
+      ".cassi",
+      "workspaces",
+      taskId
+    );
+
+    // Check the console logs
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /^Generated ID for file modification task: [a-zA-Z0-9]{8}$/
+      )
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(`Task ID set to: ${taskId}`);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      `Workspace directory set to: ${expectedWorkspaceDir}` // Check workspace log
+    );
+    expect(consoleSpy).toHaveBeenCalledWith(`Created branch: ${taskId}`); // Check branch log
+    expect(consoleSpy).toHaveBeenCalledWith(
+      `Added worktree at ${expectedWorkspaceDir} for branch ${taskId}` // Check worktree log
+    );
+
+    // Check that invoke was called correctly for git branch
+    expect(mockInvoke).toHaveBeenCalledWith(
+      expect.any(Code), // Account for 'this' context passed by invoke
+      "git",
+      "branch",
+      [mockRepositoryDir],
+      [taskId]
+    );
+
+    // Check that invoke was called correctly for git addWorkTree
+    expect(mockInvoke).toHaveBeenCalledWith(
+      expect.any(Code), // Account for 'this' context passed by invoke
+      "git",
+      "addWorkTree",
+      [mockRepositoryDir],
+      [expectedWorkspaceDir, taskId]
+    );
+
+    // Ensure the old message is not logged
+    expect(consoleSpy).not.toHaveBeenCalledWith(
+      `Executing file modification task for: ${expectedRepoSlug}`
+    );
+
+    consoleSpy.mockRestore();
+    initFileTaskSpy.mockRestore();
+    dateNowSpy.mockRestore();
+  });
+
+  // Keep the test for ID generation if desired, but remove the initFileTaskSpy checks
+  // if they are covered elsewhere.
+  it("should generate an 8-character alphanumeric ID in initFileTask", async () => {
+    const promptText = "Generate code that modifies files.";
+    const summaryText = "Generate ID Test";
+    const expectedRepoSlug = "generate-id-test";
+    const mockTimestamp = 1713996743000; // Fixed timestamp
+    const mockJsonResponse = JSON.stringify({
+      modifiesFiles: true,
+      summary: summaryText,
+    });
+    mockGenerate.mockResolvedValue(mockJsonResponse);
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
+    const codeTask = new Code(mockCassi, null, promptText);
+    const consoleSpy = vi.spyOn(console, "log");
+
+    // We still need initTask to trigger initFileTask
+    await codeTask.initTask();
+
+    // Verify taskId property is set correctly
+    expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-generate-id-test$/);
+
+    // Check console logs related to ID generation
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringMatching(
         /^Generated ID for file modification task: [a-zA-Z0-9]{8}$/
@@ -293,20 +339,9 @@ describe("Code Task", () => {
       expect.stringMatching(/^Task ID set to: [a-zA-Z0-9]{8}-generate-id-test$/)
     );
 
-    // Optional: Calculate expected ID for verification (requires crypto import in test)
-    // import crypto from 'crypto';
-    // const hashInput = `${expectedRepoSlug}${mockTimestamp}`;
-    // const hash = crypto.createHash('sha256').update(hashInput).digest('base64');
-    // const alphanumericHash = hash.replace(/[^a-zA-Z0-9]/g, '');
-    // const expectedId = alphanumericHash.substring(0, 8);
-    // expect(consoleSpy).toHaveBeenCalledWith(`Generated ID for file modification task: ${expectedId}`);
-    // expect(consoleSpy).toHaveBeenCalledWith(`Task ID set to: ${expectedId}-${expectedRepoSlug}`);
-
-    // Verify taskId property is set correctly
-    expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-generate-id-test$/);
-
     consoleSpy.mockRestore();
-    initFileTaskSpy.mockRestore(); // Restore the spy
-    dateNowSpy.mockRestore(); // Restore Date.now()
+    dateNowSpy.mockRestore();
   });
+
+  // ... other tests ...
 });
