@@ -42,10 +42,30 @@ describe("EvaluateCodePrompt", () => {
     const promptText = "Test prompt";
     const response = await promptInstance.generate(promptText);
 
+    // Construct the expected prompt using the template literal
+    const expectedPrompt = `
+OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
+
+FILE TREE:
+
+TASK DESCRIPTION:
+
+${promptText}
+
+The JSON object to OUTPUT is:
+{
+    "summary": "(( INSERT a 3-5 word summary of the TASK DESCRIPTION that is as short as possible. do not include an punctuation.))",
+    "modifiesFiles" (( INSERT boolean true if the TASK DESCRIPTION involves creating or modifying files or false if it does not)),
+    "steps": [
+          "(( BREAK down the TASK DESCRIPTION into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
+     ]
+}            
+`;
+
     // Check if the globally defined mockGenerate function was called correctly
     expect(mockGenerate).toHaveBeenCalledWith({
       model: mockModel,
-      prompt: promptText,
+      prompt: expectedPrompt, // Use the constructed template literal
     });
     expect(response).toBe("mocked response");
   });

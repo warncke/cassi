@@ -8,6 +8,7 @@ interface ConfigData {
   apiKeys: {
     gemini: string;
   };
+  srcDir?: string; // Optional, will have a default
 }
 
 // Define the JSON schema for validation
@@ -21,6 +22,11 @@ const configSchema: JSONSchemaType<ConfigData> = {
       },
       required: ["gemini"],
       additionalProperties: false, // Disallow other keys within apiKeys
+    },
+    srcDir: {
+      type: "string",
+      nullable: true, // Allow it to be missing, Ajv will use default
+      default: "src",
     },
   },
   required: ["apiKeys"],
@@ -51,7 +57,7 @@ export class Config {
       }
 
       // Validate the parsed data against the schema
-      const ajv = new (Ajv as any).default(); // Try accessing .default for CJS interop
+      const ajv = new (Ajv as any).default({ useDefaults: true }); // Enable useDefaults
       const validate = ajv.compile(configSchema);
 
       if (validate(parsedData)) {

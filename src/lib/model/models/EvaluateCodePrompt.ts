@@ -15,21 +15,25 @@ export class EvaluateCodePrompt extends Models {
       // Store the full response
       model: this.model, // Use the stored model
       prompt: `
-Output the following JSON object, substituting in the results of model queries for properties. use the following text for context when generating text for JSON properties:
+OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
+
+FILE TREE:
+
+TASK DESCRIPTION:
 
 ${promptText}
 
-The JSON object to output is:
+The JSON object to OUTPUT is:
 {
-    "summary": "(( INSERT a 3-5 word summary that is as short as possible. do not include an punctuation.))",
-    "modifiesFiles" (( INSERT boolean true if the task described involves creating or modifying files or false if it does not)),
+    "summary": "(( INSERT a 3-5 word summary of the TASK DESCRIPTION that is as short as possible. do not include an punctuation.))",
+    "modifiesFiles" (( INSERT boolean true if the TASK DESCRIPTION involves creating or modifying files or false if it does not)),
     "steps": [
-          "(( BREAK down the described task into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
+          "(( BREAK down the TASK DESCRIPTION into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
      ]
 }            
 `,
     });
 
-    return text; // Call the text() function
+    return text(); // Call the text() function to get the string
   }
 }

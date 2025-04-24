@@ -30,6 +30,14 @@ const invalidSchemaWrongTypeFile = join(
   testDir,
   "invalid_schema_wrong_type.json"
 );
+const validSchemaWithSrcDirFile = join(
+  testDir,
+  "valid_schema_with_srcdir.json"
+);
+const invalidSchemaSrcDirTypeFile = join(
+  testDir,
+  "invalid_schema_srcdir_type.json"
+);
 
 describe("Config", () => {
   let user: User;
@@ -84,6 +92,18 @@ describe("Config", () => {
         JSON.stringify({ apiKeys: { gemini: 123 } }),
         "utf-8"
       );
+      // Valid schema with srcDir specified
+      await writeFile(
+        validSchemaWithSrcDirFile,
+        JSON.stringify({ apiKeys: { gemini: "test-key" }, srcDir: "source" }),
+        "utf-8"
+      );
+      // Invalid schema: wrong type for srcDir
+      await writeFile(
+        invalidSchemaSrcDirTypeFile,
+        JSON.stringify({ apiKeys: { gemini: "test-key" }, srcDir: 123 }),
+        "utf-8"
+      );
     } catch (e) {
       // Ignore errors if files already exist from previous failed runs
     }
@@ -100,6 +120,8 @@ describe("Config", () => {
       invalidSchemaMissingGeminiFile,
       invalidSchemaExtraApiKeyFile,
       invalidSchemaWrongTypeFile,
+      validSchemaWithSrcDirFile, // Add new file
+      invalidSchemaSrcDirTypeFile, // Add new file
     ];
     for (const file of filesToUnlink) {
       try {
@@ -132,7 +154,11 @@ describe("Config", () => {
   test("init() should successfully validate a config file matching the schema", async () => {
     const config = new Config(validSchemaFile, user);
     await config.init();
-    expect(config.configData).toEqual({ apiKeys: { gemini: "test-key" } });
+    // Now expect the default srcDir to be added
+    expect(config.configData).toEqual({
+      apiKeys: { gemini: "test-key" },
+      srcDir: "src",
+    });
   });
 
   test("init() should throw validation error if required 'apiKeys' is missing", async () => {
@@ -184,6 +210,32 @@ describe("Config", () => {
     const config = new Config(invalidJsonFile, user);
     await expect(config.init()).rejects.toThrow(
       `Error parsing config file ${invalidJsonFile}`
+    );
+  });
+
+  test("init() should default srcDir to 'src' when not provided", async () => {
+    const config = new Config(validSchemaFile, user); // Use the file without srcDir
+    await config.init();
+    // Ajv applies the default during validation
+    expect(config.configData).toEqual({
+      apiKeys: { gemini: "test-key" },
+      srcDir: "src",
+    });
+  });
+
+  test("init() should use provided srcDir value", async () => {
+    const config = new Config(validSchemaWithSrcDirFile, user);
+    await config.init();
+    expect(config.configData).toEqual({
+      apiKeys: { gemini: "test-key" },
+      srcDir: "source",
+    });
+  });
+
+  test("init() should throw validation error if srcDir has wrong type", async () => {
+    const config = new Config(invalidSchemaSrcDirTypeFile, user);
+    await expect(config.init()).rejects.toThrow(
+      `Config file ${invalidSchemaSrcDirTypeFile} validation failed: /srcDir must be string`
     );
   });
 });
