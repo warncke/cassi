@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-// Removed SpyInstance type import again
 import { InitializeGit } from "./InitializeGit.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Task } from "../Task.js";
+import { Prompt } from "../../prompt/Prompt.js"; // Import Prompt
+import Confirm from "../../prompt/prompts/Confirm.js"; // Import Confirm
 
 // Mock Cassi and its dependencies
 vi.mock("../../cassi/Cassi.js");
@@ -29,15 +30,21 @@ describe("InitializeGit Task", () => {
     // vi.clearAllMocks(); // Keep this if other mocks are used, but spies need specific setup/restore
 
     // Create a mock Cassi instance
-    // Provide necessary properties, potentially mocking Repository directly here
-    // if the vi.mock above isn't sufficient or causes issues.
     mockCassi = {
       repository: {
         repositoryDir: "/mock/repo/dir",
-        // Add other required Repository properties if the mock isn't picked up correctly
       },
-      // Add other necessary Cassi properties/methods if needed by Task constructor or methods
-    } as Cassi; // Correct type assertion syntax
+      user: {
+        // Mock the user and its prompt method
+        prompt: vi.fn(async (promptContainer: Prompt) => {
+          // Default mock implementation: simulate user confirming
+          if (promptContainer.prompts[0] instanceof Confirm) {
+            promptContainer.prompts[0].response = true;
+          }
+        }),
+      },
+      // Add other necessary Cassi properties/methods if needed
+    } as unknown as Cassi; // Use unknown for partial mock
 
     // Create an instance of the task
     initializeGitTask = new InitializeGit(mockCassi);
@@ -76,16 +83,17 @@ describe("InitializeGit Task", () => {
     expect(invokeSpy).toHaveBeenCalledWith("git", "status", "/mock/repo/dir");
   });
 
-  it("should log the status returned by invoke when clean", async () => {
-    const mockStatus = { isClean: () => true /* other properties if needed */ };
-    // Ensure the mock invoke returns a specific value for this test
+  it("should log status and proceed without exiting if clean and user confirms", async () => {
+    const mockStatus = { isClean: () => true, current: "main" };
     vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
+    // User prompt mock defaults to confirming (true)
 
     await initializeGitTask.initTask();
 
     expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus);
+    expect(mockCassi.user.prompt).toHaveBeenCalled(); // Verify prompt was called
     expect(mockConsoleError).not.toHaveBeenCalled();
-    expect(mockProcessExit).not.toHaveBeenCalled();
+    expect(mockProcessExit).not.toHaveBeenCalled(); // Should not exit if confirmed
   });
 
   it("should log error and exit if git status is not clean", async () => {
@@ -132,5 +140,51 @@ describe("InitializeGit Task", () => {
     );
     // Verify run was called
     expect(runSpy).toHaveBeenCalled();
+  });
+
+  // --- New tests for prompt functionality ---
+
+  it("should prompt the user with the current branch name if clean", async () => {
+    const mockStatus = { isClean: () => true, current: "develop" };
+    vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
+    // Spy on the actual prompt function passed to the task
+    const promptSpy = vi.spyOn(mockCassi.user, "prompt");
+
+    await initializeGitTask.initTask();
+
+    expect(promptSpy).toHaveBeenCalledOnce();
+    // Check the structure and message of the prompt passed
+    expect(promptSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompts: expect.arrayContaining([
+          expect.objectContaining({
+            message: "Current branch is 'develop'. Continue?",
+            type: "confirm",
+          }),
+        ]),
+      })
+    );
+  });
+
+  it("should log cancellation and exit with 0 if user cancels the prompt", async () => {
+    const mockStatus = { isClean: () => true, current: "feature/new-stuff" };
+    vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
+    // Override the default prompt mock to simulate cancellation
+    vi.spyOn(mockCassi.user, "prompt").mockImplementation(
+      async (promptContainer: Prompt) => {
+        if (promptContainer.prompts[0] instanceof Confirm) {
+          promptContainer.prompts[0].response = false; // Simulate user saying no
+        }
+      }
+    );
+
+    await initializeGitTask.initTask();
+
+    expect(mockConsoleLog).toHaveBeenCalledWith("Git Status:", mockStatus); // Status is still logged
+    expect(mockCassi.user.prompt).toHaveBeenCalledOnce();
+    expect(mockConsoleLog).toHaveBeenCalledWith("Operation cancelled by user.");
+    expect(mockProcessExit).toHaveBeenCalledOnce();
+    expect(mockProcessExit).toHaveBeenCalledWith(0); // Exit code 0 for user cancellation
+    expect(mockConsoleError).not.toHaveBeenCalled(); // No error should be logged
   });
 });
