@@ -51,8 +51,9 @@ describe("Code Task", () => {
     expect(codeTask.parentTask).toBe(parentTask);
     // Check if the prompt is stored correctly
     expect(codeTask.prompt).toBe(promptText);
-    // Check if taskId is initialized to null
+    // Check if taskId and worktreeDir are initialized to null
     expect(codeTask.taskId).toBeNull();
+    expect(codeTask.worktreeDir).toBeNull(); // Added check for worktreeDir
   });
 
   it("should store the prompt correctly and initialize taskId to null", () => {
@@ -60,6 +61,7 @@ describe("Code Task", () => {
     const codeTask = new Code(mockCassi, null, promptText);
     expect(codeTask.prompt).toBe(promptText);
     expect(codeTask.taskId).toBeNull(); // Also check taskId here
+    expect(codeTask.worktreeDir).toBeNull(); // Added check for worktreeDir
   });
 
   it("should call newModel, generate, and initFileTask during initTask when modifiesFiles is true", async () => {
@@ -146,7 +148,7 @@ describe("Code Task", () => {
     // Check the console logs inside initFileTask
     expect(consoleSpy).toHaveBeenCalledWith(
       expect.stringMatching(
-        /^Generated ID for file modification task: [a-zA-Z0-9]{8}$/
+        /^Worktree directory set to: .*$/ // Check worktree log
       )
     );
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -253,7 +255,7 @@ describe("Code Task", () => {
     );
     expect(consoleSpy).toHaveBeenCalledWith(`Task ID set to: ${taskId}`);
     expect(consoleSpy).toHaveBeenCalledWith(
-      `Workspace directory set to: ${expectedWorkspaceDir}` // Check workspace log
+      `Worktree directory set to: ${expectedWorkspaceDir}` // Check worktree log
     );
     expect(consoleSpy).toHaveBeenCalledWith(`Created branch: ${taskId}`); // Check branch log
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -277,6 +279,9 @@ describe("Code Task", () => {
       [mockRepositoryDir],
       [expectedWorkspaceDir, taskId]
     );
+
+    // Check that the worktreeDir property is set correctly
+    expect(codeTask.worktreeDir).toBe(expectedWorkspaceDir); // Added check for worktreeDir property
 
     // Ensure the old message is not logged
     expect(consoleSpy).not.toHaveBeenCalledWith(

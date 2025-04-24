@@ -13,6 +13,7 @@ export class Code extends Task {
   public prompt: string; // Added prompt property
   public evaluation: any; // Added evaluation property
   public taskId: string | null = null; // Added taskId property initialized to null
+  public worktreeDir: string | null = null; // Added worktreeDir property
 
   // Added cassi and parentTask to constructor
   constructor(cassi: Cassi, parentTask: Task | null, prompt: string) {
@@ -36,8 +37,8 @@ export class Code extends Task {
     // Set the taskId property
     this.taskId = `${id}-${repoSlug}`;
 
-    // Generate workspace directory path
-    const workspaceDir = path.join(
+    // Generate worktree directory path and assign to the public property
+    this.worktreeDir = path.join(
       this.cassi.repository.repositoryDir,
       ".cassi",
       "workspaces",
@@ -46,7 +47,7 @@ export class Code extends Task {
 
     console.log(`Generated ID for file modification task: ${id}`);
     console.log(`Task ID set to: ${this.taskId}`); // Log the taskId
-    console.log(`Workspace directory set to: ${workspaceDir}`); // Log the workspaceDir
+    console.log(`Worktree directory set to: ${this.worktreeDir}`); // Log the worktreeDir
 
     // Create a new branch for the task
     await this.invoke(
@@ -62,11 +63,13 @@ export class Code extends Task {
       "git",
       "addWorktree", // Corrected typo
       [this.cassi.repository.repositoryDir],
-      [workspaceDir, this.taskId]
+      [this.worktreeDir, this.taskId]
     );
-    console.log(`Added worktree at ${workspaceDir} for branch ${this.taskId}`);
+    console.log(
+      `Added worktree at ${this.worktreeDir} for branch ${this.taskId}`
+    );
 
-    // TODO: Implement file modification logic using the generated id and workspaceDir
+    // TODO: Implement file modification logic using the generated id and worktreeDir
     // This method will handle the actual file changes within the worktree
   }
 
