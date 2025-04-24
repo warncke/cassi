@@ -16,7 +16,6 @@ export class InitializeGit extends Task {
       "status",
       this.cassi.repository.repositoryDir
     );
-    console.log("Git Status:", status);
 
     if (!status.isClean()) {
       console.error(
