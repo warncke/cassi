@@ -220,7 +220,14 @@ export class Tool {
    */
   async allow(invocation: Invocation): Promise<boolean> {
     // TODO: Implement actual permission logic based on user, config, or invocation details
-    console.log(`Checking allow for invocation: ${JSON.stringify(invocation)}`);
+    // Log a simplified version to avoid circular structure errors
+    console.log(
+      `Checking allow for invocation: Tool=${invocation.toolName}, Method=${
+        invocation.method
+      }, Args=${JSON.stringify(invocation.args)}, Task=${
+        invocation.task.constructor.name
+      }`
+    );
     return true; // Always allow for now
   }
 }

@@ -1,4 +1,7 @@
 import { Cassi } from "../cassi/Cassi.js";
+// Remove unused imports if Tool and Invocation are not directly used here anymore
+// import { Tool } from "../tool/Tool.js";
+// import { Invocation } from "../tool/Invocation.js";
 
 export class Task {
   public cassi: Cassi;
@@ -45,5 +48,15 @@ export class Task {
     } finally {
       this.finishedAt = new Date();
     }
+  }
+
+  async invoke(
+    toolName: string,
+    methodName: string,
+    ...args: any[]
+  ): Promise<any> {
+    // Return type matches Cassi.tool.invoke
+    // Invoke the tool using Cassi's tool invoker, passing this task instance
+    return this.cassi.tool.invoke(this, toolName, methodName, ...args);
   }
 }

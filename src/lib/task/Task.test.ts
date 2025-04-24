@@ -186,4 +186,67 @@ describe("Task", () => {
       expect(task.finishedAt).toBeInstanceOf(Date);
     });
   });
+
+  describe("invoke", () => {
+    test("should call cassi.tool.invoke with the correct arguments and return its result", async () => {
+      const mockToolName = "fs";
+      const mockMethodName = "readFile";
+      const mockArgs = ["/path/to/file.txt"];
+      const mockResult = "file content";
+
+      // Mock cassi.tool.invoke
+      const invokeSpy = vi
+        .spyOn(mockCassi.tool, "invoke")
+        .mockResolvedValue(mockResult);
+
+      // Call the task's invoke method
+      const result = await task.invoke(
+        mockToolName,
+        mockMethodName,
+        ...mockArgs
+      );
+
+      // Assertions
+      expect(invokeSpy).toHaveBeenCalledOnce();
+      expect(invokeSpy).toHaveBeenCalledWith(
+        task, // Should pass the task instance itself
+        mockToolName,
+        mockMethodName,
+        ...mockArgs
+      );
+      expect(result).toBe(mockResult); // Should return the result from cassi.tool.invoke
+
+      // Restore the spy
+      invokeSpy.mockRestore();
+    });
+
+    test("should propagate errors from cassi.tool.invoke", async () => {
+      const mockToolName = "fs";
+      const mockMethodName = "writeFile";
+      const mockArgs = ["/path/to/file.txt", "content"];
+      const mockError = new Error("Failed to write file");
+
+      // Mock cassi.tool.invoke to throw an error
+      const invokeSpy = vi
+        .spyOn(mockCassi.tool, "invoke")
+        .mockRejectedValue(mockError);
+
+      // Call the task's invoke method and expect it to reject
+      await expect(
+        task.invoke(mockToolName, mockMethodName, ...mockArgs)
+      ).rejects.toThrow(mockError);
+
+      // Assertions
+      expect(invokeSpy).toHaveBeenCalledOnce();
+      expect(invokeSpy).toHaveBeenCalledWith(
+        task,
+        mockToolName,
+        mockMethodName,
+        ...mockArgs
+      );
+
+      // Restore the spy
+      invokeSpy.mockRestore();
+    });
+  });
 });

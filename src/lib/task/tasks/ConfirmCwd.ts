@@ -10,12 +10,8 @@ export class ConfirmCwd extends Task {
   }
 
   public async initTask(): Promise<void> {
-    // Invoke the fs tool to get the current working directory, passing the task context
-    const cwd = await this.cassi.tool.invoke(
-      this, // Pass the current task instance
-      "fs",
-      "getCurrentWorkingDirectory"
-    );
+    // Invoke the fs tool to get the current working directory using the task's invoke method
+    const cwd = await this.invoke("fs", "getCurrentWorkingDirectory");
 
     // Resolve the potential repository directory against the current working directory
     const potentialRepoDir = path.resolve(

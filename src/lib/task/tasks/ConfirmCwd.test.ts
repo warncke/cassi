@@ -30,12 +30,12 @@ describe("ConfirmCwd", () => {
 
   it("initTask should run without errors and update repo dir when user confirms", async () => {
     const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
-    // Mock the tool.invoke method
-    const invokeSpy = vi
-      .spyOn(mockCassi.tool, "invoke")
-      .mockResolvedValue(mockCwd);
+    const task = new ConfirmCwd(mockCassi); // Create task instance first
 
-    // Mock the user.prompt method
+    // Mock the task's invoke method directly
+    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
+
+    // Mock the user.prompt method on the Cassi instance associated with the task
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
@@ -48,16 +48,12 @@ describe("ConfirmCwd", () => {
         }
       });
 
-    const task = new ConfirmCwd(mockCassi); // Instantiated with default null parentTask
+    // Run the task's initTask
     await expect(task.initTask()).resolves.toBeUndefined();
 
     // Verify mocks were called
-    // Expect the task instance as the first argument now
-    expect(invokeSpy).toHaveBeenCalledWith(
-      task,
-      "fs",
-      "getCurrentWorkingDirectory"
-    );
+    // Expect invoke to be called on the task instance with tool name and method name
+    expect(invokeSpy).toHaveBeenCalledWith("fs", "getCurrentWorkingDirectory");
     expect(promptSpy).toHaveBeenCalled();
 
     // Verify repositoryDir was updated
@@ -70,13 +66,15 @@ describe("ConfirmCwd", () => {
     const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit called"); // Throw error to catch exit call
     });
+    const task = new ConfirmCwd(mockCassi); // Create task instance first
 
-    // Mock tool.invoke
-    vi.spyOn(mockCassi.tool, "invoke").mockResolvedValue(mockCwd);
+    // Mock the task's invoke method directly
+    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
 
-    // Mock user.prompt to simulate denial
-    vi.spyOn(mockCassi.user, "prompt").mockImplementation(
-      async (prompt: Prompt) => {
+    // Mock user.prompt on the Cassi instance associated with the task to simulate denial
+    const promptSpy = vi
+      .spyOn(mockCassi.user, "prompt")
+      .mockImplementation(async (prompt: Prompt) => {
         const confirmPrompt = prompt.prompts.find(
           (p) => p instanceof Confirm
         ) as Confirm | undefined;
@@ -84,13 +82,14 @@ describe("ConfirmCwd", () => {
         if (confirmPrompt) {
           confirmPrompt.response = false; // Simulate denial
         }
-      }
-    );
-
-    const task = new ConfirmCwd(mockCassi); // Instantiated with default null parentTask
+      });
 
     // Expect initTask to eventually lead to process.exit being called
     await expect(task.initTask()).rejects.toThrow("process.exit called");
+
+    // Verify mocks were called
+    expect(invokeSpy).toHaveBeenCalledWith("fs", "getCurrentWorkingDirectory");
+    expect(promptSpy).toHaveBeenCalled();
 
     // Verify process.exit was called with code 1
     expect(mockExit).toHaveBeenCalledWith(1);
