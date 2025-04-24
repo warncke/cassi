@@ -21,6 +21,8 @@ describe("LocalGit", () => {
   const testRepoPath = path.join(__dirname, "test-repo");
   const mockGitInstance = {
     status: vi.fn(),
+    branch: vi.fn(),
+    raw: vi.fn(), // Add mock for raw method
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
@@ -77,6 +79,91 @@ describe("LocalGit", () => {
 
       await expect(localGit.status()).rejects.toThrow(mockError);
       expect(mockGitInstance.status).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("branch", () => {
+    it("should call git.branch with the correct branch name", async () => {
+      const branchName = "new-feature-branch";
+      // Mock the branch method to resolve successfully (simple-git branch returns BranchSummary on success)
+      // Added the missing 'detached' property
+      const mockBranchSummary = {
+        current: branchName,
+        branches: {},
+        all: [],
+        detached: false,
+      };
+      vi.mocked(mockGitInstance.branch).mockResolvedValue(mockBranchSummary);
+
+      await localGit.branch(branchName);
+
+      // Expect branch to be called with an array containing the branch name
+      expect(mockGitInstance.branch).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.branch).toHaveBeenCalledWith([branchName]);
+    });
+
+    it("should handle errors from git.branch", async () => {
+      const branchName = "error-branch";
+      const mockError = new Error("Git branch creation failed");
+      vi.mocked(mockGitInstance.branch).mockRejectedValue(mockError);
+
+      await expect(localGit.branch(branchName)).rejects.toThrow(mockError);
+      expect(mockGitInstance.branch).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.branch).toHaveBeenCalledWith([branchName]);
+    });
+  });
+
+  describe("addWorktree", () => {
+    it("should call git.raw with the correct arguments for worktree add", async () => {
+      const directory = "../new-worktree-dir";
+      const branchName = "feature/new-worktree";
+      const expectedCommand = ["worktree", "add", directory, branchName];
+      // Mock the raw method to resolve successfully (simple-git raw returns the raw string output)
+      vi.mocked(mockGitInstance.raw).mockResolvedValue("Worktree created");
+
+      await localGit.addWorktree(directory, branchName);
+
+      expect(mockGitInstance.raw).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
+    });
+
+    it("should handle errors from git.raw when creating a worktree", async () => {
+      const directory = "../error-worktree-dir";
+      const branchName = "feature/error-worktree";
+      const expectedCommand = ["worktree", "add", directory, branchName];
+      const mockError = new Error("Git worktree add failed");
+      vi.mocked(mockGitInstance.raw).mockRejectedValue(mockError);
+
+      await expect(localGit.addWorktree(directory, branchName)).rejects.toThrow(
+        mockError
+      );
+      expect(mockGitInstance.raw).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
+    });
+  });
+
+  describe("remWorkTree", () => {
+    it("should call git.raw with the correct arguments for worktree remove", async () => {
+      const directory = "../existing-worktree-dir";
+      const expectedCommand = ["worktree", "remove", directory];
+      // Mock the raw method to resolve successfully
+      vi.mocked(mockGitInstance.raw).mockResolvedValue("Worktree removed");
+
+      await localGit.remWorkTree(directory);
+
+      expect(mockGitInstance.raw).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
+    });
+
+    it("should handle errors from git.raw when removing a worktree", async () => {
+      const directory = "../error-remove-worktree-dir";
+      const expectedCommand = ["worktree", "remove", directory];
+      const mockError = new Error("Git worktree remove failed");
+      vi.mocked(mockGitInstance.raw).mockRejectedValue(mockError);
+
+      await expect(localGit.remWorkTree(directory)).rejects.toThrow(mockError);
+      expect(mockGitInstance.raw).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
     });
   });
 });

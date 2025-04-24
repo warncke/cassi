@@ -147,9 +147,11 @@ export class Tool {
     task: Task, // Add task parameter
     toolName: string,
     methodName: string,
+    toolArgs?: any[], // Make toolArgs optional
     ...args: any[]
   ): Promise<any> {
     // Instance method
+    const effectiveToolArgs = toolArgs ?? []; // Default to empty array if undefined
     // Call init() on the instance to ensure tool classes are loaded
     const toolClasses = await this.init(); // Use this.init()
     const toolTypeMap = toolClasses[toolName]; // Get the inner map for the type
@@ -172,8 +174,12 @@ export class Tool {
     }
 
     // Instantiate a new tool instance for this specific invocation
-    // Pass user and config from the Tool instance to the tool's constructor
-    const toolInstance = new ToolClass(this.user, this.config);
+    // Pass user, config, and effectiveToolArgs to the tool's constructor
+    const toolInstance = new ToolClass(
+      this.user,
+      this.config,
+      ...effectiveToolArgs
+    );
 
     // Get the method from the newly created instance
     const toolMethod = toolInstance[methodName];
@@ -193,6 +199,7 @@ export class Tool {
       methodName,
       toolMethod, // Pass the actual method function
       toolInstance, // Pass the instance
+      effectiveToolArgs, // Pass effectiveToolArgs
       args // Pass the arguments
     );
 

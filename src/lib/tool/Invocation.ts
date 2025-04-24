@@ -7,6 +7,7 @@ export class Invocation {
   public toolMethod: Function; // The actual method function
   public toolInstance: any; // The instance the method belongs to
   public task: Task; // Added task property
+  public toolArgs: any[]; // Arguments for the tool constructor
   public args: any[]; // Arguments for the method invocation
   public startTime: number | null = null;
   public endTime: number | null = null; // Added endTime property
@@ -19,6 +20,7 @@ export class Invocation {
     methodName: string,
     toolMethod: Function,
     toolInstance: any,
+    toolArgs: any[], // Accept toolArgs in constructor
     args: any[] // Accept args in constructor
   ) {
     this.task = task; // Store task
@@ -27,6 +29,7 @@ export class Invocation {
     this.method = methodName;
     this.toolMethod = toolMethod;
     this.toolInstance = toolInstance;
+    this.toolArgs = toolArgs; // Store toolArgs
     this.args = args; // Store args
   }
 

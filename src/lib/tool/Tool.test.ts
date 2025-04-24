@@ -4,9 +4,10 @@ import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import { Task } from "../task/Task.js"; // Import Task
 import { Cassi } from "../cassi/Cassi.js"; // Import Cassi for mocking Task
-import LocalFS from "../tools/fs/LocalFS.js"; // Re-import LocalFS
-import * as fsPromises from "fs/promises"; // Use alias to avoid conflict
-import { Stats, PathLike } from "fs"; // Import Stats and PathLike types from base 'fs'
+import LocalFS from "../tools/fs/LocalFS.js";
+import * as fsPromises from "fs/promises";
+import { Stats, PathLike } from "fs";
+import { Invocation } from "./Invocation.js"; // Import Invocation for spying
 import * as path from "path"; // Need path for resolving paths in mocks
 import { fileURLToPath } from "url"; // Need this for __dirname equivalent
 
@@ -16,29 +17,54 @@ vi.mock("../config/Config.js");
 vi.mock("../tools/fs/LocalFS.js"); // Mock the original module (Vitest replaces with mock)
 vi.mock("fs/promises"); // Mock the fs/promises module
 // Mock the dynamic import target to return the already mocked LocalFS constructor
-vi.mock("../tools/fs/index.js", () => {
-  // LocalFS identifier here should refer to the mock created by vi.mock("../tools/fs/Local.js")
-  return { default: LocalFS };
-});
+vi.mock("../tools/fs/index.js", () => ({ default: LocalFS }));
+// REMOVE: vi.mock("./Invocation.js"); // No longer mocking Invocation
+
+// Define a mock tool class that accepts constructor args
+class MockToolWithArgs {
+  user: User;
+  config: Config;
+  toolArg1: string;
+  toolArg2: boolean;
+  // mockMethod: Mock = vi.fn(); // Remove instance property
+
+  constructor(user: User, config: Config, toolArg1: string, toolArg2: boolean) {
+    this.user = user;
+    this.config = config;
+    this.toolArg1 = toolArg1;
+    this.toolArg2 = toolArg2;
+  }
+
+  // Define mockMethod as an actual method
+  async mockMethod(...args: any[]): Promise<any> {
+    // Default implementation (can be overridden by spyOn)
+    return "default mockMethod result";
+  }
+}
+// Mock the dynamic import for this new tool type
+vi.mock("../tools/mockTool/MockToolWithArgs.js", () => ({
+  default: MockToolWithArgs,
+}));
 
 // Helper to get __dirname in ES Modules for test file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename); // Use standard path import
 
 describe("Tool", () => {
-  let mockUser: Mocked<User>;
-  let mockConfig: Mocked<Config>;
+  let mockUser: User; // Use non-mocked type for constructor args
+  let mockConfig: Config; // Use non-mocked type for constructor args
   let mockLocalFSInstance: Mocked<LocalFS>;
-  let toolInstance: Tool; // Add instance variable for Tool
+  let mockToolWithArgsInstance: Mocked<MockToolWithArgs>;
+  let toolInstance: Tool;
 
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks();
 
-    // Create fresh mocks for each test
-    mockUser = new User() as Mocked<User>;
-    mockConfig = new Config("", mockUser) as Mocked<Config>;
-    // Instantiate Tool with mocks
+    // Create fresh instances (not deeply mocked) for constructor args
+    mockUser = new User();
+    mockConfig = new Config("", mockUser);
+    // Instantiate Tool with these instances
     toolInstance = new Tool(mockUser, mockConfig);
 
     // Mock the LocalFS constructor and its methods directly
@@ -54,6 +80,9 @@ describe("Tool", () => {
 
     // Configure the implementation of the *mocked* LocalFS constructor
     vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
+
+    // We don't need to mock MockToolWithArgs here anymore,
+    // as it will be handled within the specific test case.
   });
 
   // Remove the instantiation test as constructor logic changed significantly
@@ -165,8 +194,12 @@ describe("Tool", () => {
       vi.mocked(LocalFS).mockClear();
       vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
 
-      // Manually populate static availableTools with the mocked *constructor*
-      Tool["availableTools"] = { fs: { index: LocalFS } }; // Store the mocked constructor
+      // Manually populate static availableTools with mocked constructors
+      Tool["availableTools"] = {
+        fs: { index: LocalFS },
+        mockTool: { MockToolWithArgs: MockToolWithArgs }, // Add the new mock tool
+      };
+      // No need to clear Invocation mock as it's not mocked anymore
     });
 
     it("should invoke a method on a valid tool", async () => {
@@ -180,6 +213,7 @@ describe("Tool", () => {
         mockTask, // Pass mock task
         "fs",
         "readFile",
+        [], // Add empty toolArgs
         filePath,
         "utf8"
       );
@@ -199,6 +233,64 @@ describe("Tool", () => {
       expect(LocalFS).toHaveBeenCalledWith(mockUser, mockConfig);
     });
 
+    it("should pass toolArgs to the tool constructor and Invocation", async () => {
+      const toolName = "mockTool";
+      const methodName = "mockMethod";
+      const mockToolArgs = ["constructorArg", true];
+      const mockMethodArgs = [123, { data: "payload" }];
+      const mockResult = "mock tool result";
+
+      // --- Test Setup ---
+      // Spy on the prototype method *before* invoke is called
+      const methodSpy = vi
+        .spyOn(MockToolWithArgs.prototype, "mockMethod")
+        .mockResolvedValue(mockResult);
+
+      // Ensure Tool uses the class (mocked at the top level)
+      Tool["availableTools"] = {
+        fs: { index: LocalFS },
+        mockTool: { MockToolWithArgs: MockToolWithArgs },
+      };
+      // --- End Test Setup ---
+
+      // Call invoke with toolArgs
+      const result = await toolInstance.invoke(
+        mockTask,
+        toolName,
+        methodName,
+        mockToolArgs,
+        ...mockMethodArgs
+      );
+
+      // 1. Verify Tool Constructor Call (Indirectly)
+      // We can't reliably assert on the constructor call itself with this setup.
+      // We'll verify the instance properties via the method spy context below.
+
+      // 2. Verify Tool Method Call (using the prototype spy)
+      expect(methodSpy).toHaveBeenCalledTimes(1);
+      expect(methodSpy).toHaveBeenCalledWith(mockTask, ...mockMethodArgs);
+
+      // 3. Verify Constructor Args via Method Spy Context ('this')
+      // Check that the 'this' context within the method spy call corresponds to an instance
+      // that received the correct constructor arguments.
+      const methodCallContext = methodSpy.mock.contexts[0];
+      expect(methodCallContext).toBeInstanceOf(MockToolWithArgs);
+      // Add type assertions before accessing properties
+      expect((methodCallContext as MockToolWithArgs).toolArg1).toBe(
+        mockToolArgs[0]
+      );
+      expect((methodCallContext as MockToolWithArgs).toolArg2).toBe(
+        mockToolArgs[1]
+      );
+      expect((methodCallContext as MockToolWithArgs).user).toBe(mockUser);
+      expect((methodCallContext as MockToolWithArgs).config).toBe(mockConfig);
+
+      // 4. Verify Invocation Constructor Call (No longer mocked)
+
+      // 4. Verify Result
+      expect(result).toBe(mockResult);
+    });
+
     it("should throw an error if tool type is not found", async () => {
       // Ensure init is called if needed, or rely on beforeEach setup
       // Spy on the instance init method if necessary, but usually covered by beforeEach
@@ -207,8 +299,9 @@ describe("Tool", () => {
       // Reset constructor mock count before this specific test
       vi.mocked(LocalFS).mockClear();
 
+      // Invoke without toolArgs, relying on optional parameter default
       await expect(
-        toolInstance.invoke(mockTask, "nonexistent", "someMethod") // Pass mock task
+        toolInstance.invoke(mockTask, "nonexistent", "someMethod")
       ).rejects.toThrow(
         'Tool type "nonexistent" not found or failed to initialize.' // Updated error message
       );
@@ -223,8 +316,9 @@ describe("Tool", () => {
       // Reset constructor mock count before this specific test
       vi.mocked(LocalFS).mockClear();
 
+      // Invoke without toolArgs, relying on optional parameter default
       await expect(
-        toolInstance.invoke(mockTask, "fs", "nonexistentMethod") // Pass mock task
+        toolInstance.invoke(mockTask, "fs", "nonexistentMethod")
       ).rejects.toThrow(
         'Method "nonexistentMethod" not found on tool "fs" (implementation "index").' // Updated error message
       );
@@ -249,7 +343,14 @@ describe("Tool", () => {
       mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
 
       // Call invoke on the instance, passing the mock task
-      await toolInstance.invoke(mockTask, "fs", "writeFile", filePath, content); // Pass mock task
+      await toolInstance.invoke(
+        mockTask,
+        "fs",
+        "writeFile",
+        [],
+        filePath,
+        content
+      ); // Pass mock task and empty toolArgs
 
       // Verify the method on the instance was called correctly
       // The actual tool method (writeFile) receives the task as the first arg from Invocation.invoke

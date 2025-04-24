@@ -52,8 +52,12 @@ describe("ConfirmCwd", () => {
     await expect(task.initTask()).resolves.toBeUndefined();
 
     // Verify mocks were called
-    // Expect invoke to be called on the task instance with tool name and method name
-    expect(invokeSpy).toHaveBeenCalledWith("fs", "getCurrentWorkingDirectory");
+    // Expect invoke to be called on the task instance with tool name, method name, and empty toolArgs
+    expect(invokeSpy).toHaveBeenCalledWith(
+      "fs",
+      "getCurrentWorkingDirectory",
+      []
+    );
     expect(promptSpy).toHaveBeenCalled();
 
     // Verify repositoryDir was updated
@@ -88,7 +92,11 @@ describe("ConfirmCwd", () => {
     await expect(task.initTask()).rejects.toThrow("process.exit called");
 
     // Verify mocks were called
-    expect(invokeSpy).toHaveBeenCalledWith("fs", "getCurrentWorkingDirectory");
+    expect(invokeSpy).toHaveBeenCalledWith(
+      "fs",
+      "getCurrentWorkingDirectory",
+      []
+    );
     expect(promptSpy).toHaveBeenCalled();
 
     // Verify process.exit was called with code 1

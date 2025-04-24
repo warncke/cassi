@@ -292,6 +292,7 @@ describe("Task", () => {
     test("should call cassi.tool.invoke with the correct arguments and return its result", async () => {
       const mockToolName = "fs";
       const mockMethodName = "readFile";
+      const mockToolArgs: any[] = []; // Define toolArgs for the test
       const mockArgs = ["/path/to/file.txt"];
       const mockResult = "file content";
 
@@ -304,6 +305,7 @@ describe("Task", () => {
       const result = await task.invoke(
         mockToolName,
         mockMethodName,
+        mockToolArgs, // Pass toolArgs
         ...mockArgs
       );
 
@@ -313,6 +315,7 @@ describe("Task", () => {
         task, // Should pass the task instance itself
         mockToolName,
         mockMethodName,
+        mockToolArgs, // Expect toolArgs
         ...mockArgs
       );
       expect(result).toBe(mockResult); // Should return the result from cassi.tool.invoke
@@ -324,6 +327,7 @@ describe("Task", () => {
     test("should propagate errors from cassi.tool.invoke", async () => {
       const mockToolName = "fs";
       const mockMethodName = "writeFile";
+      const mockToolArgs: any[] = ["someToolArg"]; // Define toolArgs for the test
       const mockArgs = ["/path/to/file.txt", "content"];
       const mockError = new Error("Failed to write file");
 
@@ -334,7 +338,7 @@ describe("Task", () => {
 
       // Call the task's invoke method and expect it to reject
       await expect(
-        task.invoke(mockToolName, mockMethodName, ...mockArgs)
+        task.invoke(mockToolName, mockMethodName, mockToolArgs, ...mockArgs) // Pass toolArgs
       ).rejects.toThrow(mockError);
 
       // Assertions
@@ -343,6 +347,7 @@ describe("Task", () => {
         task,
         mockToolName,
         mockMethodName,
+        mockToolArgs, // Expect toolArgs
         ...mockArgs
       );
 

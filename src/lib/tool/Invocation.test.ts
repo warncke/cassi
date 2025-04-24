@@ -10,7 +10,8 @@ describe("Invocation", () => {
     const method = "readFile";
     const mockToolMethod = () => {}; // Mock function
     const mockToolInstance = {}; // Mock instance
-    const mockArgs = ["arg1", 2, { key: "value" }]; // Mock arguments
+    const mockToolArgs = ["toolArg1", true]; // Mock tool constructor arguments
+    const mockArgs = ["arg1", 2, { key: "value" }]; // Mock method arguments
     // Need a mock task for the constructor test as well
     const mockCassiForTask = {} as Cassi;
     const mockTaskForConstructor = new Task(mockCassiForTask);
@@ -22,6 +23,7 @@ describe("Invocation", () => {
       method,
       mockToolMethod,
       mockToolInstance,
+      mockToolArgs, // Pass mock toolArgs
       mockArgs // Pass mock args
     );
 
@@ -31,6 +33,7 @@ describe("Invocation", () => {
     expect(invocation.toolMethod).toBe(mockToolMethod);
     expect(invocation.toolInstance).toBe(mockToolInstance);
     expect(invocation.task).toBe(mockTaskForConstructor); // Check stored task
+    expect(invocation.toolArgs).toEqual(mockToolArgs); // Check stored toolArgs
     expect(invocation.args).toEqual(mockArgs); // Check stored args
     expect(invocation.startTime).toBeNull(); // startTime should be null initially
     expect(invocation.endTime).toBeNull(); // endTime should be null initially
@@ -63,6 +66,7 @@ describe("Invocation", () => {
         "testMethod",
         mockToolMethod,
         {},
+        [], // Add empty toolArgs
         [arg1, arg2] // Pass args to constructor
       );
 
@@ -91,6 +95,7 @@ describe("Invocation", () => {
         "testMethod",
         mockToolMethod,
         {},
+        [], // Add empty toolArgs
         []
       );
 
@@ -119,6 +124,7 @@ describe("Invocation", () => {
         "testMethod",
         mockToolMethod,
         {},
+        [], // Add empty toolArgs
         []
       );
 
@@ -143,6 +149,7 @@ describe("Invocation", () => {
         method,
         {} as any, // Pass an object instead of a function
         {},
+        [], // Add empty toolArgs
         []
       );
 

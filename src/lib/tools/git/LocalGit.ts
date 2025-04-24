@@ -24,4 +24,36 @@ export class LocalGit {
   async status() {
     return this.git.status();
   }
+
+  /**
+   * Creates a new branch.
+   * @param branchName The name of the branch to create.
+   * @returns A promise that resolves when the branch is created.
+   */
+  async branch(branchName: string) {
+    // The branch method in simple-git takes an array of command options.
+    // To create a branch, we just pass the branch name.
+    return this.git.branch([branchName]);
+  }
+
+  /**
+   * Adds a new worktree.
+   * @param directory The path for the new worktree.
+   * @param branchName The name of the branch to check out in the new worktree.
+   * @returns A promise that resolves when the worktree is added.
+   */
+  async addWorktree(directory: string, branchName: string) {
+    // Use the raw method to execute the git worktree add command
+    return this.git.raw(["worktree", "add", directory, branchName]);
+  }
+
+  /**
+   * Removes an existing worktree.
+   * @param directory The path of the worktree to remove.
+   * @returns A promise that resolves when the worktree is removed.
+   */
+  async remWorkTree(directory: string) {
+    // Use the raw method to execute the git worktree remove command
+    return this.git.raw(["worktree", "remove", directory]);
+  }
 }

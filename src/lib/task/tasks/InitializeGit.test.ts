@@ -80,7 +80,13 @@ describe("InitializeGit Task", () => {
     await initializeGitTask.initTask();
 
     expect(invokeSpy).toHaveBeenCalledOnce();
-    expect(invokeSpy).toHaveBeenCalledWith("git", "status", "/mock/repo/dir");
+    // Expect toolArgs ([]) to be passed now
+    expect(invokeSpy).toHaveBeenCalledWith(
+      "git",
+      "status",
+      [],
+      "/mock/repo/dir"
+    );
   });
 
   it("should log status and proceed without exiting if clean and user confirms", async () => {
