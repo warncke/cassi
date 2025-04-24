@@ -21,12 +21,14 @@
   },
   "homepage": "https://github.com/warncke/cassi#readme",
   "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.14.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   },
   "dependencies": {
-    "commander": "^13.1.0"
+    "commander": "^13.1.0",
+    "simple-git": "^3.27.0"
   }
 }

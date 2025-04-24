@@ -4,7 +4,7 @@ import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import { Task } from "../task/Task.js"; // Import Task
 import { Cassi } from "../cassi/Cassi.js"; // Import Cassi for mocking Task
-import LocalFS from "../tools/fs/Local.js"; // Re-import LocalFS
+import LocalFS from "../tools/fs/LocalFS.js"; // Re-import LocalFS
 import * as fsPromises from "fs/promises"; // Use alias to avoid conflict
 import { Stats, PathLike } from "fs"; // Import Stats and PathLike types from base 'fs'
 import * as path from "path"; // Need path for resolving paths in mocks
@@ -13,7 +13,7 @@ import { fileURLToPath } from "url"; // Need this for __dirname equivalent
 // Mock the dependencies
 vi.mock("../user/User.js");
 vi.mock("../config/Config.js");
-vi.mock("../tools/fs/Local.js"); // Mock the original module (Vitest replaces with mock)
+vi.mock("../tools/fs/LocalFS.js"); // Mock the original module (Vitest replaces with mock)
 vi.mock("fs/promises"); // Mock the fs/promises module
 // Mock the dynamic import target to return the already mocked LocalFS constructor
 vi.mock("../tools/fs/index.js", () => {
@@ -75,7 +75,7 @@ describe("Tool", () => {
         }
         if (dirPath === fsToolPath) {
           // Simulate finding the tool file and its test file
-          return ["Local.js", "Local.test.js", "index.js"];
+          return ["LocalFS.js", "LocalFS.test.js", "index.js"];
         }
         throw new Error(`Unexpected readdir path: ${dirPath}`);
       }
@@ -88,8 +88,8 @@ describe("Tool", () => {
           return { isDirectory: () => true } as Stats; // 'fs' is a directory
         }
         if (
-          itemPath === path.join(fsToolPath, "Local.js") ||
-          itemPath === path.join(fsToolPath, "Local.test.js") ||
+          itemPath === path.join(fsToolPath, "LocalFS.js") ||
+          itemPath === path.join(fsToolPath, "LocalFS.test.js") ||
           itemPath === path.join(fsToolPath, "index.js") // Treat index.js as a file too
         ) {
           return { isDirectory: () => false } as Stats; // Files are not directories

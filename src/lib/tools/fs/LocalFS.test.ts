@@ -9,7 +9,7 @@ import {
 } from "vitest";
 import * as fs from "fs/promises";
 import * as path from "path";
-import LocalFS from "./Local.js"; // Import the .ts file directly
+import LocalFS from "./LocalFS.js"; // Import the .ts file directly
 
 describe("LocalFS", () => {
   const localFs = new LocalFS();
