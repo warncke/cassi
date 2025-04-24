@@ -10,12 +10,12 @@ export class EvaluateCodePrompt extends Models {
   // Example method showing how to use the inherited ai and model properties
   async generate(promptText: string) {
     // Model is now stored in the instance
-    const response = await this.ai.generate({
+    const { text } = await this.ai.generate({
       // Store the full response
       model: this.model, // Use the stored model
       prompt: promptText,
     });
-    console.log(response);
-    return response.text(); // Call the text() function
+    console.log(text);
+    return text; // Call the text() function
   }
 }
