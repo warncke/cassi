@@ -77,7 +77,7 @@ export class Code extends Task {
     // Assign the response directly to the evaluation property
     this.evaluation = await model.generate(this.prompt);
 
-    console.log("XXX", this.evaluation);
+    console.log("XXX", this.evaluation, this.evaluation.modifiesFiles);
 
     // Check the modifiesFiles property using the evaluation property
     if (this.evaluation.modifiesFiles === true) {
