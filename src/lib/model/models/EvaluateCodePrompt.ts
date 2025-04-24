@@ -15,6 +15,7 @@ export class EvaluateCodePrompt extends Models {
       model: this.model, // Use the stored model
       prompt: promptText,
     });
+    console.log(response);
     return response.text(); // Call the text() function
   }
 }
