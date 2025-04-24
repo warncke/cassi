@@ -6,6 +6,7 @@ import { EvaluateCodePrompt } from "./EvaluateCodePrompt.js";
 import { type ModelReference, z } from "genkit";
 
 // Define the mock generate function globally
+// It needs to return an object with a 'text' property (or function) to match the destructuring in EvaluateCodePrompt.generate
 const mockGenerate = vi
   .fn()
   .mockResolvedValue({ text: () => "mocked response" });
@@ -85,6 +86,7 @@ The JSON object to OUTPUT is:
         }),
       })
     );
+    // EvaluateCodePrompt.generate should return the string directly
     expect(response).toBe("mocked response");
   });
 });
