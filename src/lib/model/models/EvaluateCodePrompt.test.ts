@@ -2,21 +2,30 @@
 /// <reference types="vitest/globals" />
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EvaluateCodePrompt } from "./EvaluateCodePrompt.js";
-// Import ModelReference and z as types ONLY to avoid runtime issues with mocking
-import { type ModelReference, z } from "genkit";
+import { type ModelReference, z } from "genkit"; // Keep type imports
+import { GenerateModelOptions } from "../Models.js"; // Import GenerateModelOptions
 
-// Define the mock generate function globally
-// It needs to return an object with a 'text' property (or function) to match the destructuring in EvaluateCodePrompt.generate
-const mockGenerate = vi
-  .fn()
-  .mockResolvedValue({ text: () => "mocked response" });
+// Use vi.hoisted for the mock function
+const { mockAIGenerate } = vi.hoisted(() => {
+  return {
+    mockAIGenerate: vi.fn().mockResolvedValue({
+      // Mock the AI response structure expected by the implementation
+      text: () => "mocked response text",
+      toJSON: () => ({ text: "mocked response text" }),
+    }),
+  };
+});
 
-// Mock the genkit library using vi.importActual to preserve other exports like 'z'
+// Mock the genkit library
+// Removed duplicated lines here
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
     ...actual, // Spread all actual exports, including 'z' and ModelReference type
-    genkit: vi.fn(), // Keep the mock for the genkit function itself
+    // Mock the genkit function to return an object with our mock generate
+    genkit: vi.fn().mockReturnValue({
+      generate: mockAIGenerate,
+    }),
   };
 });
 
@@ -34,29 +43,36 @@ const mockPlugin = { name: "mock-plugin" } as any;
 const mockModel = { name: "mock-model" } as ModelReference<any>; // Type assertion is fine
 
 describe("EvaluateCodePrompt", () => {
-  // Reset and configure mocks before each test
+  // Reset mocks before each test
   beforeEach(async () => {
-    // Clear all previous mock states and calls
+    // Make beforeEach async
     vi.clearAllMocks();
-    mockGenerate.mockClear(); // Clear the generate mock specifically
+    mockAIGenerate.mockClear(); // Clear the generate mock specifically
 
-    // Dynamically import the mocked genkit module
+    // Re-configure the mock genkit return value
+    // We need to ensure the object returned by genkit() has the generate property
     const { genkit } = await import("genkit");
-
-    // Configure the mocked genkit function's return value for this test run
-    (genkit as ReturnType<typeof vi.fn>).mockReturnValue({
-      generate: mockGenerate,
-    });
+    vi.mocked(genkit).mockReturnValue({
+      generate: mockAIGenerate,
+      // Add other properties expected by the Models constructor if necessary,
+      // but for now, just providing 'generate' might be enough as it's what's used.
+    } as any); // Use 'as any' for simplicity if the full type is complex to mock
   });
 
-  it("should call the generate method with the correct model and prompt", async () => {
-    // No need to import genkit again here, beforeEach handles it
-    const promptInstance = new EvaluateCodePrompt(mockPlugin, mockModel);
+  it("should call the ai.generate method with the correct options and return text", async () => {
+    const promptInstance = new EvaluateCodePrompt(mockPlugin); // Pass only plugin
     const promptText = "Test prompt";
-    const response = await promptInstance.generate(promptText);
+    const generateOptions: GenerateModelOptions = {
+      model: mockModel, // Pass the mock model reference
+      prompt: promptText,
+    };
+    const expectedResponseText = "mocked response text"; // Expecting string
 
-    // Construct the expected prompt using the template literal
-    const expectedPrompt = `
+    // Call the generate method with the options object
+    const responseText = await promptInstance.generate(generateOptions);
+
+    // Construct the expected prompt string for assertion
+    const expectedPromptString = `
 OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
 
 FILE TREE:
@@ -75,18 +91,34 @@ The JSON object to OUTPUT is:
 }            
 `;
 
-    // Check if the globally defined mockGenerate function was called correctly
-    // Use expect.objectContaining to avoid strict object identity checks for the schema
-    expect(mockGenerate).toHaveBeenCalledWith(
+    // Check if the mockAIGenerate function (inside the mocked ai object) was called correctly
+    expect(mockAIGenerate).toHaveBeenCalledTimes(1);
+    // Use expect.objectContaining for the output part to avoid strict schema reference check
+    expect(mockAIGenerate).toHaveBeenCalledWith(
       expect.objectContaining({
         model: mockModel,
-        prompt: expectedPrompt,
+        prompt: expectedPromptString,
         output: expect.objectContaining({
-          schema: expect.any(Object), // Verify that a schema object was passed
+          // Ensure output is an object
+          schema: expect.any(Object), // Ensure output has a schema property which is an object
         }),
       })
     );
-    // EvaluateCodePrompt.generate returns the text function, call it to get the string
-    expect(response()).toBe("mocked response");
+
+    // Assert the method returned the expected text string
+    expect(responseText).toBe(expectedResponseText);
+  });
+
+  it("should throw an error if the prompt in options is not a string", async () => {
+    const promptInstance = new EvaluateCodePrompt(mockPlugin);
+    const generateOptions: GenerateModelOptions = {
+      model: mockModel,
+      prompt: ["not", "a", "string"], // Invalid prompt type
+    };
+
+    await expect(promptInstance.generate(generateOptions)).rejects.toThrow(
+      "EvaluateCodePrompt requires a string prompt."
+    );
+    expect(mockAIGenerate).not.toHaveBeenCalled();
   });
 });

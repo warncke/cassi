@@ -88,7 +88,13 @@ describe("Code Task", () => {
 
     // Verify the generate method on the mock model was called correctly
     expect(mockGenerate).toHaveBeenCalledTimes(1);
-    expect(mockGenerate).toHaveBeenCalledWith(promptText);
+    // Check that generate was called with an object containing model and prompt
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: expect.anything(), // We know it's gemini20Flash from Code.ts, but checking existence is enough here
+        prompt: promptText,
+      })
+    );
 
     // Check that the evaluation property is set correctly (parsed object)
     expect(codeTask.evaluation).toEqual(mockEvaluation);
@@ -118,8 +124,13 @@ describe("Code Task", () => {
 
     // Verify newModel was called
     expect(mockNewInstance).toHaveBeenCalledWith("EvaluateCodePrompt");
-    // Verify generate was called
-    expect(mockGenerate).toHaveBeenCalledWith(promptText);
+    // Verify generate was called with the options object
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: expect.anything(),
+        prompt: promptText,
+      })
+    );
     // Verify the evaluation property contains the PARSED object, not the string
     expect(codeTask.evaluation).toEqual(mockJsonResponse);
     // Verify initFileTask was called because modifiesFiles was true in the parsed object

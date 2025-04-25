@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Model } from "./Model.js";
-import { Models } from "./Models.js"; // Corrected import path
+import { Models, GenerateModelOptions } from "./Models.js"; // Import GenerateModelOptions
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import fs from "fs/promises";
 import path from "path";
-import { ModelReference } from "genkit/model"; // Import for type usage
+// Removed ModelReference import as it's not directly used here anymore
 
 // Mock the dependencies
 vi.mock("../user/User.js");
@@ -16,10 +16,9 @@ vi.mock("fs/promises");
 vi.mock("@genkit-ai/googleai", () => {
   // Mock googleAI to return a simple function, as genkit likely expects a plugin function/object
   const mockGoogleAI = vi.fn(() => () => "mockGoogleAIPlugin"); // Return a function
-  const mockGemini20Flash = { model: "gemini-2.0-flash" } as any;
+  // Removed mockGemini20Flash as it's not used in newInstance anymore
   return {
     googleAI: mockGoogleAI, // googleAI() now returns a function
-    gemini20Flash: mockGemini20Flash,
   };
 });
 
@@ -52,24 +51,36 @@ vi.mock("path", async (importOriginal) => {
 // Update constructors to accept new signature and extend Models
 class MockModel1 extends Models {
   // Extend Models
-  // Keep plugin/modelRef for testing purposes, even though Models handles them
   public plugin: any;
-  public modelRef: ModelReference<any>;
-  constructor(plugin: any, modelRef: ModelReference<any>) {
-    super(plugin, modelRef); // Call Models constructor
-    this.plugin = plugin; // Still assign for direct access in tests if needed
-    this.modelRef = modelRef;
+  constructor(plugin: any) {
+    super(plugin); // Call updated Models constructor
+    this.plugin = plugin;
+  }
+  // Implement abstract generate method
+  async generate(options: GenerateModelOptions): Promise<string> {
+    // Simple mock implementation
+    return `MockModel1 generated: ${
+      typeof options.prompt === "string"
+        ? options.prompt
+        : JSON.stringify(options.prompt)
+    }`;
   }
 }
 class MockModel2 extends Models {
   // Extend Models
-  // Keep plugin/modelRef for testing purposes
   public plugin: any;
-  public modelRef: ModelReference<any>;
-  constructor(plugin: any, modelRef: ModelReference<any>) {
-    super(plugin, modelRef); // Call Models constructor
+  constructor(plugin: any) {
+    super(plugin); // Call updated Models constructor
     this.plugin = plugin;
-    this.modelRef = modelRef;
+  }
+  // Implement abstract generate method
+  async generate(options: GenerateModelOptions): Promise<string> {
+    // Simple mock implementation
+    return `MockModel2 generated: ${
+      typeof options.prompt === "string"
+        ? options.prompt
+        : JSON.stringify(options.prompt)
+    }`;
   }
 }
 const notAModel = { foo: "bar" };
@@ -300,10 +311,7 @@ describe("Model", () => {
     // Mark test as async
     it("should create a new instance of the specified model class", async () => {
       // Arrange
-      // Re-import the mocked module to access the mock value defined inside the factory
-      const { gemini20Flash: mockedGemini20Flash } = await vi.importActual<
-        typeof import("@genkit-ai/googleai")
-      >("@genkit-ai/googleai");
+      // No need to re-import gemini20Flash
 
       // Act
       const newInstance = model.newInstance("MockModel1");
@@ -311,14 +319,11 @@ describe("Model", () => {
       // Assert
       expect(newInstance).toBeInstanceOf(MockModel1);
       expect(newInstance).toBeInstanceOf(Models); // Should be instance of base Models
-      // Check if the plugin and model were passed (specific to MockModel1 structure)
-      // Accessing plugin/modelRef directly on MockModel1 instance
+      // Check if the plugin was passed (specific to MockModel1 structure)
+      // Accessing plugin directly on MockModel1 instance
       // The actual value returned by the mocked googleAI() is now a function
       expect(typeof (newInstance as MockModel1).plugin).toBe("function");
-      // Accessing modelRef directly on MockModel1 instance
-      expect((newInstance as MockModel1).modelRef).toEqual({
-        model: "gemini-2.0-flash", // This comes from the super() call now
-      });
+      // Removed assertion for modelRef as it's no longer part of MockModel1
     });
 
     // Removed redundant test that spied on the constructor

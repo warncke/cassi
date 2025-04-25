@@ -1,14 +1,15 @@
-import { ModelReference } from "genkit";
-import { defineTool } from "@genkit-ai/ai"; // Keep for potential type usage, though might be removable
+import { defineTool } from "@genkit-ai/ai"; // Revert import for defineTool
 import { z } from "zod"; // Assuming zod is used for schema definition
-import { Models } from "../Models.js"; // Import the base class with .js extension
+import { Models, GenerateModelOptions } from "../Models.js"; // Import the base class and options type
+// Removed incorrect import for standalone generate
 
 export class Coder extends Models {
   // Extend the base class
   public tools: any[]; // Define the tools property
 
-  constructor(plugin: any, model: ModelReference<any>) {
-    super(plugin, model); // Call the base class constructor
+  constructor(plugin: any) {
+    // Updated constructor: only takes plugin
+    super(plugin); // Call the base class constructor with only the plugin
 
     // Define the input schema for the execute_command tool
     const executeCommandInputSchema = z.object({
@@ -47,14 +48,29 @@ export class Coder extends Models {
     ];
   }
 
-  async generate(promptText: string): Promise<any> {
-    // Changed return type to any for now
+  // Implement the abstract generate method from Models
+  // Implement the abstract generate method from Models
+  async generate(options: GenerateModelOptions): Promise<string> {
+    const { model, prompt, ...restOptions } = options; // Destructure options
+
+    // Use this.ai.generate which is initialized in the base class
     const response = await this.ai.generate({
-      prompt: promptText,
-      tools: this.tools,
+      model: model, // Pass the model reference
+      prompt: prompt, // Pass the prompt
+      tools: this.tools, // Pass the tools defined in this class
+      ...restOptions, // Pass any other generation options
     });
-    // TODO: Process the response
-    console.log("AI Response:", response); // Log the response for now
-    return response; // Return the response
+
+    // Extract and return the text content
+    const text = response.text();
+    if (!text) {
+      // Handle cases where the response might not have text (e.g., tool call)
+      console.warn("AI response did not contain text content.");
+      // Consider how to handle this - maybe return an empty string or throw an error
+      // For now, let's log the full response if text is missing
+      console.log("Full AI Response:", response.toJSON());
+      return ""; // Or throw new Error("No text content in AI response");
+    }
+    return text;
   }
 }

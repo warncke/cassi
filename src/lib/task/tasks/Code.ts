@@ -9,6 +9,7 @@ import { kebabCase } from "change-case"; // Import kebabCase
 import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; // Import EvaluateCodePrompt
 import { Coder } from "./Coder.js"; // Import Coder task
+import { gemini20Flash } from "@genkit-ai/googleai"; // Import the specific model reference
 
 export class Code extends Task {
   public prompt: string; // Added prompt property
@@ -74,15 +75,29 @@ export class Code extends Task {
     const coderPrompt = `${this.prompt}\n\nSummary: ${
       this.evaluation.summary
     }\n\nSteps:\n${this.evaluation.steps.join("\n")}`;
+    // Pass only cassi, parentTask (this), and prompt to Coder constructor
     this.addSubtask(new Coder(this.cassi, this, coderPrompt));
   }
 
   public async initTask(): Promise<void> {
-    // Instantiate the EvaluateCodePrompt model and assert its type
-    const model = this.newModel("EvaluateCodePrompt") as EvaluateCodePrompt;
-    // Generate the response using the model and the provided prompt
+    // Instantiate the EvaluateCodePrompt model
+    const evaluateModel = this.newModel(
+      "EvaluateCodePrompt"
+    ) as EvaluateCodePrompt; // Keep assertion for type safety
+
+    // Prepare options for the generate call
+    const generateOptions = {
+      model: gemini20Flash, // Pass the specific model reference
+      prompt: this.prompt, // Pass the task's prompt
+      // Add other options like temperature, maxOutputTokens if needed
+    };
+
+    // Generate the response using the model and the prepared options
+    const evaluationJson = await evaluateModel.generate(generateOptions);
+
     // Parse the JSON response and assign it to the evaluation property
-    this.evaluation = JSON.parse(await model.generate(this.prompt));
+    this.evaluation = JSON.parse(evaluationJson);
+
     // Check the modifiesFiles property using the evaluation property
     if (this.evaluation.modifiesFiles === true) {
       // Call the new method to handle file modifications

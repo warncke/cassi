@@ -1,6 +1,6 @@
-import { ModelReference, z } from "genkit";
-import { Models } from "../Models.js"; // Import the base class with .js extension
-import { prototype } from "events";
+import { z } from "genkit"; // ModelReference is not needed directly here anymore
+import { Models, GenerateModelOptions } from "../Models.js"; // Import the base class and options type
+// Removed unused import 'prototype' from 'events'
 
 const EvaluateCodePromptSchema = z.object({
   summary: z.string(),
@@ -9,16 +9,22 @@ const EvaluateCodePromptSchema = z.object({
 });
 export class EvaluateCodePrompt extends Models {
   // Extend the base class
-  constructor(plugin: any, model: ModelReference<any>) {
-    super(plugin, model); // Call the base class constructor
+  constructor(plugin: any) {
+    // Updated constructor: only takes plugin
+    super(plugin); // Call the base class constructor with only the plugin
   }
 
-  // Example method showing how to use the inherited ai and model properties
-  async generate(promptText: string) {
-    // Model is now stored in the instance
-    const { text } = await this.ai.generate({
-      // Store the full response
-      model: this.model, // Use the stored model
+  // Implement the abstract generate method from Models
+  async generate(options: GenerateModelOptions): Promise<string> {
+    const { model, prompt, ...restOptions } = options; // Destructure options
+
+    // Ensure prompt is a string for this specific model's logic
+    if (typeof prompt !== "string") {
+      throw new Error("EvaluateCodePrompt requires a string prompt.");
+    }
+
+    const response = await this.ai.generate({
+      model: model, // Use the model from options
       prompt: `
 OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
 
@@ -26,7 +32,7 @@ FILE TREE:
 
 TASK DESCRIPTION:
 
-${promptText}
+${prompt}
 
 The JSON object to OUTPUT is:
 {
@@ -38,9 +44,16 @@ The JSON object to OUTPUT is:
 }            
 `,
       output: { schema: EvaluateCodePromptSchema },
+      ...restOptions, // Pass any other generation options
     });
 
-    // Call the text function to get the actual string response
+    // Extract and return the text content
+    const text = response.text();
+    if (!text) {
+      console.warn("EvaluateCodePrompt response did not contain text content.");
+      console.log("Full AI Response:", response.toJSON());
+      return ""; // Or throw an error
+    }
     return text;
   }
 }

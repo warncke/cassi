@@ -4,15 +4,15 @@ import { Models } from "./Models.js"; // Corrected import path
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import { googleAI, gemini20Flash } from "@genkit-ai/googleai"; // Added import
-import { ModelReference } from "genkit/model"; // Added import for type
+import { googleAI } from "@genkit-ai/googleai"; // Keep one googleAI import
+import { ModelReference } from "genkit/model"; // Kept import for type usage elsewhere if needed
 
 // Helper to get __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define the expected constructor signature for models stored in the map
-type ModelConstructor = new (plugin: any, model: ModelReference<any>) => Models; // Return Models
+type ModelConstructor = new (plugin: any) => Models; // Updated: Only plugin needed
 
 export class Model {
   public availableModels: Map<string, ModelConstructor> = new Map(); // Use updated ModelConstructor
@@ -86,7 +86,7 @@ export class Model {
     if (!ModelClass) {
       throw new Error(`Model class '${modelClassName}' not found.`);
     }
-    // Instantiate using the new constructor signature
-    return new ModelClass(googleAI(), gemini20Flash);
+    // Instantiate using the updated constructor signature (only plugin)
+    return new ModelClass(googleAI()); // Pass only the plugin
   }
 }

@@ -2,23 +2,31 @@ import { Task } from "./Task.js";
 import { Cassi } from "../cassi/Cassi.js";
 import { User } from "../user/User.js";
 import { Model } from "../model/Model.js"; // Keep for error test case
-import { Models } from "../model/Models.js"; // Import Models
-import { ModelReference } from "genkit/model"; // Import ModelReference
+import { Models, GenerateModelOptions } from "../model/Models.js"; // Import Models and GenerateModelOptions
+// Removed unused ModelReference import
 
 import { describe, expect, test, beforeEach, vi } from "vitest";
 
-// Mock plugin and model reference for Models constructor
+// Mock plugin for Models constructor
 // Change mockPlugin to be a function as expected by genkit
 const mockPlugin = () => "mockPluginFunction";
-const mockModelRef = { name: "mockModelRef" } as ModelReference<any>;
+// Removed unused mockModelRef
 
 // Mock Model class for testing, now extending Models
 class MockModel extends Models {
   constructor() {
-    // Call super with mock plugin and model reference
-    super(mockPlugin, mockModelRef);
+    // Call super with mock plugin only
+    super(mockPlugin);
   }
-  // Add any methods needed for testing if necessary
+  // Implement abstract generate method
+  async generate(options: GenerateModelOptions): Promise<string> {
+    // Simple mock implementation for testing purposes
+    return `MockModel generated: ${
+      typeof options.prompt === "string"
+        ? options.prompt
+        : JSON.stringify(options.prompt)
+    }`;
+  }
 }
 
 // Mock Cassi instance
