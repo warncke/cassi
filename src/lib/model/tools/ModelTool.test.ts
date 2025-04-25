@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest"; // Added beforeEach
-import { ModelTool } from "./tools.js";
-import { Model, ModelConstructor } from "./Model.js"; // Import Model and ModelConstructor
-import { Models, GenerateModelOptions } from "./Models.js";
-import { ToolDefinition } from "../tool/Tool.js";
-import { Task } from "../task/Task.js";
-import { Cassi } from "../cassi/Cassi.js";
+import { ModelTool } from "./ModelTool.js";
+import { Model, ModelConstructor } from "../Model.js"; // Import Model and ModelConstructor
+import { Models, GenerateModelOptions } from "../Models.js";
+import { ToolDefinition } from "../../tool/Tool.js";
+import { Task } from "../../task/Task.js";
+import { Cassi } from "../../cassi/Cassi.js";
 import { genkit } from "genkit"; // Import genkit to mock it
 
 // --- Mocks ---
