@@ -53,6 +53,7 @@ export class ExecuteCommand extends ModelTool {
     if (result.stderr) {
       output += `STDERR:\n${result.stderr}\n`;
     }
+    console.log("YYY", output);
     return output.trim() || "Command executed successfully with no output.";
   }
 }
