@@ -40,8 +40,7 @@ describe("Invocation", () => {
   });
 
   describe("invoke", () => {
-    const mockCassi = {
-    } as Cassi;
+    const mockCassi = {} as Cassi;
     const mockTask = new Task(mockCassi);
 
     it("should execute the tool method with task and args, returning the result", async () => {
@@ -124,6 +123,41 @@ describe("Invocation", () => {
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
       expect(invocation.error).toBeInstanceOf(Error);
       expect(invocation.error?.message).toBe(String(errorObject));
+    });
+
+    it("should log before and after invoking the tool method", async () => {
+      const mockConsoleLog = vi.spyOn(console, "log");
+      const expectedResult = "Logged!";
+      const arg1 = "logArg";
+      const toolName = "logTool";
+      const method = "logMethod";
+      const mockToolMethod = vi.fn(async () => expectedResult);
+      const invocation = new Invocation(
+        mockTask,
+        toolName,
+        "LogImpl",
+        method,
+        mockToolMethod,
+        {},
+        [],
+        [arg1]
+      );
+
+      await invocation.invoke();
+
+      expect(mockConsoleLog).toHaveBeenCalledTimes(2);
+      expect(mockConsoleLog).toHaveBeenNthCalledWith(
+        1,
+        `[Invocation] Invoking tool ${toolName}.${method} with args:`,
+        [arg1]
+      );
+      expect(mockConsoleLog).toHaveBeenNthCalledWith(
+        2,
+        `[Invocation] Tool ${toolName}.${method} returned:`,
+        expectedResult
+      );
+
+      mockConsoleLog.mockRestore();
     });
 
     it("should throw an error if toolMethod is not a function", async () => {

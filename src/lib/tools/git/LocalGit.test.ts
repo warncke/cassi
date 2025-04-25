@@ -105,10 +105,17 @@ describe("LocalGit", () => {
   });
 
   describe("addWorktree", () => {
-    it("should call git.raw with the correct arguments for worktree add", async () => {
+    it("should call git.raw with the correct arguments for worktree add -b", async () => {
       const directory = "../new-worktree-dir";
       const branchName = "feature/new-worktree";
-      const expectedCommand = ["worktree", "add", directory, branchName];
+      const expectedCommand = [
+        "worktree",
+        "add",
+        "-b",
+        branchName,
+        directory,
+        "HEAD",
+      ];
       vi.mocked(mockGitInstance.raw).mockResolvedValue("Worktree created");
 
       await localGit.addWorktree(directory, branchName);
@@ -117,10 +124,17 @@ describe("LocalGit", () => {
       expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
     });
 
-    it("should handle errors from git.raw when creating a worktree", async () => {
+    it("should handle errors from git.raw when creating a worktree with -b", async () => {
       const directory = "../error-worktree-dir";
       const branchName = "feature/error-worktree";
-      const expectedCommand = ["worktree", "add", directory, branchName];
+      const expectedCommand = [
+        "worktree",
+        "add",
+        "-b",
+        branchName,
+        directory,
+        "HEAD",
+      ];
       const mockError = new Error("Git worktree add failed");
       vi.mocked(mockGitInstance.raw).mockRejectedValue(mockError);
 

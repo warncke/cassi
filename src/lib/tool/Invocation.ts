@@ -45,9 +45,17 @@ export class Invocation {
     }
     this.startTime = Date.now();
     try {
+      console.log(
+        `[Invocation] Invoking tool ${this.toolName}.${this.method} with args:`,
+        this.methodArgs
+      );
       const result = await this.toolMethod.apply(this.toolInstance, [
         ...this.methodArgs,
       ]);
+      console.log(
+        `[Invocation] Tool ${this.toolName}.${this.method} returned:`,
+        result
+      );
       return result;
     } catch (e: any) {
       this.error = e instanceof Error ? e : new Error(String(e));

@@ -65,6 +65,7 @@ export class Code extends Task {
   }
 
   public async initTask(): Promise<void> {
+    console.log("[Code Task] Starting initTask");
     const evaluateModel = this.newModel(
       "EvaluateCodePrompt"
     ) as EvaluateCodePrompt;
@@ -85,12 +86,15 @@ export class Code extends Task {
         "Model response indicates no file modifications. Only file modification tasks are currently supported."
       );
     }
+    console.log("[Code Task] Finished initTask");
   }
 
   public async cleanupTask(): Promise<void> {
+    console.log("[Code Task] Starting cleanupTask");
     if (this.worktreeDir) {
       await this.invoke("git", "remWorkTree", [], [this.worktreeDir]);
       // await this.invoke("fs", "deleteDirectory", [], [this.worktreeDir]);
     }
+    console.log("[Code Task] Finished cleanupTask");
   }
 }

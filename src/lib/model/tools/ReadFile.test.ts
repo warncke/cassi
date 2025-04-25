@@ -31,9 +31,9 @@ class MockTask extends Task {
       ...args: any[]
     ) => {
       if (toolName === "fs" && methodName === "readFile") {
-        const methodArgs = args[0]; // methodArgs is the first element captured by ...args
-        const filePath = methodArgs[0]; // filePath is the first element within methodArgs
-        if (filePath === "empty.txt") {
+        const methodArgs = args[0];
+        const filePath = methodArgs[0];
+        if (filePath === "/mock/cwd/empty.txt") {
           return null;
         }
         return `mock content for ${filePath}`;
@@ -110,11 +110,11 @@ describe("ReadFile", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
       "readFile",
-      ["/mock/cwd"],
-      [input.path]
+      [],
+      ["/mock/cwd/some/file.txt"]
     );
 
-    expect(result).toBe(`mock content for ${input.path}`);
+    expect(result).toBe(`mock content for /mock/cwd/some/file.txt`);
   });
 
   it("toolMethod should handle empty file content", async () => {
@@ -128,8 +128,8 @@ describe("ReadFile", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
       "readFile",
-      ["/mock/cwd"],
-      [input.path]
+      [],
+      ["/mock/cwd/empty.txt"]
     );
 
     expect(result).toBe("File read successfully, but it was empty.");

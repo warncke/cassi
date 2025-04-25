@@ -155,8 +155,22 @@ describe("CommandLineTest E2E", () => {
       fullOutput += afterBranchConfirmOutput;
       expect(afterBranchConfirmOutput).toMatch(/Enter your next request:/i);
 
+      // Send the specific task request
+      const taskRequest = "add a pauseTask method to the Task class";
+      // Wait for the next prompt, assuming the task completes and loops back
+      const taskResponseOutput = await interact(
+        cassiProcess,
+        taskRequest,
+        /Enter your next request:/i // Expect the prompt again after processing
+      );
+      fullOutput += taskResponseOutput;
+      console.log(
+        "Response after adding pauseTask request:",
+        taskResponseOutput
+      );
+      // Add specific expectations for the taskResponseOutput if needed
+
       // Add more interactions and expectations here...
-      // e.g., wait for task prompt, send task, wait for completion
     } catch (error) {
       console.error("Test interaction failed:", error);
       console.log("Full output received:\n", fullOutput); // Log output on failure

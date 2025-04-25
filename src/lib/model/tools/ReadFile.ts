@@ -1,8 +1,8 @@
 import { z } from "zod";
+import path from "path";
 import { Models } from "../Models.js";
 import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
-import { Repository } from "../../repository/Repository.js";
 
 const readFileInputSchema = z.object({
   path: z
@@ -34,12 +34,8 @@ export class ReadFile extends ModelTool {
     model: Models,
     input: z.infer<typeof readFileInputSchema>
   ): Promise<string> {
-    const content = await model.task.invoke(
-      "fs",
-      "readFile",
-      [model.task.getCwd()],
-      [input.path]
-    );
+    const fullPath = path.join(model.task.getCwd(), input.path);
+    const content = await model.task.invoke("fs", "readFile", [], [fullPath]);
 
     return content ?? "File read successfully, but it was empty.";
   }
