@@ -72,10 +72,7 @@ export class PatchFile extends ModelTool {
       }
       return outputMessage;
     } catch (error: any) {
-      // Rethrow or format the error
-      throw new Error(
-        `Failed to apply patch to ${input.path}: ${error.message || error}`
-      );
+      return `Error: ${error.message}`;
     }
   }
 }

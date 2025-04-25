@@ -46,15 +46,16 @@ Use the READ_FILE command to get the contents of files.
 
 Determine all of the file changes that need to be made.
 
-For each file that needs to be changed call the PATCH_FILE tool with a string .patch file syntax
-that can be processed by the linux patch command.
+For each file that needs to be changed call the PATCH_FILE tool with a path and patchContent arguments. The path must be the file to apply the patchContent to and the patchContent must be in the format of a standard .patch file.
 
-You can also use the WRITE_FILE tool to create or replace the contents of any file.
+You can also use the WRITE_FILE tool to create or replace the contents of any file but PATCH_FILE should always be used for updating existing files unless PATCH_FILE fails. It PATCH_FILE fails retry writing the entire file using WRITE_FILE.
 
 When calling READ_FILE, WRITE_FILE, and PATCH_FILE always inlude the "path" argument with the
 relative path of the file to access.
 
 After changing files with WRITE_FILE and PATCH_FILE run the RUN_BUILD tool and check the STDERR output for any build errors. If there is any STDERR output try to fix it by modifying the files and RUN_BUILD again to verify changes until no STDERR output is returned by RUN_BUILD
+
+When creating or modifying new ".ts" files always take into account the creation of tests. Every ".ts" file should have a corresponding ".test.ts" test file. When modifying existing ".ts" files always modfify or create the files corresponding ".test.ts" file to update tests coverage to reflect the changes. Do not attempt to run tests. These will be run in another task.
 
 PROMPT: ${prompt}
       

@@ -166,14 +166,36 @@ describe("PatchFile", () => {
       code: mockExitCode,
     });
 
-    await expect(toolMethod(input)).rejects.toThrow(
-      `Failed to apply patch to ${input.path}: Patch command failed with exit code ${mockExitCode}. Stderr:\n${mockStderr}`
+    // The method should now return the error string, not throw
+    const result = await toolMethod(input);
+    expect(result).toBe(
+      `Error: Patch command failed with exit code ${mockExitCode}. Stderr:\n${mockStderr}`
     );
 
     expect(mockTask.invoke).toHaveBeenCalledTimes(1);
   });
 
-  it("toolMethod should handle errors thrown by task.invoke itself", async () => {
+  // This test is now incorrect due to the change in error handling
+  // it("toolMethod should handle errors thrown by task.invoke itself", async () => {
+  //   const input = {
+  //     path: "some/file/to/patch.txt",
+  //     patchContent: "invalid patch content",
+  //   };
+  //   const toolArgs = PatchFile.modelToolArgs(mockModelInstance);
+  //   const toolMethod = toolArgs[1];
+
+  //   // Mock task.invoke to throw an error
+  //   const mockError = new Error("Invocation failed");
+  //   vi.mocked(mockTask.invoke).mockRejectedValueOnce(mockError);
+
+  //   await expect(toolMethod(input)).rejects.toThrow(
+  //     `Failed to apply patch to ${input.path}: ${mockError.message}`
+  //   );
+
+  //   expect(mockTask.invoke).toHaveBeenCalledTimes(1);
+  // });
+
+  it("toolMethod should return formatted error string when task.invoke throws", async () => {
     const input = {
       path: "some/file/to/patch.txt",
       patchContent: "invalid patch content",
@@ -185,10 +207,9 @@ describe("PatchFile", () => {
     const mockError = new Error("Invocation failed");
     vi.mocked(mockTask.invoke).mockRejectedValueOnce(mockError);
 
-    await expect(toolMethod(input)).rejects.toThrow(
-      `Failed to apply patch to ${input.path}: ${mockError.message}`
-    );
+    const result = await toolMethod(input);
 
+    expect(result).toBe(`Error: ${mockError.message}`);
     expect(mockTask.invoke).toHaveBeenCalledTimes(1);
   });
 });
