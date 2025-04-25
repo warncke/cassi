@@ -36,6 +36,8 @@ Take the original PROMPT, with its summary and suggested steps, evaluate each of
 
 For each step evaluate what files may need to be changed in order to complete the step.
 
+Use the EXECUTE_COMMAND to execute linux system commands in a bash shell to get information about the files and directories in the project.
+
 PROMPT: ${prompt}
       
 `, // Pass the prompt

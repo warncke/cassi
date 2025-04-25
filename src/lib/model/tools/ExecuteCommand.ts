@@ -41,8 +41,8 @@ export class ExecuteCommand extends ModelTool {
     const result = await model.task.invoke(
       "console",
       "exec",
-      undefined,
-      input.command
+      [model.task.getCwd()], // Pass cwd as toolArgs using getCwd()
+      [input.command] // Pass command as an element in the methodArgs array
     );
 
     let output = "";

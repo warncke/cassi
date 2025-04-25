@@ -37,6 +37,7 @@ class MockTask extends Task {
       throw new Error(`Unexpected tool invocation: ${toolName}.${methodName}`);
     }
   );
+  getCwd = vi.fn(() => "/mock/cwd"); // Mock getCwd
 
   constructor(cassi: Cassi) {
     super(cassi);
@@ -68,8 +69,11 @@ describe("ExecuteCommand", () => {
         })),
       },
     }));
-    // Reset task invoke mock
+    // Reset task invoke and getCwd mocks
     vi.mocked(mockTask.invoke).mockClear();
+    vi.mocked(mockTask.getCwd).mockClear();
+    // Ensure getCwd mock is set for each test if needed, or rely on the class mock
+    vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
   });
 
   it("should have correct toolDefinition", () => {
@@ -111,8 +115,8 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      undefined,
-      input.command
+      [mockTask.getCwd()], // Expect cwd array as toolArgs
+      [input.command] // Expect command wrapped in methodArgs array
     );
 
     // Verify the output formatting
@@ -135,8 +139,8 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      undefined,
-      input.command
+      [mockTask.getCwd()], // Expect cwd array as toolArgs
+      [input.command] // Expect command wrapped in methodArgs array
     );
     expect(result).toBe("STDERR:\nmock error output");
   });
@@ -157,8 +161,8 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      undefined,
-      input.command
+      [mockTask.getCwd()], // Expect cwd array as toolArgs
+      [input.command] // Expect command wrapped in methodArgs array
     );
     expect(result).toBe("STDOUT:\nsome output\nSTDERR:\nsome error");
   });
@@ -176,8 +180,8 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      undefined,
-      input.command
+      [mockTask.getCwd()], // Expect cwd array as toolArgs
+      [input.command] // Expect command wrapped in methodArgs array
     );
     expect(result).toBe("Command executed successfully with no output.");
   });

@@ -84,8 +84,8 @@ describe("InitializeGit Task", () => {
     expect(invokeSpy).toHaveBeenCalledWith(
       "git",
       "status",
-      [],
-      "/mock/repo/dir"
+      [], // Expect empty toolArgs
+      [mockCassi.repository.repositoryDir] // Expect repositoryDir wrapped in methodArgs array
     );
   });
 

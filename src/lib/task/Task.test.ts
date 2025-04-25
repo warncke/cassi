@@ -326,7 +326,7 @@ describe("Task", () => {
         toolName,
         methodName,
         toolArgs,
-        ...methodArgs
+        methodArgs // Pass methodArgs as an array
       );
 
       expect(mockTool.invoke).toHaveBeenCalledTimes(1);
@@ -335,7 +335,7 @@ describe("Task", () => {
         toolName,
         methodName,
         toolArgs,
-        ...methodArgs
+        methodArgs // Pass methodArgs as an array
       );
       expect(result).toBe(expectedResult);
     });
@@ -347,7 +347,7 @@ describe("Task", () => {
       );
 
       await expect(
-        task.invoke("fs", "writeFile", [], "a.txt", "data")
+        task.invoke("fs", "writeFile", [], ["a.txt", "data"]) // Wrap method args in an array
       ).rejects.toThrow(testError);
     });
   });

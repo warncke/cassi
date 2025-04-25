@@ -74,18 +74,18 @@ export class Task {
   async invoke(
     toolName: string,
     methodName: string,
-    toolArgs?: any[], // Make toolArgs optional
-    ...args: any[]
+    toolArgs?: any[], // Keep toolArgs optional
+    methodArgs: any[] = [] // Add methodArgs, default to empty array
   ): Promise<any> {
     // Return type matches Cassi.tool.invoke
     const effectiveToolArgs = toolArgs ?? []; // Default to empty array if undefined
-    // Invoke the tool using Cassi's tool invoker, passing this task instance and effectiveToolArgs
+    // Invoke the tool using Cassi's tool invoker, passing task, toolName, methodName, toolArgs, and methodArgs
     return this.cassi.tool.invoke(
       this,
       toolName,
       methodName,
-      effectiveToolArgs, // Pass the effective args
-      ...args
+      effectiveToolArgs, // Pass the effective tool args
+      methodArgs // Pass methodArgs
     );
   }
 

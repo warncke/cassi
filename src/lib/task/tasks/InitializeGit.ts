@@ -14,8 +14,8 @@ export class InitializeGit extends Task {
     const status = await this.invoke(
       "git",
       "status",
-      [], // Add empty toolArgs
-      this.cassi.repository.repositoryDir // Pass repositoryDir as a method arg
+      [], // Keep empty toolArgs
+      [this.cassi.repository.repositoryDir] // Pass repositoryDir inside methodArgs array
     );
 
     if (!status.isClean()) {
