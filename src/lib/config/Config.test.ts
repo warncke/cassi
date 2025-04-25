@@ -1,14 +1,16 @@
 import { Config } from "./Config.js"; // Added .js extension
 import { User } from "../user/User.js"; // Added .js extension
-import { writeFile, unlink, mkdir, rmdir } from "fs/promises"; // Added mkdir and rmdir
-import { join } from "path";
-
+import { writeFile, unlink, mkdir, rmdir } from "fs/promises";
+import { join } from "path"; // Keep join, remove resolve
 import { describe, expect, test, beforeEach, afterEach } from "vitest";
 
-const testDir = "temp_test_config_dir"; // Use a temporary directory
-const validConfigFileOld = join(testDir, "valid_config_old.json"); // Renamed old valid file
+// --- Use Simple Relative Path ---
+const testDir = "./temp_test_config_dir_rel"; // Simple relative path
+// --- End Simple Relative Path ---
+
+const validConfigFileOld = join(testDir, "valid_config_old.json");
 const invalidJsonFile = join(testDir, "invalid_config.json");
-const nonExistentFile = join(testDir, "non_existent_config.json");
+const nonExistentFile = join(testDir, "non_existent_config.json"); // This remains relative to testDir
 const validSchemaFile = join(testDir, "valid_schema_config.json");
 const invalidSchemaMissingApiKeyFile = join(
   testDir,

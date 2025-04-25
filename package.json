@@ -20,6 +20,14 @@
     "url": "https://github.com/warncke/cassi/issues"
   },
   "homepage": "https://github.com/warncke/cassi#readme",
+  "vitest": {
+    "exclude": [
+      "node_modules/**",
+      "dist/**",
+      ".cassi/workspaces/**",
+      ".cassi/worktrees/**"
+    ]
+  },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.14.1",

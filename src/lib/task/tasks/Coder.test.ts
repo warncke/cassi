@@ -52,10 +52,25 @@ describe("Coder Task", () => {
     const testPrompt = "Another test prompt";
     const coderTask = new Coder(mockCassi, mockParentTask, testPrompt);
 
+    // --- Mock the newModel method for this specific instance ---
+    const mockGenerate = vi.fn().mockResolvedValue("mock generated code");
+    const mockCoderModelInstance = {
+      generate: mockGenerate,
+      // Add any other properties/methods of CoderModel if needed by initTask
+    };
+    // Mock the inherited newModel method directly on the instance
+    coderTask.newModel = vi.fn().mockReturnValue(mockCoderModelInstance);
+    // --- End Mock ---
+
     // Check if the method exists
     expect(coderTask.initTask).toBeDefined();
-    // Optionally, call the method and check for expected behavior (e.g., console log)
-    // For now, just ensure it returns a promise that resolves
+
+    // Call the method and check that it resolves (doesn't throw the TypeError)
     await expect(coderTask.initTask()).resolves.toBeUndefined();
+
+    // Verify that newModel was called within initTask
+    expect(coderTask.newModel).toHaveBeenCalledWith("Coder");
+    // Verify that the mock model's generate method was called
+    expect(mockGenerate).toHaveBeenCalledWith(testPrompt);
   });
 });

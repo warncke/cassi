@@ -20,10 +20,8 @@ export class Coder extends Models {
         ),
     });
 
-    // Initialize tools using plugin.ai
     this.tools = [
-      plugin.ai.defineTool(
-        // Use plugin.ai.defineTool directly
+      this.ai.defineTool(
         {
           name: "execute_command",
           description:
