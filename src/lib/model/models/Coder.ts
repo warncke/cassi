@@ -54,21 +54,27 @@ export class Coder extends Models {
     const { model, prompt, ...restOptions } = options; // Destructure options
 
     // Use this.ai.generate which is initialized in the base class
-    const response = await this.ai.generate({
+    // Destructure text and usage directly from the response
+    const { text, usage } = await this.ai.generate({
       model: model, // Pass the model reference
       prompt: prompt, // Pass the prompt
       tools: this.tools, // Pass the tools defined in this class
       ...restOptions, // Pass any other generation options
     });
 
-    // Extract and return the text content
-    const text = response.text();
+    // text is now directly available
+
+    // Log usage information if available
+    if (usage) {
+      console.log("AI Usage:", usage); // Log the destructured usage
+      // TODO: Implement proper cost tracking based on usage
+    }
+
     if (!text) {
       // Handle cases where the response might not have text (e.g., tool call)
       console.warn("AI response did not contain text content.");
       // Consider how to handle this - maybe return an empty string or throw an error
-      // For now, let's log the full response if text is missing
-      console.log("Full AI Response:", response.toJSON());
+      // Cannot log full response anymore as 'response' variable is gone.
       return ""; // Or throw new Error("No text content in AI response");
     }
     return text;

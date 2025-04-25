@@ -25,15 +25,17 @@ vi.mock("../Models.js", () => {
   // Define a mock generate function for the ai object
   const mockAIGenerate = vi.fn(async (options: GenerateModelOptions) => {
     // Simulate an AI response based on input for testing
-    // Return a structure that has a .text() method
+    // Return a structure that includes text and potentially usage
     const responseText = `AI Response for prompt: ${
       typeof options.prompt === "string"
         ? options.prompt
         : JSON.stringify(options.prompt)
     }`;
+    const mockUsage = { inputTokens: 10, outputTokens: 20 }; // Example usage data
     return {
-      text: () => responseText,
-      toJSON: () => ({ text: responseText }), // Add toJSON for logging in implementation
+      text: responseText, // Return text directly now
+      usage: mockUsage, // Include usage data
+      // No need for toJSON or text() method in the mock return anymore
     };
   });
 
@@ -145,7 +147,62 @@ describe("Coder", () => {
       tools: coderInstance.tools, // Ensure tools are passed
     });
 
-    // Assert the method returned the expected text string from the mock's .text() method
+    // Assert the method returned the expected text string (now directly from the mock)
     expect(responseText).toBe(expectedText);
+  });
+
+  it("should log usage information when available", async () => {
+    const coderInstance = new Coder(mockPlugin);
+    const testPrompt = "Test prompt for usage logging";
+    const generateOptions: GenerateModelOptions = {
+      model: mockModel,
+      prompt: testPrompt,
+    };
+    const mockGenerateFn = (coderInstance as any).ai.generate;
+    const expectedUsage = { inputTokens: 10, outputTokens: 20 }; // Matches mock
+
+    // Spy on console.log
+    const consoleSpy = vi.spyOn(console, "log");
+
+    // Call generate
+    await coderInstance.generate(generateOptions);
+
+    // Assert console.log was called with usage
+    expect(consoleSpy).toHaveBeenCalledWith("AI Usage:", expectedUsage);
+
+    // Restore console.log
+    consoleSpy.mockRestore();
+  });
+
+  it("should handle missing usage information without error", async () => {
+    const coderInstance = new Coder(mockPlugin);
+    const testPrompt = "Test prompt without usage";
+    const generateOptions: GenerateModelOptions = {
+      model: mockModel,
+      prompt: testPrompt,
+    };
+    const mockGenerateFn = (coderInstance as any).ai.generate;
+
+    // Temporarily modify the mock to return no usage
+    mockGenerateFn.mockResolvedValueOnce({
+      text: `AI Response for prompt: ${testPrompt}`,
+      // No usage property
+    });
+
+    // Spy on console.log
+    const consoleSpy = vi.spyOn(console, "log");
+
+    // Call generate and expect it not to throw
+    await expect(
+      coderInstance.generate(generateOptions)
+    ).resolves.toBeDefined();
+
+    // Assert console.log was NOT called for usage
+    expect(consoleSpy).not.toHaveBeenCalledWith("AI Usage:", expect.anything());
+
+    // Restore console.log and the mock
+    consoleSpy.mockRestore();
+    // Reset the mock to its default behavior for subsequent tests if needed
+    // (though beforeEach should handle this)
   });
 });
