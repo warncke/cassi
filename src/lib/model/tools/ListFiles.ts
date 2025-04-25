@@ -71,6 +71,9 @@ export class ListFiles extends ModelTool {
       if (!Array.isArray(files)) {
         return "Error: Expected an array of file paths but received something else.";
       }
+      if (files.length === 0) {
+        return "Error: No Files Found";
+      }
       return files.join("\n");
     } catch (error: any) {
       console.error("Error executing glob pattern:", error);

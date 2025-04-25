@@ -221,8 +221,29 @@ describe("Coder Model", () => {
       model: model,
       prompt: expect.stringContaining(prompt as string),
       tools: coderInstance.tools,
+      maxToolCallIterations: 100, // Add expectation for the new option
       ...restOptions,
     });
+  });
+
+  it("should pass maxToolCallIterations to ai.generate", async () => {
+    const mockResponse = { text: "Generated code", usage: { totalTokens: 10 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Test max iterations",
+    };
+    const { model, prompt, ...restOptions } = options;
+
+    await coderInstance.generate(options);
+
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxToolCallIterations: 100,
+      })
+    );
   });
 
   it("should return the text content from the ai.generate response", async () => {

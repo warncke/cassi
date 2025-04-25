@@ -46,7 +46,7 @@ Use the READ_FILE command to get the contents of files.
 
 Determine all of the file changes that need to be made.
 
-For each file that needs to be changed call the PATCH_FILE tool with a path and patchContent arguments. The path must be the file to apply the patchContent to and the patchContent must be in the format of a standard .patch file.
+For each file that needs to be changed call the PATCH_FILE tool with a path and patchContent arguments. The path must be the file to apply the patchContent to and the patchContent must be in the unified diff format. Be sure to include start every line that is added in patchContent with a "+" and every line that is removed in patchContent with a "-". Be sure to include a "diff --git a/path/to/original/file b/path/to/new/file" line in patchContent.
 
 You can also use the WRITE_FILE tool to create or replace the contents of any file but PATCH_FILE should always be used for updating existing files unless PATCH_FILE fails. It PATCH_FILE fails retry writing the entire file using WRITE_FILE.
 
@@ -61,6 +61,7 @@ PROMPT: ${prompt}
       
 `, // Pass the prompt
       tools: this.tools,
+      maxToolCallIterations: 100,
       ...restOptions,
     });
 

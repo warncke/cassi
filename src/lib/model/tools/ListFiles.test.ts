@@ -200,7 +200,7 @@ describe("ListFiles", () => {
     expect(result).toBe("file1.txt");
   });
 
-  it("toolMethod should return an empty string if glob returns an empty array", async () => {
+  it("toolMethod should return 'Error: No Files Found' if glob returns an empty array", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const params = { pattern: "nonexistent/**" };
@@ -219,7 +219,7 @@ describe("ListFiles", () => {
       [],
       ["nonexistent/**", expectedOptions]
     );
-    expect(result).toBe("");
+    expect(result).toBe("Error: No Files Found");
   });
 
   it("toolMethod should return error if glob does not return an array", async () => {
