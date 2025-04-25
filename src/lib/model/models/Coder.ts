@@ -30,7 +30,16 @@ Take the original PROMPT, with its summary and suggested steps, evaluate each of
 
 For each step evaluate what files may need to be changed in order to complete the step.
 
-Use the EXECUTE_COMMAND to execute linux system commands in a bash shell to get information about the files and directories in the project.
+Use EXECUTE_COMMAND to run linux shell commands to complete tasks.
+
+Use the READ_FILE command to get the contents of files.
+
+Determine all of the file changes that need to be made.
+
+For each file that needs to be changed call the PATCH_FILE tool with a string .patch file syntax
+that can be processed by the linux patch command.
+
+You can also use the WRITE_FILE tool to create or replace the contents of any file.
 
 PROMPT: ${prompt}
       
