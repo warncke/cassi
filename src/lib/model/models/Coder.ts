@@ -5,6 +5,7 @@ import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
 import { PatchFile } from "../tools/PatchFile.js";
+import { RunBuild } from "../tools/RunBuild.js";
 
 export class Coder extends Models {
   public tools: any[];
@@ -17,6 +18,7 @@ export class Coder extends Models {
       this.ai.defineTool(...ReadFile.modelToolArgs(this)),
       this.ai.defineTool(...WriteFile.modelToolArgs(this)),
       this.ai.defineTool(...PatchFile.modelToolArgs(this)),
+      this.ai.defineTool(...RunBuild.modelToolArgs(this)),
     ];
   }
 
@@ -47,6 +49,8 @@ You can also use the WRITE_FILE tool to create or replace the contents of any fi
 
 When calling READ_FILE, WRITE_FILE, and PATCH_FILE always inlude the "path" argument with the
 relative path of the file to access.
+
+After changing files with WRITE_FILE and PATCH_FILE run the RUN_BUILD tool and check the STDERR output for any build errors. If there is any STDERR output try to fix it by modifying the files and RUN_BUILD again to verify changes until no STDERR output is returned by RUN_BUILD
 
 PROMPT: ${prompt}
       

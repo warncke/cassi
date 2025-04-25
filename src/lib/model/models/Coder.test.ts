@@ -7,6 +7,7 @@ import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
 import { PatchFile } from "../tools/PatchFile.js";
+import { RunBuild } from "../tools/RunBuild.js";
 
 vi.mock("../../task/Task.js");
 
@@ -14,6 +15,7 @@ let executeCommandModelToolArgsSpy: any;
 let readFileModelToolArgsSpy: any;
 let writeFileModelToolArgsSpy: any;
 let patchFileModelToolArgsSpy: any;
+let runBuildModelToolArgsSpy: any;
 
 const mockGenerate = vi.fn();
 const mockDefineTool = vi.fn((toolDefinition, toolMethod) => {
@@ -60,6 +62,12 @@ describe("Coder Model", () => {
     description: "mockPatchFileDesc",
     parameters: {},
   };
+  const mockRunBuildToolMethod = vi.fn();
+  const mockRunBuildToolDefinition = {
+    name: "mockRunBuildDef",
+    description: "mockRunBuildDesc",
+    parameters: {},
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -89,6 +97,12 @@ describe("Coder Model", () => {
     patchFileModelToolArgsSpy.mockReturnValue([
       mockPatchFileToolDefinition,
       mockPatchFileToolMethod,
+    ]);
+
+    runBuildModelToolArgsSpy = vi.spyOn(RunBuild, "modelToolArgs");
+    runBuildModelToolArgsSpy.mockReturnValue([
+      mockRunBuildToolDefinition,
+      mockRunBuildToolMethod,
     ]);
 
     mockTask = new (Task as any)("mock-coder-task") as Task;
@@ -121,8 +135,10 @@ describe("Coder Model", () => {
     expect(writeFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(patchFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(patchFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+    expect(runBuildModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(runBuildModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
 
-    expect(mockDefineTool).toHaveBeenCalledTimes(4);
+    expect(mockDefineTool).toHaveBeenCalledTimes(5);
 
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       1,
@@ -144,10 +160,15 @@ describe("Coder Model", () => {
       mockPatchFileToolDefinition,
       mockPatchFileToolMethod
     );
+    expect(mockDefineTool).toHaveBeenNthCalledWith(
+      5,
+      mockRunBuildToolDefinition,
+      mockRunBuildToolMethod
+    );
 
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
-    expect(coderInstance.tools.length).toBe(4);
+    expect(coderInstance.tools.length).toBe(5);
     expect(coderInstance.tools[0].name).toBe(mockToolDefinition.name);
     expect(coderInstance.tools[0].handler).toBe(mockExecuteCommandToolMethod);
     expect(coderInstance.tools[1].name).toBe(mockReadFileToolDefinition.name);
@@ -156,6 +177,8 @@ describe("Coder Model", () => {
     expect(coderInstance.tools[2].handler).toBe(mockWriteFileToolMethod);
     expect(coderInstance.tools[3].name).toBe(mockPatchFileToolDefinition.name);
     expect(coderInstance.tools[3].handler).toBe(mockPatchFileToolMethod);
+    expect(coderInstance.tools[4].name).toBe(mockRunBuildToolDefinition.name);
+    expect(coderInstance.tools[4].handler).toBe(mockRunBuildToolMethod);
   });
 
   it("should call ai.generate with correct parameters in generate method", async () => {
@@ -231,7 +254,7 @@ describe("Coder Model", () => {
 
   it("should execute the placeholder logic in the tool handlers", async () => {
     const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    expect(mockDefineTool).toHaveBeenCalledTimes(4);
+    expect(mockDefineTool).toHaveBeenCalledTimes(5);
 
     const executeCommandHandler = mockDefineTool.mock.calls[0][1];
     expect(executeCommandHandler).toBe(mockExecuteCommandToolMethod);
@@ -269,6 +292,14 @@ describe("Coder Model", () => {
     await patchFileHandler(patchFileInput);
     expect(mockPatchFileToolMethod).toHaveBeenCalledWith(patchFileInput);
     expect(coderInstance.tools[3].handler).toBe(mockPatchFileToolMethod);
+
+    const runBuildHandler = mockDefineTool.mock.calls[4][1];
+    expect(runBuildHandler).toBe(mockRunBuildToolMethod);
+
+    const runBuildInput = {};
+    await runBuildHandler(runBuildInput);
+    expect(mockRunBuildToolMethod).toHaveBeenCalledWith(runBuildInput);
+    expect(coderInstance.tools[4].handler).toBe(mockRunBuildToolMethod);
 
     consoleLogSpy.mockRestore();
   });
