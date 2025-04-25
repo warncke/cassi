@@ -38,6 +38,7 @@ export class ExecuteCommand extends ModelTool {
     model: Models, // Change type to Models
     input: z.infer<typeof executeCommandInputSchema>
   ): Promise<string> {
+    console.log("XXX", model.task.getCwd());
     const result = await model.task.invoke(
       "console",
       "exec",
