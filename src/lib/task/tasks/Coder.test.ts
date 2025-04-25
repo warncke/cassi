@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"; // Added beforeEach
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Coder } from "./Coder.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Task } from "../Task.js";
-import { User } from "../../user/User.js"; // Import User
+import { User } from "../../user/User.js";
+import { gemini15Flash } from "@genkit-ai/googleai"; // Import the model reference
 
 // Mock dependencies
 vi.mock("../../cassi/Cassi");
@@ -70,7 +71,13 @@ describe("Coder Task", () => {
 
     // Verify that newModel was called within initTask
     expect(coderTask.newModel).toHaveBeenCalledWith("Coder");
-    // Verify that the mock model's generate method was called
-    expect(mockGenerate).toHaveBeenCalledWith(testPrompt);
+
+    // Verify that the mock model's generate method was called with the correct options object
+    expect(mockGenerate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: gemini15Flash, // Check for the correct model reference
+        prompt: testPrompt, // Check for the correct prompt
+      })
+    );
   });
 });
