@@ -40,6 +40,30 @@ const invalidSchemaSrcDirTypeFile = join(
   testDirAbsolute,
   "invalid_schema_srcdir_type.json"
 );
+const validSchemaWithDefaultCommandsFile = join(
+  testDirAbsolute,
+  "valid_schema_default_commands.json"
+);
+const validSchemaWithEmptyCommandsFile = join(
+  testDirAbsolute,
+  "valid_schema_empty_commands.json"
+);
+const validSchemaWithCustomCommandsFile = join(
+  testDirAbsolute,
+  "valid_schema_custom_commands.json"
+);
+const invalidSchemaCommandsBuildTypeFile = join(
+  testDirAbsolute,
+  "invalid_schema_commands_build_type.json"
+);
+const invalidSchemaCommandsTestTypeFile = join(
+  testDirAbsolute,
+  "invalid_schema_commands_test_type.json"
+);
+const invalidSchemaCommandsExtraPropFile = join(
+  testDirAbsolute,
+  "invalid_schema_commands_extra_prop.json"
+);
 
 describe("Config", () => {
   let user: User;
@@ -94,8 +118,49 @@ describe("Config", () => {
         JSON.stringify({ apiKeys: { gemini: "test-key" }, srcDir: 123 }),
         "utf-8"
       );
-    } catch (e) {
-    }
+      await writeFile(
+        validSchemaWithDefaultCommandsFile,
+        JSON.stringify({ apiKeys: { gemini: "test-key" } }),
+        "utf-8"
+      );
+      await writeFile(
+        validSchemaWithEmptyCommandsFile,
+        JSON.stringify({ apiKeys: { gemini: "test-key" }, commands: {} }),
+        "utf-8"
+      );
+      await writeFile(
+        validSchemaWithCustomCommandsFile,
+        JSON.stringify({
+          apiKeys: { gemini: "test-key" },
+          commands: { build: "yarn build", test: "yarn test" },
+        }),
+        "utf-8"
+      );
+      await writeFile(
+        invalidSchemaCommandsBuildTypeFile,
+        JSON.stringify({
+          apiKeys: { gemini: "test-key" },
+          commands: { build: 123 },
+        }),
+        "utf-8"
+      );
+      await writeFile(
+        invalidSchemaCommandsTestTypeFile,
+        JSON.stringify({
+          apiKeys: { gemini: "test-key" },
+          commands: { test: false },
+        }),
+        "utf-8"
+      );
+      await writeFile(
+        invalidSchemaCommandsExtraPropFile,
+        JSON.stringify({
+          apiKeys: { gemini: "test-key" },
+          commands: { extra: "prop" },
+        }),
+        "utf-8"
+      );
+    } catch (e) {}
   });
 
   afterEach(async () => {
@@ -110,6 +175,12 @@ describe("Config", () => {
       invalidSchemaWrongTypeFile,
       validSchemaWithSrcDirFile,
       invalidSchemaSrcDirTypeFile,
+      validSchemaWithDefaultCommandsFile,
+      validSchemaWithEmptyCommandsFile,
+      validSchemaWithCustomCommandsFile,
+      invalidSchemaCommandsBuildTypeFile,
+      invalidSchemaCommandsTestTypeFile,
+      invalidSchemaCommandsExtraPropFile,
     ];
     for (const file of filesToUnlink) {
       try {
@@ -143,6 +214,7 @@ describe("Config", () => {
     expect(config.configData).toEqual({
       apiKeys: { gemini: "test-key" },
       srcDir: "src",
+      commands: { build: "npm run build", test: "npm run test" },
     });
   });
 
@@ -201,6 +273,7 @@ describe("Config", () => {
     expect(config.configData).toEqual({
       apiKeys: { gemini: "test-key" },
       srcDir: "src",
+      commands: { build: "npm run build", test: "npm run test" },
     });
   });
 
@@ -210,6 +283,7 @@ describe("Config", () => {
     expect(config.configData).toEqual({
       apiKeys: { gemini: "test-key" },
       srcDir: "source",
+      commands: { build: "npm run build", test: "npm run test" },
     });
   });
 
@@ -217,6 +291,54 @@ describe("Config", () => {
     const config = new Config(invalidSchemaSrcDirTypeFile, user);
     await expect(config.init()).rejects.toThrow(
       `Config file ${invalidSchemaSrcDirTypeFile} validation failed: /srcDir must be string`
+    );
+  });
+
+  test("init() should default commands to { build: 'npm run build', test: 'npm run test' } when not provided", async () => {
+    const config = new Config(validSchemaWithDefaultCommandsFile, user);
+    await config.init();
+    expect(config.configData?.commands).toEqual({
+      build: "npm run build",
+      test: "npm run test",
+    });
+  });
+
+  test("init() should default commands when commands object is empty", async () => {
+    const config = new Config(validSchemaWithEmptyCommandsFile, user);
+    await config.init();
+    expect(config.configData?.commands).toEqual({
+      build: "npm run build",
+      test: "npm run test",
+    });
+  });
+
+  test("init() should use provided custom commands", async () => {
+    const config = new Config(validSchemaWithCustomCommandsFile, user);
+    await config.init();
+    expect(config.configData?.commands).toEqual({
+      build: "yarn build",
+      test: "yarn test",
+    });
+  });
+
+  test("init() should throw validation error if commands.build has wrong type", async () => {
+    const config = new Config(invalidSchemaCommandsBuildTypeFile, user);
+    await expect(config.init()).rejects.toThrow(
+      `Config file ${invalidSchemaCommandsBuildTypeFile} validation failed: /commands/build must be string`
+    );
+  });
+
+  test("init() should throw validation error if commands.test has wrong type", async () => {
+    const config = new Config(invalidSchemaCommandsTestTypeFile, user);
+    await expect(config.init()).rejects.toThrow(
+      `Config file ${invalidSchemaCommandsTestTypeFile} validation failed: /commands/test must be string`
+    );
+  });
+
+  test("init() should throw validation error for extra property within commands", async () => {
+    const config = new Config(invalidSchemaCommandsExtraPropFile, user);
+    await expect(config.init()).rejects.toThrow(
+      `Error processing config file ${invalidSchemaCommandsExtraPropFile}: Config file ${invalidSchemaCommandsExtraPropFile} validation failed: /commands must NOT have additional properties (schema path: #/properties/commands/additionalProperties)`
     );
   });
 });

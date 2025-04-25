@@ -7,7 +7,6 @@ export class LocalConsole {
   private cwd: string;
 
   constructor(cwd: string) {
-    console.log("GGG", cwd);
     this.cwd = cwd;
   }
 

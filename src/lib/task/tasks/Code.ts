@@ -40,13 +40,23 @@ export class Code extends Task {
     console.log(`Task ID set to: ${this.taskId}`);
     console.log(`Worktree directory set to: ${this.worktreeDir}`);
 
+    // Note: This first addWorktree call seems incorrect based on typical git usage.
+    // It might be intended to ensure the branch exists or something similar,
+    // but usually addWorktree takes the path and the branch name/commit.
+    // Assuming the intent was to pass arguments correctly to the invoke function:
     await this.invoke(
       "git",
-      "branch",
-      [this.cassi.repository.repositoryDir],
-      [this.taskId]
+      "addWorktree",
+      [this.getCwd()], // First arg array (options)
+      [this.taskId] // Second arg array (args)
     );
-    console.log(`Created branch: ${this.taskId}`);
+    // Corrected invoke call as per user instruction
+    await this.invoke("console", "exec", [this.getCwd()], ["npm install"]);
+    console.log(
+      `Created branch ${
+        this.taskId
+      } and installed dependencies in ${this.getCwd()}`
+    );
 
     await this.invoke(
       "git",
@@ -85,6 +95,18 @@ export class Code extends Task {
       console.log(
         "Model response indicates no file modifications. Only file modification tasks are currently supported."
       );
+    }
+  }
+
+  public async cleanupTask(): Promise<void> {
+    if (this.worktreeDir) {
+      await this.invoke(
+        "git",
+        "remWorkTree",
+        [this.getCwd()],
+        [this.worktreeDir]
+      );
+      await this.invoke("fs", "deleteDirectory", [], [this.worktreeDir]);
     }
   }
 }

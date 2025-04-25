@@ -8,6 +8,10 @@ interface ConfigData {
     gemini: string;
   };
   srcDir?: string;
+  commands?: {
+    build?: string;
+    test?: string;
+  };
 }
 
 const configSchema: JSONSchemaType<ConfigData> = {
@@ -25,6 +29,16 @@ const configSchema: JSONSchemaType<ConfigData> = {
       type: "string",
       nullable: true,
       default: "src",
+    },
+    commands: {
+      type: "object",
+      properties: {
+        build: { type: "string", nullable: true, default: "npm run build" },
+        test: { type: "string", nullable: true, default: "npm run test" },
+      },
+      nullable: true,
+      additionalProperties: false,
+      default: {}, // Add default empty object here
     },
   },
   required: ["apiKeys"],
@@ -62,9 +76,7 @@ export class Config {
       } else {
         const errors = validate.errors
           ?.map(
-            (
-              err: ErrorObject
-            ) =>
+            (err: ErrorObject) =>
               `${err.instancePath || "root"} ${err.message} (schema path: ${
                 err.schemaPath
               })`
