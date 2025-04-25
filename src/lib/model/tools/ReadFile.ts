@@ -34,9 +34,24 @@ export class ReadFile extends ModelTool {
     model: Models,
     input: z.infer<typeof readFileInputSchema>
   ): Promise<string> {
+    console.log(
+      "ReadFile toolMethod cwd:",
+      model.task.getCwd(),
+      "input:",
+      input
+    );
     const fullPath = path.join(model.task.getCwd(), input.path);
-    const content = await model.task.invoke("fs", "readFile", [], [fullPath]);
-
-    return content ?? "File read successfully, but it was empty.";
+    try {
+      const content = await model.task.invoke("fs", "readFile", [], [fullPath]);
+      return content ?? "File read successfully, but it was empty.";
+    } catch (error: any) {
+      if (
+        error instanceof Error &&
+        error.message.includes("ENOENT: no such file or directory")
+      ) {
+        return "File does not exist";
+      }
+      throw error;
+    }
   }
 }

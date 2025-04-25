@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ReadFile } from "./ReadFile.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -63,8 +63,11 @@ const mockTask = new MockTask(mockCassi);
 const mockModelInstance = new MockCoderModel(mockTask);
 
 describe("ReadFile", () => {
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {}); // Spy and suppress output
     (genkit as any).mockImplementation(() => ({
       ai: {
         generate: vi.fn(async (options: GenerateModelOptions) => ({
@@ -76,6 +79,10 @@ describe("ReadFile", () => {
     vi.mocked(mockTask.invoke).mockClear();
     vi.mocked(mockTask.getCwd).mockClear();
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore(); // Restore original console.log
   });
 
   it("should have correct toolDefinition", () => {
@@ -133,5 +140,58 @@ describe("ReadFile", () => {
     );
 
     expect(result).toBe("File read successfully, but it was empty.");
+  });
+
+  it("toolMethod should return 'File does not exist' when fs.readFile throws ENOENT", async () => {
+    const input = { path: "nonexistent.txt" };
+    const toolArgs = ReadFile.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+
+    vi.mocked(mockTask.invoke).mockImplementationOnce(
+      async (toolName, methodName, toolArgs, ...args) => {
+        if (toolName === "fs" && methodName === "readFile") {
+          const methodArgs = args[0];
+          const filePath = methodArgs[0];
+          if (filePath === "/mock/cwd/nonexistent.txt") {
+            const error = new Error(
+              "ENOENT: no such file or directory, open '/mock/cwd/nonexistent.txt'"
+            );
+            (error as any).code = "ENOENT";
+            throw error;
+          }
+        }
+        throw new Error(
+          `Unexpected tool invocation: ${toolName}.${methodName}`
+        );
+      }
+    );
+
+    const result = await toolMethod(input);
+
+    expect(mockTask.invoke).toHaveBeenCalledTimes(1);
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      ["/mock/cwd/nonexistent.txt"]
+    );
+
+    expect(result).toBe("File does not exist");
+  });
+
+  it("toolMethod should log cwd and input", async () => {
+    const input = { path: "debug/log.txt" };
+    const toolArgs = ReadFile.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+
+    await toolMethod(input);
+
+    expect(consoleLogSpy).toHaveBeenCalledTimes(1);
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReadFile toolMethod cwd:",
+      "/mock/cwd",
+      "input:",
+      input
+    );
   });
 });
