@@ -101,7 +101,7 @@ export class Code extends Task {
   public async cleanupTask(): Promise<void> {
     if (this.worktreeDir) {
       await this.invoke("git", "remWorkTree", [], [this.worktreeDir]);
-      await this.invoke("fs", "deleteDirectory", [], [this.worktreeDir]);
+      // await this.invoke("fs", "deleteDirectory", [], [this.worktreeDir]);
     }
   }
 }
