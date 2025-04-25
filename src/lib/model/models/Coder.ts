@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
+import { ReadFile } from "../tools/ReadFile.js";
 
 export class Coder extends Models {
   public tools: any[];
@@ -11,6 +12,7 @@ export class Coder extends Models {
 
     this.tools = [
       this.ai.defineTool(...ExecuteCommand.modelToolArgs(this)),
+      this.ai.defineTool(...ReadFile.modelToolArgs(this)),
     ];
   }
 
@@ -36,7 +38,6 @@ PROMPT: ${prompt}
       tools: this.tools,
       ...restOptions,
     });
-
 
     if (usage) {
       console.log("AI Usage:", usage);

@@ -4,10 +4,12 @@ import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
 import { genkit } from "genkit";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
+import { ReadFile } from "../tools/ReadFile.js";
 
 vi.mock("../../task/Task.js");
 
-let modelToolArgsSpy: any;
+let executeCommandModelToolArgsSpy: any;
+let readFileModelToolArgsSpy: any;
 
 const mockGenerate = vi.fn();
 const mockDefineTool = vi.fn((toolDefinition, toolMethod) => {
@@ -27,7 +29,6 @@ vi.mock("genkit", () => ({
   genkit: vi.fn(() => mockAiObject),
 }));
 
-
 describe("Coder Model", () => {
   let mockTask: Task;
   let coderInstance: Coder;
@@ -36,7 +37,13 @@ describe("Coder Model", () => {
     description: "mockDesc",
     parameters: {},
   };
-  const mockToolMethod = vi.fn();
+  const mockExecuteCommandToolMethod = vi.fn();
+  const mockReadFileToolMethod = vi.fn();
+  const mockReadFileToolDefinition = {
+    name: "mockReadFileDef",
+    description: "mockReadFileDesc",
+    parameters: {},
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -44,8 +51,17 @@ describe("Coder Model", () => {
     mockDefineTool.mockClear();
     (genkit as ReturnType<typeof vi.fn>).mockClear();
 
-    modelToolArgsSpy = vi.spyOn(ExecuteCommand, "modelToolArgs");
-    modelToolArgsSpy.mockReturnValue([mockToolDefinition, mockToolMethod]);
+    executeCommandModelToolArgsSpy = vi.spyOn(ExecuteCommand, "modelToolArgs");
+    executeCommandModelToolArgsSpy.mockReturnValue([
+      mockToolDefinition,
+      mockExecuteCommandToolMethod,
+    ]);
+
+    readFileModelToolArgsSpy = vi.spyOn(ReadFile, "modelToolArgs");
+    readFileModelToolArgsSpy.mockReturnValue([
+      mockReadFileToolDefinition,
+      mockReadFileToolMethod,
+    ]);
 
     mockTask = new (Task as any)("mock-coder-task") as Task;
 
@@ -68,22 +84,32 @@ describe("Coder Model", () => {
     expect((coderInstance as any).ai.defineTool).toBe(mockDefineTool);
   });
 
-  it("should call ExecuteCommand.modelToolArgs and pass its result spread into ai.defineTool", () => {
-    expect(modelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(modelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+  it("should call modelToolArgs for each tool and pass results to ai.defineTool", () => {
+    expect(executeCommandModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(executeCommandModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+    expect(readFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(readFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
 
-    expect(mockDefineTool).toHaveBeenCalledTimes(1);
+    expect(mockDefineTool).toHaveBeenCalledTimes(2);
 
-    expect(mockDefineTool).toHaveBeenCalledWith(
+    expect(mockDefineTool).toHaveBeenNthCalledWith(
+      1,
       mockToolDefinition,
-      mockToolMethod
+      mockExecuteCommandToolMethod
+    );
+    expect(mockDefineTool).toHaveBeenNthCalledWith(
+      2,
+      mockReadFileToolDefinition,
+      mockReadFileToolMethod
     );
 
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
-    expect(coderInstance.tools.length).toBe(1);
+    expect(coderInstance.tools.length).toBe(2);
     expect(coderInstance.tools[0].name).toBe(mockToolDefinition.name);
-    expect(coderInstance.tools[0].handler).toBe(mockToolMethod);
+    expect(coderInstance.tools[0].handler).toBe(mockExecuteCommandToolMethod);
+    expect(coderInstance.tools[1].name).toBe(mockReadFileToolDefinition.name);
+    expect(coderInstance.tools[1].handler).toBe(mockReadFileToolMethod);
   });
 
   it("should call ai.generate with correct parameters in generate method", async () => {
@@ -159,18 +185,25 @@ describe("Coder Model", () => {
 
   it("should execute the placeholder logic in the execute_command tool handler", async () => {
     const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    expect(mockDefineTool).toHaveBeenCalled();
+    expect(mockDefineTool).toHaveBeenCalledTimes(2);
 
-    const toolHandler = mockDefineTool.mock.calls[0][1];
-    expect(toolHandler).toBe(mockToolMethod);
+    const executeCommandHandler = mockDefineTool.mock.calls[0][1];
+    expect(executeCommandHandler).toBe(mockExecuteCommandToolMethod);
 
-    const input = { command: "ls -l", requires_approval: false };
+    const executeCommandInput = { command: "ls -l", requires_approval: false };
+    await executeCommandHandler(executeCommandInput);
+    expect(mockExecuteCommandToolMethod).toHaveBeenCalledWith(
+      executeCommandInput
+    );
+    expect(coderInstance.tools[0].handler).toBe(mockExecuteCommandToolMethod);
 
-    await toolHandler(input);
+    const readFileHandler = mockDefineTool.mock.calls[1][1];
+    expect(readFileHandler).toBe(mockReadFileToolMethod);
 
-    expect(mockToolMethod).toHaveBeenCalledWith(input);
-
-    expect(coderInstance.tools[0].handler).toBe(mockToolMethod);
+    const readFileInput = { path: "test.txt" };
+    await readFileHandler(readFileInput);
+    expect(mockReadFileToolMethod).toHaveBeenCalledWith(readFileInput);
+    expect(coderInstance.tools[1].handler).toBe(mockReadFileToolMethod);
 
     consoleLogSpy.mockRestore();
   });
