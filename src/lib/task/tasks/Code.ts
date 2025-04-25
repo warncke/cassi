@@ -40,24 +40,6 @@ export class Code extends Task {
     console.log(`Task ID set to: ${this.taskId}`);
     console.log(`Worktree directory set to: ${this.worktreeDir}`);
 
-    // Note: This first addWorktree call seems incorrect based on typical git usage.
-    // It might be intended to ensure the branch exists or something similar,
-    // but usually addWorktree takes the path and the branch name/commit.
-    // Assuming the intent was to pass arguments correctly to the invoke function:
-    await this.invoke(
-      "git",
-      "addWorktree",
-      [this.getCwd()], // First arg array (options)
-      [this.taskId] // Second arg array (args)
-    );
-    // Corrected invoke call as per user instruction
-    await this.invoke("console", "exec", [this.getCwd()], ["npm install"]);
-    console.log(
-      `Created branch ${
-        this.taskId
-      } and installed dependencies in ${this.getCwd()}`
-    );
-
     await this.invoke(
       "git",
       "addWorktree",
@@ -66,6 +48,13 @@ export class Code extends Task {
     );
     console.log(
       `Added worktree at ${this.worktreeDir} for branch ${this.taskId}`
+    );
+
+    await this.invoke("console", "exec", [this.getCwd()], ["npm install"]);
+    console.log(
+      `Created branch ${
+        this.taskId
+      } and installed dependencies in ${this.getCwd()}`
     );
 
     const formattedSteps = this.evaluation.steps

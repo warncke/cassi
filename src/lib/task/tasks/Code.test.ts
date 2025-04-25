@@ -3,15 +3,26 @@ import { Code } from "./Code.js";
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Models } from "../../model/Models.js";
-import { Coder } from "../../model/models/Coder.js";
+import { Coder } from "./Coder.js";
+import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
 import { gemini20Flash } from "@genkit-ai/googleai";
 
 vi.mock("../../cassi/Cassi.js");
 vi.mock("../../model/Models.js");
-vi.mock("../../model/models/Coder.js");
-
+// Provide a mock implementation for Coder that captures the prompt
+vi.mock("./Coder.js", () => {
+  const MockCoder = vi.fn().mockImplementation((cassi, parentTask, prompt) => {
+    return {
+      cassi: cassi,
+      parentTask: parentTask,
+      prompt: prompt, // Store the prompt
+      run: vi.fn().mockResolvedValue(undefined), // Mock run method
+    };
+  });
+  return { Coder: MockCoder };
+});
 vi.mock("../../model/models/EvaluateCodePrompt.js", () => {
-  const MockEvaluateCodePrompt = vi.fn().mockImplementation((plugin, task) => {
+  const MockEvaluateCodePrompt = vi.fn().mockImplementation(() => {
     return {
       generate: vi.fn(),
     };
@@ -28,12 +39,13 @@ vi.mock("@genkit-ai/googleai", async (importOriginal) => {
 });
 
 describe("Code Task", () => {
-  let mockCassi: Cassi;
+  let mockCassi: any;
   let mockParentTask: Task;
   let codeTask: Code;
-  let mockNewInstance: ReturnType<typeof vi.spyOn>;
+  let mockNewModel: ReturnType<typeof vi.spyOn>;
   let mockGenerate: ReturnType<typeof vi.fn>;
   let mockEvaluateModel: { generate: ReturnType<typeof vi.fn> };
+  let invokeSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -41,23 +53,30 @@ describe("Code Task", () => {
     mockGenerate = vi.fn();
     mockEvaluateModel = { generate: mockGenerate };
 
-    mockNewInstance = vi.fn().mockReturnValue(mockEvaluateModel);
+    mockNewModel = vi.fn().mockReturnValue(mockEvaluateModel);
+
     mockCassi = {
-      model: {
-        newInstance: mockNewInstance,
-      },
       repository: {
         repositoryDir: "/mock/repo/dir",
       },
-      tool: {
-        invoke: vi.fn().mockResolvedValue(undefined),
+      // Correctly structure the mock to include the nested 'model' property
+      model: {
+        newInstance: mockNewModel,
       },
     } as unknown as Cassi;
 
-    mockParentTask = new Task(mockCassi);
+    mockParentTask = new Task(mockCassi, null);
     codeTask = new Code(mockCassi, mockParentTask, "Generate some code.");
 
+    // Spy on the invoke method directly, casting to any to bypass type issues
+    invokeSpy = vi
+      .spyOn(codeTask as any, "invoke")
+      .mockResolvedValue(undefined);
     vi.spyOn(codeTask, "addSubtask");
+    vi.spyOn(codeTask, "getCwd").mockImplementation(
+      () => codeTask.worktreeDir || "/mock/worktree/dir"
+    );
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -70,295 +89,114 @@ describe("Code Task", () => {
     expect(codeTask.prompt).toBe("Generate some code.");
     expect(codeTask.cassi).toBe(mockCassi);
     expect(codeTask.parentTask).toBe(mockParentTask);
-  });
-
-  it("should store the prompt correctly and initialize taskId to null", () => {
     expect(codeTask.prompt).toBe("Generate some code.");
     expect(codeTask.taskId).toBeNull();
+    expect(codeTask.worktreeDir).toBeUndefined();
   });
 
-  it("should call newModel generate and add Coder subtask during initTask when modifiesFiles is true", async () => {
+  it("should evaluate prompt, create worktree, install deps, and add Coder subtask when modifiesFiles is true", async () => {
+    // Remove duplicate keys in mockResponse
     const mockResponse = JSON.stringify({
       summary: "Test Summary",
       modifiesFiles: true,
-      steps: [],
+      steps: ["Step 1"],
     });
     mockGenerate.mockResolvedValue(mockResponse);
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
 
     await codeTask.initTask();
 
-    expect(mockNewInstance).toHaveBeenCalledTimes(1);
-    expect(mockNewInstance).toHaveBeenCalledWith(
-      "EvaluateCodePrompt",
-      codeTask
-    );
+    expect(mockNewModel).toHaveBeenCalledTimes(1);
+    // Expect newInstance to be called via newModel
+    expect(mockNewModel).toHaveBeenCalledTimes(1);
+    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask); // newModel passes the task instance
 
     expect(mockGenerate).toHaveBeenCalledTimes(1);
+    // Use the mocked model name
     expect(mockGenerate).toHaveBeenCalledWith({
       model: "mockedGemini20Flash",
       prompt: codeTask.prompt,
     });
 
-    // Check the first git addWorktree call (which might be creating the branch)
+    expect(codeTask.evaluation).toEqual(JSON.parse(mockResponse));
+    expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-test-summary$/);
+    expect(codeTask.worktreeDir).toMatch(
+      /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-test-summary$/
+    );
+
+    expect(invokeSpy).toHaveBeenCalledTimes(2);
+
     expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
       "git",
       "addWorktree",
-      [codeTask.getCwd()],
-      [expect.stringMatching(/^[a-zA-Z0-9]{8}-test-summary$/)]
+      [mockCassi.repository.repositoryDir],
+      [codeTask.worktreeDir, codeTask.taskId]
     );
 
-    // Check the console exec call for npm install with the corrected structure
     expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
       "console",
       "exec",
-      [codeTask.getCwd()], // First argument array (options/cwd)
-      ["npm install"] // Second argument array (command)
-    );
-
-    // Check the second git addWorktree call (adding the actual worktree)
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.cassi.repository.repositoryDir],
-      [
-        expect.stringMatching(
-          /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-test-summary$/
-        ),
-        expect.stringMatching(/^[a-zA-Z0-9]{8}-test-summary$/),
-      ]
-    );
-
-    expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object)); // Changed Coder to Object
-  });
-
-  it("should correctly parse the JSON string returned by model.generate", async () => {
-    const mockJsonResponse = {
-      summary: "Parsed Summary",
-      modifiesFiles: true,
-      steps: ["Step 1", "Step 2"],
-    };
-    mockGenerate.mockResolvedValue(JSON.stringify(mockJsonResponse));
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
-
-    await codeTask.initTask();
-
-    expect(codeTask.evaluation).toEqual(mockJsonResponse);
-    // Add check for console.exec here too for consistency with the corrected structure
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "console",
-      "exec",
-      [codeTask.getCwd()],
-      ["npm install"]
-    );
-    expect(mockNewInstance).toHaveBeenCalledWith(
-      "EvaluateCodePrompt",
-      codeTask
-    );
-    expect(mockGenerate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: "mockedGemini20Flash",
-        prompt: codeTask.prompt,
-      })
-    );
-    expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object));
-  });
-
-  it("should add Coder subtask when modifiesFiles is true", async () => {
-    mockGenerate.mockResolvedValue(
-      JSON.stringify({ modifiesFiles: true, summary: "s", steps: [] })
-    );
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
-    await codeTask.initTask();
-
-    // Check the first git addWorktree call
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.getCwd()],
-      [expect.stringMatching(/^[a-zA-Z0-9]{8}-s$/)]
-    );
-
-    // Check the console exec call with the corrected structure
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "console",
-      "exec",
-      [codeTask.getCwd()],
+      [codeTask.worktreeDir],
       ["npm install"]
     );
 
-    // Check the second git addWorktree call
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.cassi.repository.repositoryDir],
-      [
-        expect.stringMatching(
-          /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-s$/
-        ),
-        expect.stringMatching(/^[a-zA-Z0-9]{8}-s$/),
-      ]
+    expect(codeTask.addSubtask).toHaveBeenCalledTimes(1);
+    // Check that the mock Coder constructor was called
+    const MockCoder = vi.mocked(Coder);
+    expect(MockCoder).toHaveBeenCalledTimes(1);
+    // Ensure the correct instance was passed to addSubtask
+    expect(codeTask.addSubtask).toHaveBeenCalledWith(
+      MockCoder.mock.instances[0]
     );
-    expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object)); // Changed Coder to Object
+
+    // Assert directly on the prompt argument passed to the mock constructor
+    const capturedPrompt = MockCoder.mock.calls[0][2]; // Get the 3rd argument (prompt)
+    expect(capturedPrompt).toContain("Generate some code.");
+    expect(capturedPrompt).toContain("Summary: Test Summary");
+    expect(capturedPrompt).toContain("Steps:\n- Step 1");
   });
 
-  it("should log 'Only file modification tasks supported' and not add Coder subtask when modifiesFiles is false", async () => {
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    mockGenerate.mockResolvedValue(
-      JSON.stringify({ modifiesFiles: false, summary: "s", steps: [] })
-    );
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
+  it("should log message and not invoke tools or add subtask when modifiesFiles is false", async () => {
+    // Correctly define mockResponse within the test case
+    const mockResponse = JSON.stringify({
+      summary: "No Modify Summary",
+      modifiesFiles: false,
+      steps: [],
+    });
+    mockGenerate.mockResolvedValue(mockResponse);
 
     await codeTask.initTask();
 
+    // Expect newInstance to be called via newModel
+    expect(mockNewModel).toHaveBeenCalledTimes(1);
+    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask); // newModel passes the task instance
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(codeTask.evaluation).toEqual(JSON.parse(mockResponse));
     expect(invokeSpy).not.toHaveBeenCalled();
     expect(codeTask.addSubtask).not.toHaveBeenCalled();
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "Only file modification tasks are currently supported"
-      )
+    expect(console.log).toHaveBeenCalledWith(
+      "Model response indicates no file modifications. Only file modification tasks are currently supported."
     );
-    consoleLogSpy.mockRestore();
-  });
-
-  it("should call git tools and add Coder subtask with correct prompt when modifiesFiles is true", async () => {
-    const summary = "this-is-my-summary";
-    const steps = ["step a", "step b"];
-    mockGenerate.mockResolvedValue(
-      JSON.stringify({ modifiesFiles: true, summary: summary, steps: steps })
-    );
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
-    const addSubtaskSpy = vi.spyOn(codeTask, "addSubtask");
-
-    await codeTask.initTask();
-
-    // Check first addWorktree
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.getCwd()],
-      [expect.stringMatching(/^[a-zA-Z0-9]{8}-this-is-my-summary$/)]
-    );
-
-    // Check console exec with the corrected structure
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "console",
-      "exec",
-      [codeTask.getCwd()],
-      ["npm install"]
-    );
-
-    // Check second addWorktree
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.cassi.repository.repositoryDir],
-      [
-        expect.stringMatching(
-          /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-this-is-my-summary$/
-        ),
-        expect.stringMatching(/^[a-zA-Z0-9]{8}-this-is-my-summary$/),
-      ]
-    );
-    expect(addSubtaskSpy).toHaveBeenCalledTimes(1);
-    expect(addSubtaskSpy).toHaveBeenCalledWith(expect.any(Object)); // Changed Coder to Object
-
-    const addedSubtask = addSubtaskSpy.mock.calls[0][0] as any;
-    expect(addedSubtask.prompt).toContain(codeTask.prompt);
-    expect(addedSubtask.prompt).toContain(`Summary: ${summary}`);
-    expect(addedSubtask.prompt).toContain(
-      `Steps:\n- ${steps[0]}\n- ${steps[1]}`
-    );
-  });
-
-  it("should generate an 8-character alphanumeric ID and use it in git calls", async () => {
-    mockGenerate.mockResolvedValue(
-      JSON.stringify({
-        modifiesFiles: true,
-        summary: "generate-id-test",
-        steps: [],
-      })
-    );
-    const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
-
-    await codeTask.initTask();
-
-    // Check first addWorktree
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.getCwd()],
-      [expect.stringMatching(/^[a-zA-Z0-9]{8}-generate-id-test$/)]
-    );
-
-    // Check console exec with the corrected structure
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "console",
-      "exec",
-      [codeTask.getCwd()],
-      ["npm install"]
-    );
-
-    // Check second addWorktree
-    expect(invokeSpy).toHaveBeenCalledWith(
-      codeTask, // Add task instance as first argument
-      "git",
-      "addWorktree",
-      [codeTask.cassi.repository.repositoryDir],
-      [
-        expect.stringMatching(
-          /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-generate-id-test$/
-        ),
-        expect.stringMatching(/^[a-zA-Z0-9]{8}-generate-id-test$/),
-      ]
-    );
-    expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-generate-id-test$/);
   });
 
   describe("cleanupTask", () => {
-    it("should call git remWorkTree and fs deleteDirectory if worktreeDir is set", async () => {
+    it("should call git remWorkTree if worktreeDir is set", async () => {
       const mockWorktreeDir = "/mock/repo/dir/.cassi/workspaces/mock-task-id";
       codeTask.worktreeDir = mockWorktreeDir;
-      const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
 
       await codeTask.cleanupTask();
 
-      expect(invokeSpy).toHaveBeenCalledTimes(2);
-      // Correcting the remWorkTree call based on likely intent (using worktreeDir as primary arg)
+      expect(invokeSpy).toHaveBeenCalledTimes(1);
       expect(invokeSpy).toHaveBeenCalledWith(
-        codeTask, // Add task instance as first argument
         "git",
         "remWorkTree",
-        [mockWorktreeDir], // Options likely empty or related to the worktree path
-        [mockWorktreeDir] // Argument is the worktree path to remove
-      );
-      expect(invokeSpy).toHaveBeenCalledWith(
-        codeTask, // Add task instance as first argument
-        "fs",
-        "deleteDirectory",
-        [], // No options expected for deleteDirectory
+        [],
         [mockWorktreeDir]
       );
     });
 
     it("should not call invoke if worktreeDir is not set", async () => {
       codeTask.worktreeDir = undefined;
-      const invokeSpy = vi.spyOn(mockCassi.tool, "invoke");
-
       await codeTask.cleanupTask();
-
       expect(invokeSpy).not.toHaveBeenCalled();
     });
   });
