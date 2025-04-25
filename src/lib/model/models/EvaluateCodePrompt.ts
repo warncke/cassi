@@ -23,7 +23,7 @@ export class EvaluateCodePrompt extends Models {
       throw new Error("EvaluateCodePrompt requires a string prompt.");
     }
 
-    const response = await this.ai.generate({
+    const { text } = await this.ai.generate({
       model: model, // Use the model from options
       prompt: `
 OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
@@ -47,13 +47,7 @@ The JSON object to OUTPUT is:
       ...restOptions, // Pass any other generation options
     });
 
-    // Extract and return the text content
-    const text = response.text();
-    if (!text) {
-      console.warn("EvaluateCodePrompt response did not contain text content.");
-      console.log("Full AI Response:", response.toJSON());
-      return ""; // Or throw an error
-    }
-    return text;
+    // Return the text content, defaulting to an empty string if null/undefined
+    return text ?? "";
   }
 }

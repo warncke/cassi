@@ -9,8 +9,9 @@ import { GenerateModelOptions } from "../Models.js"; // Import GenerateModelOpti
 const { mockAIGenerate } = vi.hoisted(() => {
   return {
     mockAIGenerate: vi.fn().mockResolvedValue({
-      // Mock the AI response structure expected by the implementation
-      text: () => "mocked response text",
+      // Mock the AI response structure to return an object with a 'text' property
+      text: "mocked response text",
+      // Include toJSON for potential debugging/logging in the source if needed
       toJSON: () => ({ text: "mocked response text" }),
     }),
   };
