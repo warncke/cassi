@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "vitest run src --exclude .cassi/**",
+    "test:e2e": "vitest run src/test/e2e",
     "start:cli": "node dist/bin/cassi.js",
     "watch": "tsc --watch",
     "remove-comments": "node --loader ts-node/esm src/bin/remove-comments.ts"
