@@ -38,7 +38,6 @@ export class ExecuteCommand extends ModelTool {
     model: Models,
     input: z.infer<typeof executeCommandInputSchema>
   ): Promise<string> {
-    console.log("XXX", model.task.getCwd());
     const result = await model.task.invoke(
       "console",
       "exec",
@@ -53,7 +52,6 @@ export class ExecuteCommand extends ModelTool {
     if (result.stderr) {
       output += `STDERR:\n${result.stderr}\n`;
     }
-    console.log("YYY", output);
     return output.trim() || "Command executed successfully with no output.";
   }
 }
