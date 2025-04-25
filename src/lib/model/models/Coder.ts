@@ -38,7 +38,7 @@ Take the original PROMPT, with its summary and suggested steps, evaluate each of
 
 For each step evaluate what files may need to be changed in order to complete the step.
 
-Use the LIST_FILES command to list all files in the projects src directory. Use the results of LIST_FILE to determine which files may need to be modified and use the READ_FILE tool to read individual files.
+Use the LIST_FILES tool to run a glob to list all files. Use an optional pattern argument to the LIST_FILES tool to limit the types of files to return. Use the results of LIST_FILE to determine which files may need to be modified and use the READ_FILE tool to read individual files. When using file path from LIST_FILES be sure to include the original path argument from the call to LIST_FILES for constructing the path for calling READ_FILE, WRITE_FILE, and PATCH_FILE.
 
 Use EXECUTE_COMMAND to run linux shell commands to complete tasks.
 

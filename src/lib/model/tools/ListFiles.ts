@@ -1,39 +1,34 @@
-import path from "path";
-import { Models } from "../Models.js";
-import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
 import { z } from "zod";
-import * as fs from "fs/promises"; // Import fs promises for types
+import { Models } from "../Models.js";
+import { ModelTool } from "./ModelTool.js";
+import { GlobOptions } from "glob";
 
 export class ListFiles extends ModelTool {
   static parametersSchema = z.object({
-    path: z.string().describe("The path of the directory to list contents for"),
-    recursive: z
-      .boolean()
-      .optional()
+    pattern: z
+      .string()
       .describe(
-        "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only."
-      ),
+        "The glob pattern to match files against (e.g., 'src/**/*.ts', '**/*.ts'). Defaults to '*'."
+      )
+      .optional()
+      .default("*"),
   });
 
   static toolDefinition: ToolDefinition = {
-    name: "list_files",
+    name: "LIST_FILES",
     description:
-      "Lists files and directories within the specified directory. If recursive is true, it lists recursively.",
+      "Lists files matching a glob pattern within the current working directory.",
     parameters: {
       type: "object",
       properties: {
-        path: {
+        pattern: {
           type: "string",
-          description: "The path of the directory to list contents for",
-        },
-        recursive: {
-          type: "boolean",
           description:
-            "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+            "The glob pattern to match files against (e.g., 'src/**/*.ts', '**/*.ts'). Defaults to '*'.",
         },
       },
-      required: ["path"],
+      required: [], // pattern is optional with a default
     },
   };
 
@@ -41,48 +36,45 @@ export class ListFiles extends ModelTool {
     model: Models,
     params: z.infer<typeof ListFiles.parametersSchema>
   ): Promise<string> {
-    // Use empty string if params.path is undefined, resolving to cwd
-    const targetPath = path.resolve(model.task.getCwd(), params.path || "");
-    // Use inline type for options matching LocalFS.listDirectory signature
-    const options:
-      | {
-          encoding?: BufferEncoding | null | undefined;
-          withFileTypes?: false | undefined;
-          recursive?: boolean | undefined;
-        }
-      | BufferEncoding
-      | null
-      | undefined = params.recursive ? { recursive: true } : undefined;
+    const cwd = model.task.getCwd();
+    let pattern = params.pattern;
+
+    // Check if the pattern is a simple file extension pattern like *.ts
+    const simplePatternRegex = /^\*\.\w+$/;
+    if (simplePatternRegex.test(pattern)) {
+      pattern = `**/${pattern}`; // Prepend **/ to search recursively
+    }
+
+    const options: GlobOptions = {
+      cwd: cwd,
+      nodir: true, // Usually, we want to list files, not directories
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
 
     console.log(
       "ListFiles toolMethod cwd:",
-      model.task.getCwd(),
-      "params.path:",
-      params.path,
-      "targetPath:",
-      targetPath,
+      cwd,
+      "pattern:",
+      pattern,
       "options:",
       options
     );
 
     try {
-      // Note: listDirectory returns Promise<string[] | fs.Dirent[]>
-      // We are casting to string[] based on the assumption that withFileTypes is not true in options.
-      // If withFileTypes: true is needed later, this handling needs adjustment.
-      const entries = (await model.task.invoke(
+      const files = (await model.task.invoke(
         "fs",
-        "listDirectory",
+        "glob",
         [],
-        [targetPath, options]
+        [pattern, options]
       )) as string[];
 
-      if (!Array.isArray(entries)) {
-        return "Error: Expected an array of file/directory names but received something else.";
+      if (!Array.isArray(files)) {
+        return "Error: Expected an array of file paths but received something else.";
       }
-      return entries.join("\n");
+      return files.join("\n");
     } catch (error: any) {
-      console.error("Error listing files/directories:", error);
-      return `Error listing files/directories in ${targetPath}: ${error.message}`;
+      console.error("Error executing glob pattern:", error);
+      return `Error executing glob pattern '${pattern}' in ${cwd}: ${error.message}`;
     }
   }
 }

@@ -225,4 +225,67 @@ describe("LocalFS", () => {
       await localFs.deleteFile(filePath);
     });
   });
+
+  describe("Glob Operations", () => {
+    const globTestDir = path.join(testDir, "glob_test");
+    const file1 = path.join(globTestDir, "file1.txt");
+    const file2 = path.join(globTestDir, "file2.log");
+    const subDir = path.join(globTestDir, "sub");
+    const file3 = path.join(subDir, "file3.txt");
+
+    beforeEach(async () => {
+      await localFs.createDirectory(subDir);
+      await localFs.createFile(file1, "content1");
+      await localFs.createFile(file2, "content2");
+      await localFs.createFile(file3, "content3");
+    });
+
+    afterEach(async () => {
+      await localFs.deleteDirectory(globTestDir);
+    });
+
+    test("should find files matching a single pattern", async () => {
+      const results = await localFs.glob(path.join(globTestDir, "*.txt"));
+      expect(results).toHaveLength(1);
+      expect(results).toContain(file1);
+    });
+
+    test("should find files matching multiple patterns", async () => {
+      const results = await localFs.glob([
+        path.join(globTestDir, "*.txt"),
+        path.join(globTestDir, "*.log"),
+      ]);
+      expect(results).toHaveLength(2);
+      expect(results).toContain(file1);
+      expect(results).toContain(file2);
+    });
+
+    test("should find files in subdirectories", async () => {
+      const results = await localFs.glob(path.join(globTestDir, "**/*.txt"));
+      expect(results).toHaveLength(2);
+      expect(results).toContain(file1);
+      expect(results).toContain(file3);
+    });
+
+    test("should use glob options (cwd)", async () => {
+      const results = await localFs.glob("*.txt", { cwd: globTestDir });
+      expect(results).toHaveLength(1);
+      expect(results).toContain("file1.txt"); // Relative path when using cwd
+    });
+
+    test("should return an empty array if no files match", async () => {
+      const results = await localFs.glob(path.join(globTestDir, "*.md"));
+      expect(results).toHaveLength(0);
+    });
+
+    test("should handle patterns relative to process.cwd() if cwd is not specified", async () => {
+      const relativePattern = path.relative(
+        process.cwd(),
+        path.join(globTestDir, "*.txt")
+      );
+      const results = await localFs.glob(relativePattern);
+      expect(results.length).toBeGreaterThanOrEqual(1); // Might find other .txt files
+      expect(results).toContain(relativePattern.replace("*.txt", "file1.txt"));
+    });
+  });
 });

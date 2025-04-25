@@ -1,5 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import { glob, GlobOptions } from "glob";
 
 /**
  * Provides methods for interacting with the local file system using Node.js standard libraries.
@@ -148,6 +149,25 @@ export default class LocalFS {
       throw new Error(
         `Failed to change directory to ${dirPath}: ${error.message}`
       );
+    }
+  }
+
+  /**
+   * Finds files matching a glob pattern.
+   * @param pattern - The glob pattern to match.
+   * @param options - Optional settings for glob.
+   * @returns A promise that resolves with an array of matching file paths.
+   */
+  async glob(
+    pattern: string | string[],
+    options?: GlobOptions
+  ): Promise<string[]> {
+    try {
+      const mergedOptions = { ...(options ?? {}), withFileTypes: false };
+      const files = await glob(pattern, mergedOptions);
+      return files as string[];
+    } catch (error: any) {
+      throw error;
     }
   }
 }

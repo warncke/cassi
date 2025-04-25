@@ -5,7 +5,7 @@ import { Task } from "../../task/Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { genkit } from "genkit";
 import { Config } from "../../config/Config.js";
-import path from "path"; // Import path
+import { GlobOptions } from "glob";
 
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
@@ -27,7 +27,7 @@ class MockCassi {
     configData: {
       srcDir: "mockSrcDir",
     },
-  } as Config; // Keep mock config simple, srcDir not used by tool anymore
+  } as Config;
 }
 class MockTask extends Task {
   invoke = vi.fn(
@@ -37,26 +37,41 @@ class MockTask extends Task {
       toolArgs?: any[],
       ...args: any[]
     ) => {
-      if (toolName === "fs" && methodName === "listDirectory") {
+      if (toolName === "fs" && methodName === "glob") {
         const methodArgs = args[0];
-        const targetPath = methodArgs[0];
-        const options = methodArgs[1]; // { recursive?: boolean } or undefined
+        const pattern = methodArgs[0];
+        const options: GlobOptions = methodArgs[1];
 
-        // Mock responses based on path and options
-        if (targetPath === path.resolve("/mock/cwd", "test/dir")) {
-          if (options?.recursive) {
-            return ["file1.txt", "subdir", path.join("subdir", "file2.txt")];
-          } else {
-            return ["file1.txt", "subdir"];
-          }
+        expect(options.cwd).toBe("/mock/cwd");
+        expect(options.nodir).toBe(true);
+        // Check if ignore option is present and correct based on the tool's implementation
+        expect(options.ignore).toEqual([
+          "node_modules/**",
+          ".cassi/**",
+          "dist/**",
+        ]);
+
+        if (pattern === "*") {
+          return ["file1.txt", "another.js", "config.json"];
         }
-        if (targetPath === path.resolve("/mock/cwd", "error/path")) {
-          throw new Error("Mock FS error on listDirectory");
+        // Handle the transformed pattern for *.txt
+        if (pattern === "**/*.txt") {
+          return ["file1.txt"];
         }
-        if (targetPath === path.resolve("/mock/cwd", "notarray/path")) {
+        if (pattern === "nonexistent/**") {
+          return [];
+        }
+        if (pattern === "error/pattern") {
+          throw new Error("Mock FS error on glob");
+        }
+        if (pattern === "notarray/pattern") {
           return "not an array";
         }
-        throw new Error(`Unexpected path for listDirectory: ${targetPath}`);
+        // Handle the transformed pattern
+        if (pattern === "**/*.mockext") {
+          return ["file.mockext", "another/dir/file.mockext"];
+        }
+        throw new Error(`Unexpected pattern for glob: ${pattern}`);
       }
       throw new Error(`Unexpected tool invocation: ${toolName}.${methodName}`);
     }
@@ -111,23 +126,20 @@ describe("ListFiles", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ListFiles.toolDefinition).toBeDefined();
-    expect(ListFiles.toolDefinition.name).toBe("list_files"); // Updated name
-    expect(ListFiles.toolDefinition.description).toBeDefined();
+    expect(ListFiles.toolDefinition.name).toBe("LIST_FILES"); // Updated name
+    expect(ListFiles.toolDefinition.description).toBe(
+      "Lists files matching a glob pattern within the current working directory."
+    );
     expect(ListFiles.toolDefinition.parameters).toEqual({
-      // Updated parameters schema
       type: "object",
       properties: {
-        path: {
+        pattern: {
           type: "string",
-          description: "The path of the directory to list contents for",
-        },
-        recursive: {
-          type: "boolean",
           description:
-            "Whether to list files recursively. Use true for recursive listing, false or omit for top-level only.",
+            "The glob pattern to match files against (e.g., 'src/**/*.ts', '**/*.ts'). Defaults to '*'.", // Updated description
         },
       },
-      required: ["path"],
+      required: [],
     });
   });
 
@@ -141,109 +153,201 @@ describe("ListFiles", () => {
     expect(typeof toolMethod).toBe("function");
   });
 
-  it("toolMethod should invoke fs.listDirectory non-recursively by default", async () => {
+  it("toolMethod should invoke fs.glob with default pattern '*' when no pattern is provided", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const params = { path: "test/dir" };
+    const rawParams = {}; // No pattern provided
+    const parsedParams = ListFiles.parametersSchema.parse(rawParams); // Parse params to apply default
 
-    const result = await toolMethod(params);
+    const result = await toolMethod(parsedParams); // Use parsed params
 
-    const expectedPath = path.resolve("/mock/cwd", "test/dir");
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
     expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
     expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
       "fs",
-      "listDirectory",
+      "glob",
       [],
-      [expectedPath, undefined] // No options passed
+      ["*", expectedOptions]
     );
 
-    expect(result).toBe("file1.txt\nsubdir");
+    expect(result).toBe("file1.txt\nanother.js\nconfig.json");
   });
 
-  it("toolMethod should invoke fs.listDirectory recursively when recursive is true", async () => {
+  it("toolMethod should invoke fs.glob with the specified pattern", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const params = { path: "test/dir", recursive: true };
+    const params = { pattern: "*.txt" };
 
     const result = await toolMethod(params);
 
-    const expectedPath = path.resolve("/mock/cwd", "test/dir");
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
     expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
     expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
       "fs",
-      "listDirectory",
+      "glob",
       [],
-      [expectedPath, { recursive: true }] // Recursive option passed
+      ["**/*.txt", expectedOptions] // Expect transformed pattern
     );
 
+    expect(result).toBe("file1.txt");
+  });
+
+  it("toolMethod should return an empty string if glob returns an empty array", async () => {
+    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const params = { pattern: "nonexistent/**" };
+
+    const result = await toolMethod(params);
+
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
+    expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
+    expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
+      "fs",
+      "glob",
+      [],
+      ["nonexistent/**", expectedOptions]
+    );
+    expect(result).toBe("");
+  });
+
+  it("toolMethod should return error if glob does not return an array", async () => {
+    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const params = { pattern: "notarray/pattern" };
+
+    const result = await toolMethod(params);
+
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
+    expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
+    expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
+      "fs",
+      "glob",
+      [],
+      ["notarray/pattern", expectedOptions]
+    );
     expect(result).toBe(
-      `file1.txt\nsubdir\n${path.join("subdir", "file2.txt")}`
+      "Error: Expected an array of file paths but received something else."
     );
   });
 
-  it("toolMethod should return error if listDirectory does not return an array", async () => {
+  it("toolMethod should return error message if fs.glob throws", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const params = { path: "notarray/path" }; // Path configured to return non-array
+    const params = { pattern: "error/pattern" };
 
     const result = await toolMethod(params);
 
-    const expectedPath = path.resolve("/mock/cwd", "notarray/path");
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
     expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
     expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
       "fs",
-      "listDirectory",
+      "glob",
       [],
-      [expectedPath, undefined]
+      ["error/pattern", expectedOptions]
     );
     expect(result).toBe(
-      "Error: Expected an array of file/directory names but received something else."
-    );
-  });
-
-  it("toolMethod should return error message if fs.listDirectory throws", async () => {
-    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1];
-    const params = { path: "error/path" }; // Path configured to throw
-
-    const result = await toolMethod(params);
-
-    const expectedPath = path.resolve("/mock/cwd", "error/path");
-    expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
-    expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
-      "fs",
-      "listDirectory",
-      [],
-      [expectedPath, undefined]
-    );
-    expect(result).toBe(
-      `Error listing files/directories in ${expectedPath}: Mock FS error on listDirectory`
+      `Error executing glob pattern 'error/pattern' in /mock/cwd: Mock FS error on glob`
     );
     expect(consoleErrorSpy).toHaveBeenCalledWith(
-      "Error listing files/directories:",
+      "Error executing glob pattern:",
       expect.any(Error)
     );
   });
 
-  it("toolMethod should log cwd, params.path, targetPath, and options", async () => {
+  it("toolMethod should log cwd, pattern, and options", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const params = { path: "test/dir", recursive: true };
+    const params = { pattern: "*.txt" };
 
     await toolMethod(params);
 
-    const expectedPath = path.resolve("/mock/cwd", "test/dir");
-    const expectedOptions = { recursive: true };
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
     expect(consoleLogSpy).toHaveBeenCalledTimes(1);
     expect(consoleLogSpy).toHaveBeenCalledWith(
       "ListFiles toolMethod cwd:",
       "/mock/cwd",
-      "params.path:",
-      "test/dir",
-      "targetPath:",
-      expectedPath,
+      "pattern:",
+      "**/*.txt", // Expect transformed pattern
       "options:",
       expectedOptions
+    );
+  });
+
+  it("toolMethod should transform simple *.ext pattern to **/*.ext", async () => {
+    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const params = { pattern: "*.mockext" }; // Simple pattern
+
+    const result = await toolMethod(params);
+
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
+    expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
+    // Expect the pattern to be transformed
+    expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
+      "fs",
+      "glob",
+      [],
+      ["**/*.mockext", expectedOptions]
+    );
+
+    expect(result).toBe("file.mockext\nanother/dir/file.mockext");
+    // Check console log for the *transformed* pattern
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ListFiles toolMethod cwd:",
+      "/mock/cwd",
+      "pattern:",
+      "**/*.mockext", // Transformed pattern
+      "options:",
+      expectedOptions
+    );
+  });
+
+  it("toolMethod should pass the ignore option to fs.glob", async () => {
+    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const params = { pattern: "src/**/*.ts" }; // Example pattern
+
+    await toolMethod(params);
+
+    const expectedOptions: GlobOptions = {
+      cwd: "/mock/cwd",
+      nodir: true,
+      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
+    };
+    expect(mockTaskInstance.invoke).toHaveBeenCalledTimes(1);
+    expect(mockTaskInstance.invoke).toHaveBeenCalledWith(
+      "fs",
+      "glob",
+      [],
+      ["src/**/*.ts", expectedOptions] // Ensure the pattern and options are passed
     );
   });
 });
