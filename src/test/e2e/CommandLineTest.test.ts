@@ -134,14 +134,26 @@ describe("CommandLineTest E2E", () => {
       );
 
       // Send 'y' to confirm the CWD
-      // Expect some output indicating repository initialization or next step
-      const afterConfirmOutput = await interact(
+      // Send 'y' to confirm the CWD
+      const afterCwdConfirmOutput = await interact(
         cassiProcess,
         "y",
-        /Initializing repository/i
-      ); // Adjust expected output if needed
-      fullOutput += afterConfirmOutput;
-      expect(afterConfirmOutput).toMatch(/Initializing repository/i); // Or whatever comes next
+        /Current branch is '.*'. Continue\? \(y\/N\)/i // Expect the InitializeGit prompt
+      );
+      fullOutput += afterCwdConfirmOutput;
+      expect(afterCwdConfirmOutput).toMatch(
+        /Current branch is '.*'. Continue\? \(y\/N\)/i
+      );
+
+      // Send 'y' to confirm the branch in InitializeGit
+      // Expect the main task prompt now
+      const afterBranchConfirmOutput = await interact(
+        cassiProcess,
+        "y",
+        /Enter your next request:/i // Expect the main input prompt
+      );
+      fullOutput += afterBranchConfirmOutput;
+      expect(afterBranchConfirmOutput).toMatch(/Enter your next request:/i);
 
       // Add more interactions and expectations here...
       // e.g., wait for task prompt, send task, wait for completion

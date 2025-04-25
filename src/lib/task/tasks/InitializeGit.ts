@@ -4,7 +4,6 @@ import Confirm from "../../prompt/prompts/Confirm.js";
 import { Prompt } from "../../prompt/Prompt.js";
 
 export class InitializeGit extends Task {
-
   async initTask(): Promise<void> {
     const status = await this.invoke(
       "git",
@@ -12,13 +11,6 @@ export class InitializeGit extends Task {
       [],
       [this.cassi.repository.repositoryDir]
     );
-
-    if (!status.isClean()) {
-      console.error(
-        "Git repository is not clean. Please commit or stash changes before proceeding."
-      );
-      process.exit(1);
-    }
 
     const confirmPrompt = new Confirm(
       `Current branch is '${status.current}'. Continue?`

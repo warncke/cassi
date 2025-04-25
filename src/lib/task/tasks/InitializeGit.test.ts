@@ -22,7 +22,6 @@ describe("InitializeGit Task", () => {
   let mockConsoleLog: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-
     mockCassi = {
       repository: {
         repositoryDir: "/mock/repo/dir",
@@ -84,21 +83,15 @@ describe("InitializeGit Task", () => {
     expect(mockProcessExit).not.toHaveBeenCalled();
   });
 
-  it("should log error and exit if git status is not clean", async () => {
-    const mockStatus = { isClean: () => false };
-    const invokeSpy = vi
-      .spyOn(initializeGitTask, "invoke")
-      .mockResolvedValue(mockStatus);
+  it("should proceed and prompt the user even if git status is not clean", async () => {
+    const mockStatus = { isClean: () => false, current: "dirty-branch" };
+    vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
 
     await initializeGitTask.initTask();
 
-    expect(invokeSpy).toHaveBeenCalledOnce();
-    expect(mockConsoleError).toHaveBeenCalledOnce();
-    expect(mockConsoleError).toHaveBeenCalledWith(
-      "Git repository is not clean. Please commit or stash changes before proceeding."
-    );
-    expect(mockProcessExit).toHaveBeenCalledOnce();
-    expect(mockProcessExit).toHaveBeenCalledWith(1);
+    expect(mockCassi.user.prompt).toHaveBeenCalledOnce();
+    expect(mockConsoleError).not.toHaveBeenCalled();
+    expect(mockProcessExit).not.toHaveBeenCalled();
   });
 
   it("should let the base Task class handle errors from invoke", async () => {
@@ -118,7 +111,6 @@ describe("InitializeGit Task", () => {
     );
     expect(runSpy).toHaveBeenCalled();
   });
-
 
   it("should prompt the user with the current branch name if clean", async () => {
     const mockStatus = { isClean: () => true, current: "develop" };
