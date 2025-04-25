@@ -20,17 +20,12 @@ vi.mock("fs/promises"); // Mock the fs/promises module
 vi.mock("../tools/fs/index.js", () => ({ default: LocalFS }));
 // REMOVE: vi.mock("./Invocation.js"); // No longer mocking Invocation
 
-// Define a mock tool class that accepts constructor args
+// Define a mock tool class that accepts constructor args (toolArgs only)
 class MockToolWithArgs {
-  user: User;
-  config: Config;
   toolArg1: string;
   toolArg2: boolean;
-  // mockMethod: Mock = vi.fn(); // Remove instance property
 
-  constructor(user: User, config: Config, toolArg1: string, toolArg2: boolean) {
-    this.user = user;
-    this.config = config;
+  constructor(toolArg1: string, toolArg2: boolean) {
     this.toolArg1 = toolArg1;
     this.toolArg2 = toolArg2;
   }
@@ -51,20 +46,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename); // Use standard path import
 
 describe("Tool", () => {
-  let mockUser: User; // Use non-mocked type for constructor args
-  let mockConfig: Config; // Use non-mocked type for constructor args
+  let mockUser: User; // Still needed for Tool constructor
+  let mockConfig: Config; // Still needed for Tool constructor
   let mockLocalFSInstance: Mocked<LocalFS>;
-  let mockToolWithArgsInstance: Mocked<MockToolWithArgs>;
+  let mockToolWithArgsInstance: Mocked<MockToolWithArgs>; // Keep for typing
   let toolInstance: Tool;
 
   beforeEach(() => {
     // Reset mocks before each test
     vi.clearAllMocks();
 
-    // Create fresh instances (not deeply mocked) for constructor args
+    // Create fresh instances for Tool constructor
     mockUser = new User();
     mockConfig = new Config("", mockUser);
-    // Instantiate Tool with these instances
+    // Instantiate Tool with user and config
     toolInstance = new Tool(mockUser, mockConfig);
 
     // Mock the LocalFS constructor and its methods directly
@@ -228,8 +223,8 @@ describe("Tool", () => {
       expect(mockLocalFSInstance.readFile).toHaveBeenCalledTimes(1);
       // Verify that the constructor was called *during* invoke
       expect(LocalFS).toHaveBeenCalledTimes(1);
-      // Verify constructor was called with the correct user and config
-      expect(LocalFS).toHaveBeenCalledWith(mockUser, mockConfig);
+      // Verify constructor was called without user/config (i.e., with empty toolArgs)
+      expect(LocalFS).toHaveBeenCalledWith(); // Called with no args as toolArgs is []
     });
 
     it("should pass toolArgs to the tool constructor and Invocation", async () => {
@@ -282,8 +277,9 @@ describe("Tool", () => {
       expect((methodCallContext as MockToolWithArgs).toolArg2).toBe(
         mockToolArgs[1]
       );
-      expect((methodCallContext as MockToolWithArgs).user).toBe(mockUser);
-      expect((methodCallContext as MockToolWithArgs).config).toBe(mockConfig);
+      // Remove checks for user/config on the tool instance
+      // expect((methodCallContext as MockToolWithArgs).user).toBe(mockUser);
+      // expect((methodCallContext as MockToolWithArgs).config).toBe(mockConfig);
 
       // 4. Verify Invocation Constructor Call (No longer mocked)
 
@@ -361,8 +357,8 @@ describe("Tool", () => {
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledTimes(1);
       // Verify constructor was called
       expect(LocalFS).toHaveBeenCalledTimes(1);
-      // Verify constructor was called with the correct user and config
-      expect(LocalFS).toHaveBeenCalledWith(mockUser, mockConfig);
+      // Verify constructor was called without user/config (i.e., with empty toolArgs)
+      expect(LocalFS).toHaveBeenCalledWith(); // Called with no args as toolArgs is []
     });
   });
 });

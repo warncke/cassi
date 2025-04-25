@@ -188,11 +188,7 @@ export class Tool {
 
     // Instantiate a new tool instance for this specific invocation
     // Pass user, config, and effectiveToolArgs to the tool's constructor
-    const toolInstance = new ToolClass(
-      this.user,
-      this.config,
-      ...effectiveToolArgs
-    );
+    const toolInstance = new ToolClass(...effectiveToolArgs);
 
     // Get the method from the newly created instance
     const toolMethod = toolInstance[methodName];
