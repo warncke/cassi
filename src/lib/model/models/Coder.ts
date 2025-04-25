@@ -6,6 +6,7 @@ import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
 import { PatchFile } from "../tools/PatchFile.js";
 import { RunBuild } from "../tools/RunBuild.js";
+import { ListFiles } from "../tools/ListFiles.js";
 
 export class Coder extends Models {
   public tools: any[];
@@ -19,6 +20,7 @@ export class Coder extends Models {
       this.ai.defineTool(...WriteFile.modelToolArgs(this)),
       this.ai.defineTool(...PatchFile.modelToolArgs(this)),
       this.ai.defineTool(...RunBuild.modelToolArgs(this)),
+      this.ai.defineTool(...ListFiles.modelToolArgs(this)),
     ];
   }
 
@@ -35,6 +37,8 @@ You have tools available to complete your tasks.
 Take the original PROMPT, with its summary and suggested steps, evaluate each of those steps.
 
 For each step evaluate what files may need to be changed in order to complete the step.
+
+Use the LIST_FILES command to list all files in the projects src directory. Use the results of LIST_FILE to determine which files may need to be modified and use the READ_FILE tool to read individual files.
 
 Use EXECUTE_COMMAND to run linux shell commands to complete tasks.
 

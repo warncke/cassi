@@ -8,6 +8,7 @@ import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
 import { PatchFile } from "../tools/PatchFile.js";
 import { RunBuild } from "../tools/RunBuild.js";
+import { ListFiles } from "../tools/ListFiles.js";
 
 vi.mock("../../task/Task.js");
 
@@ -16,6 +17,7 @@ let readFileModelToolArgsSpy: any;
 let writeFileModelToolArgsSpy: any;
 let patchFileModelToolArgsSpy: any;
 let runBuildModelToolArgsSpy: any;
+let listFilesModelToolArgsSpy: any;
 
 const mockGenerate = vi.fn();
 const mockDefineTool = vi.fn((toolDefinition, toolMethod) => {
@@ -68,6 +70,12 @@ describe("Coder Model", () => {
     description: "mockRunBuildDesc",
     parameters: {},
   };
+  const mockListFilesToolMethod = vi.fn();
+  const mockListFilesToolDefinition = {
+    name: "mockListFilesDef",
+    description: "mockListFilesDesc",
+    parameters: {},
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -105,6 +113,12 @@ describe("Coder Model", () => {
       mockRunBuildToolMethod,
     ]);
 
+    listFilesModelToolArgsSpy = vi.spyOn(ListFiles, "modelToolArgs");
+    listFilesModelToolArgsSpy.mockReturnValue([
+      mockListFilesToolDefinition,
+      mockListFilesToolMethod,
+    ]);
+
     mockTask = new (Task as any)("mock-coder-task") as Task;
 
     coderInstance = new Coder({}, mockTask);
@@ -137,8 +151,10 @@ describe("Coder Model", () => {
     expect(patchFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(runBuildModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(runBuildModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+    expect(listFilesModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(listFilesModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
 
-    expect(mockDefineTool).toHaveBeenCalledTimes(5);
+    expect(mockDefineTool).toHaveBeenCalledTimes(6);
 
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       1,
@@ -165,10 +181,15 @@ describe("Coder Model", () => {
       mockRunBuildToolDefinition,
       mockRunBuildToolMethod
     );
+    expect(mockDefineTool).toHaveBeenNthCalledWith(
+      6,
+      mockListFilesToolDefinition,
+      mockListFilesToolMethod
+    );
 
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
-    expect(coderInstance.tools.length).toBe(5);
+    expect(coderInstance.tools.length).toBe(6); // Updated length
     expect(coderInstance.tools[0].name).toBe(mockToolDefinition.name);
     expect(coderInstance.tools[0].handler).toBe(mockExecuteCommandToolMethod);
     expect(coderInstance.tools[1].name).toBe(mockReadFileToolDefinition.name);
@@ -179,6 +200,8 @@ describe("Coder Model", () => {
     expect(coderInstance.tools[3].handler).toBe(mockPatchFileToolMethod);
     expect(coderInstance.tools[4].name).toBe(mockRunBuildToolDefinition.name);
     expect(coderInstance.tools[4].handler).toBe(mockRunBuildToolMethod);
+    expect(coderInstance.tools[5].name).toBe(mockListFilesToolDefinition.name); // Added check for ListFiles
+    expect(coderInstance.tools[5].handler).toBe(mockListFilesToolMethod); // Added check for ListFiles handler
   });
 
   it("should call ai.generate with correct parameters in generate method", async () => {
@@ -254,7 +277,7 @@ describe("Coder Model", () => {
 
   it("should execute the placeholder logic in the tool handlers", async () => {
     const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    expect(mockDefineTool).toHaveBeenCalledTimes(5);
+    expect(mockDefineTool).toHaveBeenCalledTimes(6); // Updated count
 
     const executeCommandHandler = mockDefineTool.mock.calls[0][1];
     expect(executeCommandHandler).toBe(mockExecuteCommandToolMethod);
@@ -300,6 +323,14 @@ describe("Coder Model", () => {
     await runBuildHandler(runBuildInput);
     expect(mockRunBuildToolMethod).toHaveBeenCalledWith(runBuildInput);
     expect(coderInstance.tools[4].handler).toBe(mockRunBuildToolMethod);
+
+    const listFilesHandler = mockDefineTool.mock.calls[5][1]; // Get ListFiles handler
+    expect(listFilesHandler).toBe(mockListFilesToolMethod);
+
+    const listFilesInput = { path: ".", recursive: false }; // Sample ListFiles input
+    await listFilesHandler(listFilesInput);
+    expect(mockListFilesToolMethod).toHaveBeenCalledWith(listFilesInput); // Check ListFiles call
+    expect(coderInstance.tools[5].handler).toBe(mockListFilesToolMethod); // Check ListFiles handler assignment
 
     consoleLogSpy.mockRestore();
   });

@@ -8,12 +8,26 @@ export default class LocalFS {
   /**
    * Lists the contents of a directory.
    * @param dirPath - The path to the directory.
+   * @param options - Optional settings for reading the directory.
    * @returns A promise that resolves with an array of directory entry names.
    */
-  async listDirectory(dirPath: string): Promise<string[]> {
+  async listDirectory(
+    dirPath: string,
+    options?:
+      | {
+          encoding?: BufferEncoding | null | undefined;
+          withFileTypes?: false | undefined; // Explicitly false for string[] return
+          recursive?: boolean | undefined;
+        }
+      | BufferEncoding
+      | null
+      | undefined
+  ): Promise<string[]> {
     try {
-      const entries = await fs.readdir(dirPath);
-      return entries;
+      // Assuming options will not have withFileTypes: true for now
+      const entries = await fs.readdir(dirPath, options);
+      // If options could include withFileTypes: true, the return type and handling would need adjustment.
+      return entries as string[]; // Ensure return type matches signature
     } catch (error: any) {
       throw error;
     }

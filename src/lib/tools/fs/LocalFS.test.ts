@@ -26,8 +26,7 @@ describe("LocalFS", () => {
     await fs.rm(testDir, { recursive: true, force: true });
   });
 
-  afterEach(async () => {
-  });
+  afterEach(async () => {});
 
   describe("Directory Operations", () => {
     const subDir = path.join(testDir, "subDir");
@@ -48,8 +47,51 @@ describe("LocalFS", () => {
       await fs.unlink(dummyFilePath);
     });
 
+    test("should list directory contents recursively", async () => {
+      const deepDir = path.join(subDir, "deep");
+      const deeperFile = path.join(deepDir, "deeper.txt");
+      const topLevelFile = path.join(subDir, "top.txt");
+
+      await localFs.createDirectory(deepDir);
+      await localFs.createFile(deeperFile, "deep content");
+      await localFs.createFile(topLevelFile, "top content");
+
+      // Pass the recursive option directly
+      const contents = await localFs.listDirectory(subDir, {
+        recursive: true,
+      });
+
+      // Check if both top-level and nested files/dirs are included
+      // Note: fs.readdir with recursive might return paths relative to subDir
+      expect(contents).toContain("top.txt");
+      expect(contents).toContain(path.join("deep", "deeper.txt")); // Adjust based on actual fs.readdir output format
+      expect(contents).toContain("deep"); // Directory itself might also be listed
+
+      // Cleanup
+      await localFs.deleteDirectory(subDir); // Deletes deepDir and files within
+    });
+
+    test("should list directory contents non-recursively by default", async () => {
+      const deepDir = path.join(subDir, "deep");
+      const deeperFile = path.join(deepDir, "deeper.txt");
+      const topLevelFile = path.join(subDir, "top.txt");
+
+      await localFs.createDirectory(deepDir);
+      await localFs.createFile(deeperFile, "deep content");
+      await localFs.createFile(topLevelFile, "top content");
+
+      const contents = await localFs.listDirectory(subDir); // No options
+
+      expect(contents).toContain("top.txt");
+      expect(contents).toContain("deep");
+      expect(contents).not.toContain(path.join("deep", "deeper.txt"));
+
+      // Cleanup
+      await localFs.deleteDirectory(subDir);
+    });
+
     test("should delete a directory", async () => {
-      await localFs.createDirectory(subDir);
+      await localFs.createDirectory(subDir); // Ensure dir exists before deleting
       await localFs.deleteDirectory(subDir);
 
       await expect(fs.stat(subDir)).rejects.toThrow();
