@@ -1,3 +1,4 @@
+import process from "node:process";
 import { Cassi } from "../cassi/Cassi.js";
 import { Model } from "../model/Model.js"; // Keep Model for the class itself
 import { Models } from "../model/Models.js"; // Import Models type for instances
@@ -9,6 +10,7 @@ export class Task {
   public cassi: Cassi;
   public parentTask: Task | null = null; // Added parentTask property
   public subTasks: Task[] = [];
+  public worktreeDir?: string; // Added optional worktreeDir for tasks
   public startedAt: Date | null = null;
   public finishedAt: Date | null = null;
   public error: Error | null = null;
@@ -106,5 +108,17 @@ export class Task {
   addSubtask(subtask: Task): void {
     subtask.parentTask = this;
     this.subTasks.push(subtask);
+  }
+
+  getCwd(): string {
+    if (this.worktreeDir) {
+      // Check task's own worktreeDir first
+      return this.worktreeDir;
+    }
+    if (this.parentTask) {
+      // Fallback to parent's cwd
+      return this.parentTask.getCwd(); // Call method on parent
+    }
+    return process.cwd();
   }
 }

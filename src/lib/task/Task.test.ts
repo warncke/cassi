@@ -1,3 +1,4 @@
+import process from "node:process";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Task } from "./Task.js";
 import { Cassi } from "../cassi/Cassi.js";
@@ -421,6 +422,72 @@ describe("Task", () => {
       expect(task.subTasks).toContain(subtask2);
       expect(subtask1.parentTask).toBe(task);
       expect(subtask2.parentTask).toBe(task);
+    });
+  });
+
+  describe("cwd", () => {
+    const mockWorktreeDir = "/path/to/worktree";
+    const mockProcessCwd = "/current/process/dir";
+
+    beforeEach(() => {
+      // Ensure mockRepository has the init method mocked if necessary for these tests
+      // If Repository class itself has init, the mock instance should have it.
+      // If init is added dynamically or needs specific mock behavior for cwd tests, add it here.
+      // Example: mockRepository.init = vi.fn();
+    });
+
+    it("should return task.worktreeDir if set", () => {
+      task = new Task(mockCassi);
+      task.worktreeDir = mockWorktreeDir; // Set worktreeDir directly on the task
+      expect(task.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
+    });
+
+    it("should return parentTask.getCwd() if task.worktreeDir is not set and parentTask exists", () => {
+      const parentTask = new Task(mockCassi);
+      // Spy on the parent's getCwd method
+      const parentGetCwdSpy = vi
+        .spyOn(parentTask, "getCwd") // Spy on the method directly
+        .mockReturnValue(mockWorktreeDir);
+
+      const childTask = new Task(mockCassi, parentTask);
+      childTask.worktreeDir = undefined; // Ensure child's worktreeDir is not set
+
+      expect(childTask.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
+      expect(parentGetCwdSpy).toHaveBeenCalled();
+
+      parentGetCwdSpy.mockRestore(); // Clean up the spy
+    });
+
+    it("should return process.cwd() if task.worktreeDir and parentTask are not set", () => {
+      const processCwdSpy = vi
+        .spyOn(process, "cwd")
+        .mockReturnValue(mockProcessCwd);
+      task = new Task(mockCassi); // Recreate task, parentTask is null by default
+      task.worktreeDir = undefined; // Ensure task's worktreeDir is not set
+
+      expect(task.getCwd()).toBe(mockProcessCwd); // Call getCwd() method
+      expect(processCwdSpy).toHaveBeenCalled();
+
+      processCwdSpy.mockRestore(); // Clean up the spy
+    });
+
+    it("should handle nested parent tasks correctly", () => {
+      const grandParentTask = new Task(mockCassi);
+      // Spy on the grandparent's getCwd method
+      const grandParentGetCwdSpy = vi
+        .spyOn(grandParentTask, "getCwd") // Spy on the method directly
+        .mockReturnValue(mockWorktreeDir);
+
+      const parentTask = new Task(mockCassi, grandParentTask);
+      parentTask.worktreeDir = undefined; // Ensure parent's worktreeDir is not set
+      const childTask = new Task(mockCassi, parentTask);
+      childTask.worktreeDir = undefined; // Ensure child's worktreeDir is not set
+
+      expect(childTask.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
+      // Check that the grandparent's getCwd was eventually called
+      expect(grandParentGetCwdSpy).toHaveBeenCalled();
+
+      grandParentGetCwdSpy.mockRestore(); // Clean up the spy
     });
   });
 });

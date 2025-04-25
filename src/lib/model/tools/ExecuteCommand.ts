@@ -14,7 +14,7 @@ const executeCommandInputSchema = z.object({
 
 export class ExecuteCommand extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "execute_command",
+    name: "EXECUTE_COMMAND",
     description:
       "Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands. Tailor your command to the user's system and provide a clear explanation of what the command does. Commands will be executed in the current working directory.",
     parameters: {
@@ -38,15 +38,20 @@ export class ExecuteCommand extends ModelTool {
     model: Models, // Change type to Models
     input: z.infer<typeof executeCommandInputSchema>
   ): Promise<string> {
-    console.log(
-      `Placeholder: Would execute command: ${input.command} (Requires Approval: ${input.requires_approval})`
+    const result = await model.task.invoke(
+      "console",
+      "exec",
+      undefined,
+      input.command
     );
 
-    // TODO: Implement actual command execution logic using model.task.tools.console.execute
-    // Example (needs refinement based on actual tool implementation):
-    // const result = await model.task.tools.console.execute(input.command, { requiresApproval: input.requires_approval });
-    // return result.stdout || result.stderr;
-
-    return `Simulated output for command: ${input.command}`;
+    let output = "";
+    if (result.stdout) {
+      output += `STDOUT:\n${result.stdout}\n`;
+    }
+    if (result.stderr) {
+      output += `STDERR:\n${result.stderr}\n`;
+    }
+    return output.trim() || "Command executed successfully with no output.";
   }
 }

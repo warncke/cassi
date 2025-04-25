@@ -15,7 +15,7 @@ export class Code extends Task {
   public prompt: string; // Added prompt property
   public evaluation: any; // Added evaluation property
   public taskId: string | null = null; // Added taskId property initialized to null
-  public worktreeDir: string | null = null; // Added worktreeDir property
+  public worktreeDir: string | undefined = undefined; // Changed type to string | undefined
 
   // Added cassi and parentTask to constructor
   constructor(cassi: Cassi, parentTask: Task | null, prompt: string) {

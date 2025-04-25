@@ -8,8 +8,8 @@ export interface GenerateModelOptions extends GenerateOptions {
 }
 
 export abstract class Models {
-  protected ai: any; // Consider defining a more specific type if possible
-  protected task: Task; // Add task property
+  public ai: any; // Consider defining a more specific type if possible
+  public task: Task; // Add task property
 
   constructor(plugin: any, task: Task) {
     // Add task parameter
