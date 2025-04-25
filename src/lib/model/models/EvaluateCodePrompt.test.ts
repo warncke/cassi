@@ -1,125 +1,127 @@
-/// <reference types="vitest/globals" />
-/// <reference types="vitest/globals" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { EvaluateCodePrompt } from "./EvaluateCodePrompt.js";
-import { type ModelReference, z } from "genkit"; // Keep type imports
-import { GenerateModelOptions } from "../Models.js"; // Import GenerateModelOptions
+import { Models, GenerateModelOptions } from "../Models.js"; // Import base and options
+import { Task } from "../../task/Task.js"; // Import Task
+import { genkit } from "genkit"; // Import genkit
+import { z } from "zod"; // Import z from zod, not genkit
 
-// Use vi.hoisted for the mock function
-const { mockAIGenerate } = vi.hoisted(() => {
-  return {
-    mockAIGenerate: vi.fn().mockResolvedValue({
-      // Mock the AI response structure to return an object with a 'text' property
-      text: "mocked response text",
-      // Include toJSON for potential debugging/logging in the source if needed
-      toJSON: () => ({ text: "mocked response text" }),
-    }),
-  };
-});
+// --- Mocks ---
+// Mock the Task class
+vi.mock("../../task/Task.js");
 
-// Mock the genkit library
-// Removed duplicated lines here
+// Mock the genkit function itself
+const mockGenerate = vi.fn();
+const mockAiObject = {
+  generate: mockGenerate,
+  // No defineTool needed for this model's mock
+};
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
-    ...actual, // Spread all actual exports, including 'z' and ModelReference type
-    // Mock the genkit function to return an object with our mock generate
-    genkit: vi.fn().mockReturnValue({
-      generate: mockAIGenerate,
-    }),
+    ...actual,
+    genkit: vi.fn(() => mockAiObject), // Mock the genkit() function
+    z: actual.z, // Keep original z export if needed elsewhere, or remove if only zod is used
   };
 });
 
-// Define the schema locally in the test file to match the one in the source
-// This ensures the test doesn't break if the source schema changes unexpectedly
-// and makes the test assertion clearer.
-const EvaluateCodePromptSchema = z.object({
-  summary: z.string(),
-  modifiesFiles: z.boolean(),
-  steps: z.array(z.string()),
-});
+// --- Test Suite ---
+describe("EvaluateCodePrompt Model", () => {
+  let mockTask: Task; // Declare mock task variable
+  let evaluateInstance: EvaluateCodePrompt; // Instance of the class under test
 
-// Mock plugin and model - Use the imported type
-const mockPlugin = { name: "mock-plugin" } as any;
-const mockModel = { name: "mock-model" } as ModelReference<any>; // Type assertion is fine
+  beforeEach(() => {
+    // Reset mocks before each test
+    vi.resetAllMocks();
+    mockGenerate.mockClear();
+    (genkit as ReturnType<typeof vi.fn>).mockClear(); // Clear the genkit mock
 
-describe("EvaluateCodePrompt", () => {
-  // Reset mocks before each test
-  beforeEach(async () => {
-    // Make beforeEach async
-    vi.clearAllMocks();
-    mockAIGenerate.mockClear(); // Clear the generate mock specifically
+    // Create a mock Task instance
+    mockTask = new (Task as any)("mock-eval-task") as Task;
 
-    // Re-configure the mock genkit return value
-    // We need to ensure the object returned by genkit() has the generate property
-    const { genkit } = await import("genkit");
-    vi.mocked(genkit).mockReturnValue({
-      generate: mockAIGenerate,
-      // Add other properties expected by the Models constructor if necessary,
-      // but for now, just providing 'generate' might be enough as it's what's used.
-    } as any); // Use 'as any' for simplicity if the full type is complex to mock
+    // Create a new instance of EvaluateCodePrompt, passing dummy plugin and mock task
+    evaluateInstance = new EvaluateCodePrompt({}, mockTask);
   });
 
-  it("should call the ai.generate method with the correct options and return text", async () => {
-    const promptInstance = new EvaluateCodePrompt(mockPlugin); // Pass only plugin
-    const promptText = "Test prompt";
-    const generateOptions: GenerateModelOptions = {
-      model: mockModel, // Pass the mock model reference
-      prompt: promptText,
-    };
-    const expectedResponseText = "mocked response text"; // Expecting string
-
-    // Call the generate method with the options object
-    const responseText = await promptInstance.generate(generateOptions);
-
-    // Construct the expected prompt string for assertion
-    const expectedPromptString = `
-OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
-
-FILE TREE:
-
-TASK DESCRIPTION:
-
-${promptText}
-
-The JSON object to OUTPUT is:
-{
-    "summary": "(( INSERT a 3-5 word summary of the TASK DESCRIPTION that is as short as possible. do not include an punctuation.))",
-    "modifiesFiles" (( INSERT boolean true if the TASK DESCRIPTION involves creating or modifying files or false if it does not)),
-    "steps": [
-          "(( BREAK down the TASK DESCRIPTION into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
-     ]
-}            
-`;
-
-    // Check if the mockAIGenerate function (inside the mocked ai object) was called correctly
-    expect(mockAIGenerate).toHaveBeenCalledTimes(1);
-    // Use expect.objectContaining for the output part to avoid strict schema reference check
-    expect(mockAIGenerate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        model: mockModel,
-        prompt: expectedPromptString,
-        output: expect.objectContaining({
-          // Ensure output is an object
-          schema: expect.any(Object), // Ensure output has a schema property which is an object
-        }),
-      })
-    );
-
-    // Assert the method returned the expected text string
-    expect(responseText).toBe(expectedResponseText);
+  afterEach(() => {
+    // Restore mocks after each test
+    vi.restoreAllMocks();
   });
 
-  it("should throw an error if the prompt in options is not a string", async () => {
-    const promptInstance = new EvaluateCodePrompt(mockPlugin);
-    const generateOptions: GenerateModelOptions = {
-      model: mockModel,
-      prompt: ["not", "a", "string"], // Invalid prompt type
-    };
+  it("should extend the Models base class", () => {
+    expect(evaluateInstance).toBeInstanceOf(Models);
+  });
 
-    await expect(promptInstance.generate(generateOptions)).rejects.toThrow(
+  it("should call the base class constructor and initialize 'ai' via mocked genkit", () => {
+    expect(genkit).toHaveBeenCalledTimes(1);
+    expect(evaluateInstance).toHaveProperty("ai");
+    expect((evaluateInstance as any).ai).toBe(mockAiObject);
+    expect((evaluateInstance as any).ai.generate).toBe(mockGenerate);
+  });
+
+  it("should throw an error if the prompt is not a string", async () => {
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: ["this", "is", "not", "a", "string"],
+    };
+    await expect(evaluateInstance.generate(options)).rejects.toThrow(
       "EvaluateCodePrompt requires a string prompt."
     );
-    expect(mockAIGenerate).not.toHaveBeenCalled();
+  });
+
+  it("should call ai.generate with correct parameters", async () => {
+    const mockResponse = { text: "{...}", usage: { totalTokens: 20 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "test-model" as any, // Model ref doesn't need to exist now
+      prompt: "Analyze this code.",
+    };
+    const { model, prompt, ...restOptions } = options;
+
+    await evaluateInstance.generate(options);
+
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    const generateCallArgs = mockGenerate.mock.calls[0][0];
+
+    expect(generateCallArgs.model).toBe(model);
+    expect(generateCallArgs.prompt).toContain(prompt);
+    expect(generateCallArgs.prompt).toContain(
+      "OUTPUT the following JSON object"
+    );
+    expect(generateCallArgs.output).toBeDefined();
+    expect(generateCallArgs.output.schema).toBeDefined();
+    for (const key in restOptions) {
+      expect(generateCallArgs[key]).toEqual(
+        restOptions[key as keyof typeof restOptions]
+      );
+    }
+  });
+
+  it("should return the text content from the ai.generate response", async () => {
+    const expectedText =
+      '{"summary": "refactor code", "modifiesFiles": true, "steps": ["step 1", "step 2"]}';
+    const mockResponse = { text: expectedText, usage: { totalTokens: 15 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Refactor the code.",
+    };
+
+    const result = await evaluateInstance.generate(options);
+    expect(result).toBe(expectedText);
+  });
+
+  it("should return an empty string if ai.generate response has no text", async () => {
+    const mockResponse = { usage: { totalTokens: 10 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Generate empty",
+    };
+
+    const result = await evaluateInstance.generate(options);
+    expect(result).toBe("");
   });
 });

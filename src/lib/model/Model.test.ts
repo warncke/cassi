@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Model } from "./Model.js";
-import { Models, GenerateModelOptions } from "./Models.js"; // Import GenerateModelOptions
+import { Models, GenerateModelOptions } from "./Models.js";
 import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
+import { Task } from "../task/Task.js"; // Import Task
 import fs from "fs/promises";
 import path from "path";
 // Removed ModelReference import as it's not directly used here anymore
@@ -10,6 +11,7 @@ import path from "path";
 // Mock the dependencies
 vi.mock("../user/User.js");
 vi.mock("../config/Config.js");
+vi.mock("../task/Task.js"); // Mock Task
 vi.mock("fs/promises");
 
 // Mock genkit imports - define mocks *inside* the factory function
@@ -48,12 +50,12 @@ vi.mock("path", async (importOriginal) => {
 
 // --- Mock Model Classes ---
 // Define these *before* they are used in vi.mock below
-// Update constructors to accept new signature and extend Models
+// Update constructors to accept new signature (plugin, task) and extend Models
 class MockModel1 extends Models {
-  // Extend Models
   public plugin: any;
-  constructor(plugin: any) {
-    super(plugin); // Call updated Models constructor
+  constructor(plugin: any, task: Task) {
+    // Add task parameter
+    super(plugin, task); // Pass task to super
     this.plugin = plugin;
   }
   // Implement abstract generate method
@@ -67,10 +69,10 @@ class MockModel1 extends Models {
   }
 }
 class MockModel2 extends Models {
-  // Extend Models
   public plugin: any;
-  constructor(plugin: any) {
-    super(plugin); // Call updated Models constructor
+  constructor(plugin: any, task: Task) {
+    // Add task parameter
+    super(plugin, task); // Pass task to super
     this.plugin = plugin;
   }
   // Implement abstract generate method
@@ -118,8 +120,9 @@ vi.mock("url", async (importOriginal) => {
 describe("Model", () => {
   let mockUser: User;
   let mockConfig: Config;
+  let mockTask: Task; // Declare mock task variable
 
-  let model: Model; // Declare model instance variable
+  let model: Model; // Declare model instance
 
   beforeEach(() => {
     // Reset mocks and state before each test
@@ -128,7 +131,9 @@ describe("Model", () => {
 
     mockUser = new User(); // Keep these for potential other uses if needed, or remove if truly unused
     mockConfig = new Config("test-config.json", mockUser); // Keep these for potential other uses if needed, or remove if truly unused
-    model = new Model(); // Create instance here for use in tests
+    // Instantiate mockTask using the mocked Task constructor
+    mockTask = new (Task as any)("mock-task-id") as Task;
+    model = new Model(); // Revert: No task needed in Model constructor
 
     // Default mock for path.join to return a predictable models directory path
     vi.mocked(path.join).mockImplementation((...args) => {
@@ -160,21 +165,21 @@ describe("Model", () => {
       vi.mocked(fs.readdir).mockResolvedValue(mockFiles as any); // Type assertion needed
 
       // No need to mock mockImport implementation anymore
-      const model = new Model(); // Create instance
+      const modelInstance = new Model(); // Revert: No task needed
 
       // Act
-      await model.init(); // Call instance method
+      await modelInstance.init(); // Call instance method
 
       // Assert
       expect(fs.readdir).toHaveBeenCalledWith("/fake/path/to/lib/model/models");
       // Remove assertions for mockImport calls
       // Assert the result based on the vi.mock setup on the instance
-      expect(model.availableModels.size).toBe(2);
+      expect(modelInstance.availableModels.size).toBe(2);
       // Check if the stored item is the constructor function
-      expect(model.availableModels.get("MockModel1")).toBe(
+      expect(modelInstance.availableModels.get("MockModel1")).toBe(
         MockModel1 as any // Cast needed due to complex type
       );
-      expect(model.availableModels.get("MockModel2")).toBe(
+      expect(modelInstance.availableModels.get("MockModel2")).toBe(
         MockModel2 as any // Cast needed due to complex type
       );
     });
@@ -185,16 +190,16 @@ describe("Model", () => {
       const mockFiles = ["MockModel1.js", "MockModel1.test.js"]; // Changed to .js
       vi.mocked(fs.readdir).mockResolvedValue(mockFiles as any);
       // No need to mock mockImport implementation
-      const model = new Model(); // Create instance
+      const modelInstance = new Model(); // Revert: No task needed
 
       // Act
-      await model.init(); // Call instance method
+      await modelInstance.init(); // Call instance method
 
       // Assert
       // Remove assertions for mockImport calls
       // Assert the result based on the vi.mock setup on the instance
-      expect(model.availableModels.size).toBe(1);
-      expect(model.availableModels.get("MockModel1")).toBe(
+      expect(modelInstance.availableModels.size).toBe(1);
+      expect(modelInstance.availableModels.get("MockModel1")).toBe(
         MockModel1 as any // Cast needed
       );
     });
@@ -206,13 +211,13 @@ describe("Model", () => {
         .mockImplementation(() => {});
       const testError = new Error("Failed to read directory");
       vi.mocked(fs.readdir).mockRejectedValue(testError);
-      const model = new Model(); // Create instance
+      const modelInstance = new Model(); // Revert: No task needed
 
       // Act
-      await model.init(); // Call instance method
+      await modelInstance.init(); // Call instance method
 
       // Assert
-      expect(model.availableModels.size).toBe(0); // Check instance map
+      expect(modelInstance.availableModels.size).toBe(0); // Check instance map
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Error reading models directory:",
         testError
@@ -230,13 +235,13 @@ describe("Model", () => {
       const expectedError = new Error("Failed to import"); // Error defined in vi.mock
       vi.mocked(fs.readdir).mockResolvedValue(mockFiles as any);
       // No need to mock mockImport implementation
-      const model = new Model(); // Create instance
+      const modelInstance = new Model(); // Revert: No task needed
 
       // Act
-      await model.init(); // Call instance method
+      await modelInstance.init(); // Call instance method
 
       // Assert
-      expect(model.availableModels.size).toBe(0); // Check instance map
+      expect(modelInstance.availableModels.size).toBe(0); // Check instance map
       // Check that the specific error from the mock was caught and logged
       // Vitest wraps errors from mock factories, so we check the cause
       expect(consoleErrorSpy).toHaveBeenCalledWith(
@@ -255,17 +260,17 @@ describe("Model", () => {
       const mockFiles = ["MockModel1.js", "NotAModel.js"]; // Changed to .js
       vi.mocked(fs.readdir).mockResolvedValue(mockFiles as any);
       // No need to mock mockImport implementation
-      const model = new Model(); // Create instance
+      const modelInstance = new Model(); // Revert: No task needed
 
       // Act
-      await model.init(); // Call instance method
+      await modelInstance.init(); // Call instance method
 
       // Assert
-      expect(model.availableModels.size).toBe(1); // Check instance map
-      expect(model.availableModels.get("MockModel1")).toBe(
+      expect(modelInstance.availableModels.size).toBe(1); // Check instance map
+      expect(modelInstance.availableModels.get("MockModel1")).toBe(
         MockModel1 as any // Cast needed
       );
-      expect(model.availableModels.has("SomeOtherClass")).toBe(false);
+      expect(modelInstance.availableModels.has("SomeOtherClass")).toBe(false);
     });
 
     it("should not re-initialize if called multiple times", async () => {
@@ -276,25 +281,21 @@ describe("Model", () => {
         .spyOn(console, "log")
         .mockImplementation(() => {});
 
+      // Use the model instance created in beforeEach
       // Reset the spy *before* the calls within this specific test
       consoleLogSpy.mockClear();
 
       // Act
-      await model.init(); // First call (this might have already happened in beforeEach, but call again to test logic)
-      // Call init again to test the re-initialization guard
+      await model.init(); // First call (using the instance from beforeEach)
       await model.init(); // Second call
 
       // Assert
       expect(model.availableModels.size).toBe(1);
       // Check that the initialization log message was called exactly once *during this test's execution*
-      // Note: The init might have run in the outer beforeEach, but the spy was cleared.
-      // If init ran in beforeEach, the first call here won't log. If not, it will.
-      // The second call should *never* log.
-      // Let's refine the assertion to check if the specific message was logged *at most* once.
       const initLogCalls = consoleLogSpy.mock.calls.filter(
         (call) => call[0] === "Initializing available models for instance..."
       );
-      expect(initLogCalls.length).toBeLessThanOrEqual(1); // Should be 0 or 1 depending on when init first ran relative to spy clear
+      expect(initLogCalls.length).toBeLessThanOrEqual(1); // Should be 0 or 1
 
       consoleLogSpy.mockRestore();
     });
@@ -302,7 +303,7 @@ describe("Model", () => {
 
   describe("newInstance", () => {
     beforeEach(async () => {
-      // Ensure models are initialized before each newInstance test
+      // Ensure models are initialized before each newInstance test using the instance from the outer beforeEach
       const mockFiles = ["MockModel1.js", "MockModel2.js"];
       vi.mocked(fs.readdir).mockResolvedValue(mockFiles as any);
       await model.init(); // Initialize the instance's availableModels
@@ -314,16 +315,16 @@ describe("Model", () => {
       // No need to re-import gemini20Flash
 
       // Act
-      const newInstance = model.newInstance("MockModel1");
+      // Use the model instance from beforeEach
+      const newInstance = model.newInstance("MockModel1", mockTask); // Pass mockTask here
 
       // Assert
       expect(newInstance).toBeInstanceOf(MockModel1);
       expect(newInstance).toBeInstanceOf(Models); // Should be instance of base Models
       // Check if the plugin was passed (specific to MockModel1 structure)
-      // Accessing plugin directly on MockModel1 instance
-      // The actual value returned by the mocked googleAI() is now a function
       expect(typeof (newInstance as MockModel1).plugin).toBe("function");
-      // Removed assertion for modelRef as it's no longer part of MockModel1
+      // Check if the task was passed (accessing protected member for test)
+      expect((newInstance as any).task).toBe(mockTask);
     });
 
     // Removed redundant test that spied on the constructor
@@ -333,17 +334,20 @@ describe("Model", () => {
       const modelName = "NonExistentModel";
 
       // Act & Assert
-      expect(() => model.newInstance(modelName)).toThrow(
+      // Use the model instance from beforeEach
+      expect(() => model.newInstance(modelName, mockTask)).toThrow(
+        // Pass mockTask here
         `Model class '${modelName}' not found.`
       );
     });
 
     it("should throw an error if init() has not been called", () => {
       // Arrange
-      const freshModel = new Model(); // Create a new instance without calling init()
+      const freshModel = new Model(); // Revert: No task needed in constructor
 
       // Act & Assert
-      expect(() => freshModel.newInstance("MockModel1")).toThrow(
+      expect(() => freshModel.newInstance("MockModel1", mockTask)).toThrow(
+        // Pass mockTask here
         `Model class 'MockModel1' not found.` // Because availableModels is empty
       );
     });

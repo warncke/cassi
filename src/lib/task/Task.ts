@@ -95,8 +95,8 @@ export class Task {
    */
   newModel(modelClassName: string): Models {
     // Removed generic, changed return type to Models
-    // Call newInstance which returns Models directly
-    return this.cassi.model.newInstance(modelClassName); // Removed cast
+    // Call newInstance which returns Models directly, passing the current task instance
+    return this.cassi.model.newInstance(modelClassName, this); // Pass 'this' as the task context
   }
 
   /**

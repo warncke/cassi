@@ -1,15 +1,17 @@
-import { defineTool } from "@genkit-ai/ai"; // Revert import for defineTool
+import { defineTool } from "@genkit-ai/ai"; // Keep one defineTool import
 import { z } from "zod"; // Assuming zod is used for schema definition
-import { Models, GenerateModelOptions } from "../Models.js"; // Import the base class and options type
+import { Models, GenerateModelOptions } from "../Models.js";
 // Removed incorrect import for standalone generate
+import { Task } from "../../task/Task.js"; // Import Task
 
 export class Coder extends Models {
   // Extend the base class
   public tools: any[]; // Define the tools property
 
-  constructor(plugin: any) {
-    // Updated constructor: only takes plugin
-    super(plugin); // Call the base class constructor with only the plugin
+  constructor(plugin: any, task: Task) {
+    // Add task parameter
+    // Updated constructor: takes plugin and task
+    super(plugin, task); // Pass task to super
 
     // Define the input schema for the execute_command tool
     const executeCommandInputSchema = z.object({
@@ -57,7 +59,18 @@ export class Coder extends Models {
     // Destructure text and usage directly from the response
     const { text, usage } = await this.ai.generate({
       model: model, // Pass the model reference
-      prompt: prompt, // Pass the prompt
+      prompt: `
+You are CASSI, you specialize in developing typescript programs to run on node.js.
+
+You have tools available to complete your tasks.
+
+Take the original PROMPT, with its summary and suggested steps, evaluate each of those steps.
+
+For each step evaluate what files may need to be changed in order to complete the step.
+
+PROMPT: ${prompt}
+      
+`, // Pass the prompt
       tools: this.tools, // Pass the tools defined in this class
       ...restOptions, // Pass any other generation options
     });

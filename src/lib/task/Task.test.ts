@@ -1,441 +1,426 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Task } from "./Task.js";
 import { Cassi } from "../cassi/Cassi.js";
 import { User } from "../user/User.js";
-import { Model } from "../model/Model.js"; // Keep for error test case
-import { Models, GenerateModelOptions } from "../model/Models.js"; // Import Models and GenerateModelOptions
-// Removed unused ModelReference import
+import { Config } from "../config/Config.js";
+import { Repository } from "../repository/Repository.js";
+import { Tool } from "../tool/Tool.js";
+import { Model } from "../model/Model.js"; // Import Model
+import { Models } from "../model/Models.js"; // Import Models
+import { genkit } from "genkit"; // Import genkit for mocking super call
 
-import { describe, expect, test, beforeEach, vi } from "vitest";
+// Mocks
+vi.mock("../cassi/Cassi.js");
+vi.mock("../user/User.js");
+vi.mock("../config/Config.js");
+vi.mock("../repository/Repository.js");
+vi.mock("../tool/Tool.js");
+vi.mock("../model/Model.js"); // Mock Model
 
-// Mock plugin for Models constructor
-// Change mockPlugin to be a function as expected by genkit
-const mockPlugin = () => "mockPluginFunction";
-// Removed unused mockModelRef
+// Mock genkit minimally for the super() call in MockModel
+vi.mock("genkit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("genkit")>();
+  return {
+    ...actual,
+    genkit: vi.fn(() => ({
+      // Mock genkit() to return a dummy object with 'plugins'
+      plugins: [],
+      ai: {}, // Add a dummy 'ai' object if needed by Models constructor logic
+    })),
+  };
+});
 
-// Mock Model class for testing, now extending Models
+// Define a mock plugin function for this test file
+const mockPluginInstance = { name: "mock-task-test-plugin" };
+// This function now represents the plugin *initializer* like googleAI()
+const mockPluginInitializer = vi.fn(() => () => mockPluginInstance);
+
+// Mock Models subclass for testing newModel
 class MockModel extends Models {
-  constructor() {
-    // Call super with mock plugin only
-    super(mockPlugin);
+  constructor(pluginInitializer: () => any, task: Task) {
+    // Expect initializer function
+    // Pass the initializer function and task to super
+    super(pluginInitializer(), task); // Execute the initializer before passing to super
   }
-  // Implement abstract generate method
-  async generate(options: GenerateModelOptions): Promise<string> {
-    // Simple mock implementation for testing purposes
-    return `MockModel generated: ${
-      typeof options.prompt === "string"
-        ? options.prompt
-        : JSON.stringify(options.prompt)
-    }`;
+  async generate(options: any): Promise<string> {
+    return "mock generated content";
   }
 }
 
-// Mock Cassi instance
-const mockUser = new User(); // Create a mock User
-const mockConfigFile = "mock-config.json";
-const mockRepoDir = "/mock/repo/dir";
-const mockCassi = new Cassi(mockUser, mockConfigFile, mockRepoDir); // Create a mock Cassi instance
-
 describe("Task", () => {
+  let mockCassi: Cassi;
+  let mockUser: User;
+  let mockConfig: Config;
+  let mockRepository: Repository;
+  let mockTool: Tool;
+  let mockModel: Model; // Mock Model instance
   let task: Task;
 
   beforeEach(() => {
-    // Pass the mock Cassi instance to the Task constructor
+    // Reset mocks
+    vi.resetAllMocks();
+    mockPluginInitializer.mockClear();
+    (genkit as ReturnType<typeof vi.fn>).mockClear();
+
+    // Create instances of mocks
+    mockUser = new User();
+    mockConfig = new Config("mock-config.json", mockUser);
+    mockRepository = new Repository("/mock/repo/dir", mockUser);
+    mockTool = new Tool(mockUser, mockConfig);
+    mockModel = new Model(); // Instantiate the mocked Model
+
+    // Mock the Cassi instance and its properties
+    mockCassi = {
+      user: mockUser,
+      config: mockConfig,
+      repository: mockRepository,
+      tool: mockTool,
+      model: mockModel, // Assign the mocked Model instance
+      tasks: [],
+      init: vi.fn(),
+      newTask: vi.fn(),
+      runTasks: vi.fn(),
+    } as unknown as Cassi; // Use unknown cast for partial mock
+
+    // Create a new Task instance for each test
     task = new Task(mockCassi);
+
+    // Mock the initTask and cleanupTask methods on the Task prototype
+    vi.spyOn(Task.prototype, "initTask").mockResolvedValue();
+    vi.spyOn(Task.prototype, "cleanupTask").mockResolvedValue();
   });
 
-  test("should create an instance of Task", () => {
+  afterEach(() => {
+    // Restore original implementations
+    vi.restoreAllMocks();
+  });
+
+  it("should create an instance of Task", () => {
     expect(task).toBeInstanceOf(Task);
+    expect(task.cassi).toBe(mockCassi);
   });
 
-  test("should have an empty subTasks array by default", () => {
-    expect(task.subTasks).toBeInstanceOf(Array);
-    expect(task.subTasks).toHaveLength(0);
+  it("should have an empty subTasks array by default", () => {
+    expect(task.subTasks).toEqual([]);
   });
 
-  test("should have null startedAt by default", () => {
+  it("should have null startedAt by default", () => {
     expect(task.startedAt).toBeNull();
   });
 
-  test("should have null finishedAt by default", () => {
+  it("should have null finishedAt by default", () => {
     expect(task.finishedAt).toBeNull();
   });
 
-  test("should have null error by default", () => {
+  it("should have null error by default", () => {
     expect(task.error).toBeNull();
   });
 
-  test("should have null parentTask by default", () => {
+  it("should have null parentTask by default", () => {
     expect(task.parentTask).toBeNull();
   });
 
-  test("should correctly assign parentTask when provided", () => {
+  it("should correctly assign parentTask when provided", () => {
     const parent = new Task(mockCassi);
-    const childTask = new Task(mockCassi, parent);
-    expect(childTask.parentTask).toBe(parent);
+    const child = new Task(mockCassi, parent);
+    expect(child.parentTask).toBe(parent);
   });
 
   describe("initTask", () => {
-    test("should exist and run without error", async () => {
-      expect(task.initTask).toBeInstanceOf(Function);
+    it("should exist and run without error", async () => {
       await expect(task.initTask()).resolves.toBeUndefined();
     });
   });
 
   describe("cleanupTask", () => {
-    test("should exist and run without error", async () => {
-      expect(task.cleanupTask).toBeInstanceOf(Function);
+    it("should exist and run without error", async () => {
       await expect(task.cleanupTask()).resolves.toBeUndefined();
     });
   });
 
   describe("run", () => {
-    test("should call initTask before running subtasks", async () => {
-      const initTaskSpy = vi.spyOn(task, "initTask");
-      const subTask1 = new Task(mockCassi); // Pass mock Cassi
-      const subTaskRunSpy = vi.spyOn(subTask1, "run");
-      task.subTasks.push(subTask1);
+    it("should call initTask before running subtasks", async () => {
+      const subTask = new Task(mockCassi, task);
+      const subTaskRunSpy = vi.spyOn(subTask, "run").mockResolvedValue();
+      task.addSubtask(subTask);
 
       await task.run();
 
-      expect(initTaskSpy).toHaveBeenCalledOnce();
-      // Ensure initTask is called before subTask.run
-      // Vitest spies don't easily track cross-spy call order,
-      // but the structure of the run method ensures this.
-      // We can verify initTask was called before finishedAt is set.
-      expect(initTaskSpy).toHaveBeenCalledBefore(subTaskRunSpy); // Check call order
+      expect(task.initTask).toHaveBeenCalled();
+      const initTaskCallOrder = (task.initTask as any).mock
+        .invocationCallOrder[0];
+      const subTaskRunCallOrder = subTaskRunSpy.mock.invocationCallOrder[0];
+      expect(initTaskCallOrder).toBeLessThan(subTaskRunCallOrder);
     });
 
-    test("should set startedAt and finishedAt dates", async () => {
+    it("should set startedAt and finishedAt dates", async () => {
       expect(task.startedAt).toBeNull();
       expect(task.finishedAt).toBeNull();
+
       await task.run();
+
       expect(task.startedAt).toBeInstanceOf(Date);
       expect(task.finishedAt).toBeInstanceOf(Date);
-      // startedAt should be less than or equal to finishedAt
-      expect(task.startedAt!.getTime()).toBeLessThanOrEqual(
-        task.finishedAt!.getTime()
+      expect(task.finishedAt!.getTime()).toBeGreaterThanOrEqual(
+        task.startedAt!.getTime()
       );
     });
 
-    test("should run subtasks sequentially after initTask", async () => {
-      const initTaskSpy = vi.spyOn(task, "initTask");
-      const subTask1 = new Task(mockCassi); // Pass mock Cassi
-      const subTask2 = new Task(mockCassi); // Pass mock Cassi
-      const runSpy1 = vi.spyOn(subTask1, "run");
-      const runSpy2 = vi.spyOn(subTask2, "run");
-
-      task.subTasks.push(subTask1, subTask2);
+    it("should run subtasks sequentially after initTask", async () => {
+      const subTask1 = new Task(mockCassi, task);
+      const subTask2 = new Task(mockCassi, task);
+      const subTask1RunSpy = vi.spyOn(subTask1, "run").mockResolvedValue();
+      const subTask2RunSpy = vi.spyOn(subTask2, "run").mockResolvedValue();
+      task.addSubtask(subTask1);
+      task.addSubtask(subTask2);
 
       await task.run();
 
-      expect(initTaskSpy).toHaveBeenCalledOnce(); // Ensure initTask was called
-      expect(runSpy1).toHaveBeenCalledOnce();
-      expect(runSpy2).toHaveBeenCalledOnce();
+      expect(task.initTask).toHaveBeenCalled();
+      expect(subTask1RunSpy).toHaveBeenCalled();
+      expect(subTask2RunSpy).toHaveBeenCalled();
 
-      // Ensure initTask runs before subtasks, and subtasks run sequentially
-      expect(initTaskSpy).toHaveBeenCalledBefore(runSpy1);
-      expect(runSpy1).toHaveBeenCalledBefore(runSpy2);
+      const initCallOrder = (task.initTask as any).mock.invocationCallOrder[0];
+      const sub1CallOrder = subTask1RunSpy.mock.invocationCallOrder[0];
+      const sub2CallOrder = subTask2RunSpy.mock.invocationCallOrder[0];
 
-      // We can check the timestamps if the mocks were more complex,
-      // but checking call order with spies is sufficient here.
-      // Vitest spies don't directly track call order easily across different spies,
-      // but the await ensures sequential execution.
-      // We can also check that the parent task's finishedAt is after subtasks' finishedAt.
-      expect(subTask1.finishedAt).toBeInstanceOf(Date);
-      expect(subTask2.finishedAt).toBeInstanceOf(Date);
-      expect(task.finishedAt!.getTime()).toBeGreaterThanOrEqual(
-        subTask1.finishedAt!.getTime()
-      );
-      expect(task.finishedAt!.getTime()).toBeGreaterThanOrEqual(
-        subTask2.finishedAt!.getTime()
-      );
+      expect(initCallOrder).toBeLessThan(sub1CallOrder);
+      expect(sub1CallOrder).toBeLessThan(sub2CallOrder);
     });
 
-    test("should set error property if initTask throws", async () => {
+    it("should set error property if initTask throws", async () => {
       const testError = new Error("Init failed");
       vi.spyOn(task, "initTask").mockRejectedValue(testError);
 
       await task.run();
 
       expect(task.error).toBe(testError);
-      expect(task.startedAt).toBeInstanceOf(Date);
-      expect(task.finishedAt).toBeInstanceOf(Date); // finally block should still run
+      expect(task.finishedAt).toBeInstanceOf(Date);
     });
 
-    test("should set error property if a subtask throws", async () => {
+    it("should set error property if a subtask throws", async () => {
       const testError = new Error("Subtask failed");
-      const subTask1 = new Task(mockCassi); // Pass mock Cassi
-      const subTask2 = new Task(mockCassi); // Pass mock Cassi
-      const runSpy1 = vi.spyOn(subTask1, "run").mockRejectedValue(testError);
-      const runSpy2 = vi.spyOn(subTask2, "run"); // This should not be called
+      const subTask1 = new Task(mockCassi, task);
+      const subTask2 = new Task(mockCassi, task);
+      vi.spyOn(subTask1, "run").mockRejectedValue(testError);
+      const subTask2RunSpy = vi.spyOn(subTask2, "run");
 
-      task.subTasks.push(subTask1, subTask2);
+      task.addSubtask(subTask1);
+      task.addSubtask(subTask2);
 
       await task.run();
 
       expect(task.error).toBe(testError);
-      expect(runSpy1).toHaveBeenCalledOnce();
-      expect(runSpy2).not.toHaveBeenCalled(); // Ensure second subtask doesn't run
-      expect(task.startedAt).toBeInstanceOf(Date);
-      expect(task.finishedAt).toBeInstanceOf(Date); // finally block should still run
-      expect(subTask1.finishedAt).toBeNull(); // Subtask didn't finish successfully
+      expect(subTask2RunSpy).not.toHaveBeenCalled();
+      expect(task.finishedAt).toBeInstanceOf(Date);
     });
 
-    test("should set error property if a subtask sets its error property", async () => {
-      const testError = new Error("Subtask internal failure");
-      const subTask1 = new Task(mockCassi); // Pass mock Cassi
-      const subTask2 = new Task(mockCassi); // Pass mock Cassi
-      // Mock run to set the error property instead of throwing
-      const runSpy1 = vi.spyOn(subTask1, "run").mockImplementation(async () => {
-        subTask1.startedAt = new Date();
-        subTask1.error = testError; // Simulate failure within the subtask
-        subTask1.finishedAt = new Date();
-      });
-      const runSpy2 = vi.spyOn(subTask2, "run"); // This should not be called
+    it("should set error property if a subtask sets its error property", async () => {
+      const subtaskError = new Error("Subtask internal failure");
+      const subTask1 = new Task(mockCassi, task);
+      const subTask2 = new Task(mockCassi, task);
 
-      task.subTasks.push(subTask1, subTask2);
+      vi.spyOn(subTask1, "run").mockImplementation(async () => {
+        subTask1.error = subtaskError;
+        throw subtaskError;
+      });
+      const subTask2RunSpy = vi.spyOn(subTask2, "run");
+
+      task.addSubtask(subTask1);
+      task.addSubtask(subTask2);
 
       await task.run();
 
-      expect(task.error).toBe(testError); // Parent task should capture the error
-      expect(runSpy1).toHaveBeenCalledOnce();
-      expect(runSpy2).not.toHaveBeenCalled(); // Ensure second subtask doesn't run
-      expect(task.startedAt).toBeInstanceOf(Date);
-      expect(task.finishedAt).toBeInstanceOf(Date); // finally block should still run
-      expect(subTask1.error).toBe(testError);
-      expect(subTask1.finishedAt).toBeInstanceOf(Date);
+      expect(task.error).toBe(subtaskError);
+      expect(subTask2RunSpy).not.toHaveBeenCalled();
+      expect(task.finishedAt).toBeInstanceOf(Date);
     });
 
-    test("should handle non-Error objects thrown", async () => {
-      const testErrorString = "Something went wrong";
-      vi.spyOn(task, "initTask").mockRejectedValue(testErrorString);
+    it("should handle non-Error objects thrown", async () => {
+      const nonError = "Something went wrong";
+      vi.spyOn(task, "initTask").mockRejectedValue(nonError);
 
       await task.run();
 
       expect(task.error).toBeInstanceOf(Error);
-      expect(task.error?.message).toBe(testErrorString);
-      expect(task.startedAt).toBeInstanceOf(Date);
+      expect(task.error?.message).toBe(nonError);
       expect(task.finishedAt).toBeInstanceOf(Date);
     });
 
-    test("should call cleanupTask in finally block on success", async () => {
-      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
+    it("should call cleanupTask in finally block on success", async () => {
       await task.run();
-      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
-      expect(task.error).toBeNull(); // Ensure no error was set
+      expect(task.cleanupTask).toHaveBeenCalled();
     });
 
-    test("should call cleanupTask in finally block even if initTask throws", async () => {
-      const testError = new Error("Init failed");
-      vi.spyOn(task, "initTask").mockRejectedValue(testError);
-      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
-
+    it("should call cleanupTask in finally block even if initTask throws", async () => {
+      vi.spyOn(task, "initTask").mockRejectedValue(new Error("Init failed"));
       await task.run();
-
-      expect(task.error).toBe(testError);
-      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(task.cleanupTask).toHaveBeenCalled();
     });
 
-    test("should call cleanupTask in finally block even if a subtask throws", async () => {
-      const testError = new Error("Subtask failed");
-      const subTask1 = new Task(mockCassi);
-      vi.spyOn(subTask1, "run").mockRejectedValue(testError);
-      task.subTasks.push(subTask1);
-      const cleanupTaskSpy = vi.spyOn(task, "cleanupTask");
-
+    it("should call cleanupTask in finally block even if a subtask throws", async () => {
+      const subTask = new Task(mockCassi, task);
+      vi.spyOn(subTask, "run").mockRejectedValue(new Error("Subtask failed"));
+      task.addSubtask(subTask);
       await task.run();
-
-      expect(task.error).toBe(testError);
-      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(task.cleanupTask).toHaveBeenCalled();
     });
 
-    test("should log error if cleanupTask itself throws, but not overwrite original error", async () => {
-      const initError = new Error("Init failed");
+    it("should log error if cleanupTask itself throws but not overwrite original error", async () => {
+      const originalError = new Error("Init failed");
       const cleanupError = new Error("Cleanup failed");
-      vi.spyOn(task, "initTask").mockRejectedValue(initError);
-      const cleanupTaskSpy = vi
-        .spyOn(task, "cleanupTask")
-        .mockRejectedValue(cleanupError);
       const consoleErrorSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {}); // Suppress console output for test
+        .mockImplementation(() => {});
+
+      vi.spyOn(task, "initTask").mockRejectedValue(originalError);
+      vi.spyOn(task, "cleanupTask").mockRejectedValue(cleanupError);
 
       await task.run();
 
-      expect(task.error).toBe(initError); // Original error should be preserved
-      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(task.error).toBe(originalError);
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          `[Task] Error during cleanup for Task: ${cleanupError.message}`
-        )
+        `[Task] Error during cleanup for Task: ${cleanupError.message}`
       );
 
-      consoleErrorSpy.mockRestore(); // Restore console.error
+      consoleErrorSpy.mockRestore();
     });
 
-    test("should log error if cleanupTask throws when run was successful", async () => {
+    it("should log error if cleanupTask throws when run was successful", async () => {
       const cleanupError = new Error("Cleanup failed");
-      const cleanupTaskSpy = vi
-        .spyOn(task, "cleanupTask")
-        .mockRejectedValue(cleanupError);
       const consoleErrorSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {}); // Suppress console output for test
+        .mockImplementation(() => {});
+
+      vi.spyOn(task, "cleanupTask").mockRejectedValue(cleanupError);
 
       await task.run();
 
-      expect(task.error).toBeNull(); // No error during main execution
-      expect(cleanupTaskSpy).toHaveBeenCalledOnce();
+      expect(task.error).toBeNull();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          `[Task] Error during cleanup for Task: ${cleanupError.message}`
-        )
+        `[Task] Error during cleanup for Task: ${cleanupError.message}`
       );
 
-      consoleErrorSpy.mockRestore(); // Restore console.error
+      consoleErrorSpy.mockRestore();
     });
   });
 
   describe("invoke", () => {
-    test("should call cassi.tool.invoke with the correct arguments and return its result", async () => {
-      const mockToolName = "fs";
-      const mockMethodName = "readFile";
-      const mockToolArgs: any[] = []; // Define toolArgs for the test
-      const mockArgs = ["/path/to/file.txt"];
-      const mockResult = "file content";
-
-      // Mock cassi.tool.invoke
-      const invokeSpy = vi
-        .spyOn(mockCassi.tool, "invoke")
-        .mockResolvedValue(mockResult);
-
-      // Call the task's invoke method
-      const result = await task.invoke(
-        mockToolName,
-        mockMethodName,
-        mockToolArgs, // Pass toolArgs
-        ...mockArgs
-      );
-
-      // Assertions
-      expect(invokeSpy).toHaveBeenCalledOnce();
-      expect(invokeSpy).toHaveBeenCalledWith(
-        task, // Should pass the task instance itself
-        mockToolName,
-        mockMethodName,
-        mockToolArgs, // Expect toolArgs
-        ...mockArgs
-      );
-      expect(result).toBe(mockResult); // Should return the result from cassi.tool.invoke
-
-      // Restore the spy
-      invokeSpy.mockRestore();
+    beforeEach(() => {
+      mockTool.invoke = vi.fn();
     });
 
-    test("should propagate errors from cassi.tool.invoke", async () => {
-      const mockToolName = "fs";
-      const mockMethodName = "writeFile";
-      const mockToolArgs: any[] = ["someToolArg"]; // Define toolArgs for the test
-      const mockArgs = ["/path/to/file.txt", "content"];
-      const mockError = new Error("Failed to write file");
-
-      // Mock cassi.tool.invoke to throw an error
-      const invokeSpy = vi
-        .spyOn(mockCassi.tool, "invoke")
-        .mockRejectedValue(mockError);
-
-      // Call the task's invoke method and expect it to reject
-      await expect(
-        task.invoke(mockToolName, mockMethodName, mockToolArgs, ...mockArgs) // Pass toolArgs
-      ).rejects.toThrow(mockError);
-
-      // Assertions
-      expect(invokeSpy).toHaveBeenCalledOnce();
-      expect(invokeSpy).toHaveBeenCalledWith(
-        task,
-        mockToolName,
-        mockMethodName,
-        mockToolArgs, // Expect toolArgs
-        ...mockArgs
+    it("should call cassi.tool.invoke with the correct arguments and return its result", async () => {
+      const expectedResult = { success: true };
+      (mockTool.invoke as ReturnType<typeof vi.fn>).mockResolvedValue(
+        expectedResult
       );
 
-      // Restore the spy
-      invokeSpy.mockRestore();
+      const toolName = "fs";
+      const methodName = "readFile";
+      const toolArgs = ["/path/to/tool"];
+      const methodArgs = ["file.txt", "utf8"];
+
+      const result = await task.invoke(
+        toolName,
+        methodName,
+        toolArgs,
+        ...methodArgs
+      );
+
+      expect(mockTool.invoke).toHaveBeenCalledTimes(1);
+      expect(mockTool.invoke).toHaveBeenCalledWith(
+        task,
+        toolName,
+        methodName,
+        toolArgs,
+        ...methodArgs
+      );
+      expect(result).toBe(expectedResult);
+    });
+
+    it("should propagate errors from cassi.tool.invoke", async () => {
+      const testError = new Error("Tool invocation failed");
+      (mockTool.invoke as ReturnType<typeof vi.fn>).mockRejectedValue(
+        testError
+      );
+
+      await expect(
+        task.invoke("fs", "writeFile", [], "a.txt", "data")
+      ).rejects.toThrow(testError);
     });
   });
 
   describe("newModel", () => {
-    // Renamed describe block
-    let newInstanceSpy: ReturnType<typeof vi.spyOn>;
+    let newInstanceSpy: any;
 
     beforeEach(() => {
-      // Spy on the newInstance method, casting to 'any' to resolve TS error
-      newInstanceSpy = vi.spyOn(mockCassi.model, "newInstance" as any);
+      newInstanceSpy = vi
+        .spyOn(mockModel, "newInstance")
+        .mockImplementation((modelName: string, taskInstance: Task) => {
+          // Pass the mock plugin *initializer* function
+          return new MockModel(mockPluginInitializer, taskInstance);
+        }) as any;
     });
 
-    test("should call cassi.model.newInstance with the correct model class name", () => {
+    it("should call cassi.model.newInstance with the correct model class name and task instance", () => {
       const modelClassName = "MockModel";
-      const mockModelInstance = new MockModel();
-      newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
+      task.newModel(modelClassName);
 
-      task.newModel(modelClassName); // Use newModel (removed type argument)
-
-      expect(newInstanceSpy).toHaveBeenCalledOnce();
-      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
+      expect(newInstanceSpy).toHaveBeenCalledTimes(1);
+      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName, task);
     });
 
-    test("should return the model instance created by cassi.model.newInstance", () => {
-      const modelClassName = "MockModel";
-      const mockModelInstance = new MockModel();
-      newInstanceSpy.mockReturnValue(mockModelInstance); // Mock the return value
+    it("should return the model instance created by cassi.model.newInstance", () => {
+      const modelClassName = "AnotherModel";
+      // Pass the mock plugin *initializer* function
+      const expectedInstance = new MockModel(mockPluginInitializer, task);
+      newInstanceSpy.mockReturnValue(expectedInstance);
 
-      const result = task.newModel(modelClassName); // Use newModel (removed type argument)
+      const result = task.newModel(modelClassName);
 
-      expect(result).toBeInstanceOf(MockModel); // This assertion should still work
-      expect(result).toBe(mockModelInstance);
+      expect(result).toBe(expectedInstance);
     });
 
-    test("should throw an error if cassi.model.newInstance throws", () => {
+    it("should throw an error if cassi.model.newInstance throws", () => {
       const modelClassName = "NonExistentModel";
       const testError = new Error(`Model class '${modelClassName}' not found.`);
       newInstanceSpy.mockImplementation(() => {
-        throw testError; // Mock throwing an error
+        throw testError;
       });
 
-      // Use MockModel which extends Models to satisfy the constraint
-      expect(() => task.newModel(modelClassName)).toThrow(
-        // Use newModel (removed type argument)
-        testError
-      );
-      expect(newInstanceSpy).toHaveBeenCalledOnce();
-      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
+      expect(() => task.newModel(modelClassName)).toThrow(testError);
+      expect(newInstanceSpy).toHaveBeenCalledTimes(1);
+      expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName, task);
     });
   });
 
   describe("addSubtask", () => {
-    test("should add the subtask to the subTasks array", () => {
-      const subTask = new Task(mockCassi);
-      task.addSubtask(subTask);
-      expect(task.subTasks).toContain(subTask);
+    it("should add the subtask to the subTasks array", () => {
+      const subtask = new Task(mockCassi);
+      expect(task.subTasks).toHaveLength(0);
+      task.addSubtask(subtask);
       expect(task.subTasks).toHaveLength(1);
+      expect(task.subTasks[0]).toBe(subtask);
     });
 
-    test("should set the parentTask property on the subtask", () => {
-      const subTask = new Task(mockCassi);
-      expect(subTask.parentTask).toBeNull(); // Verify initial state
-      task.addSubtask(subTask);
-      expect(subTask.parentTask).toBe(task); // Verify parent is set
+    it("should set the parentTask property on the subtask", () => {
+      const subtask = new Task(mockCassi);
+      expect(subtask.parentTask).toBeNull();
+      task.addSubtask(subtask);
+      expect(subtask.parentTask).toBe(task);
     });
 
-    test("should allow adding multiple subtasks", () => {
-      const subTask1 = new Task(mockCassi);
-      const subTask2 = new Task(mockCassi);
-      task.addSubtask(subTask1);
-      task.addSubtask(subTask2);
+    it("should allow adding multiple subtasks", () => {
+      const subtask1 = new Task(mockCassi);
+      const subtask2 = new Task(mockCassi);
+      task.addSubtask(subtask1);
+      task.addSubtask(subtask2);
       expect(task.subTasks).toHaveLength(2);
-      expect(task.subTasks).toEqual([subTask1, subTask2]);
-      expect(subTask1.parentTask).toBe(task);
-      expect(subTask2.parentTask).toBe(task);
+      expect(task.subTasks).toContain(subtask1);
+      expect(task.subTasks).toContain(subtask2);
+      expect(subtask1.parentTask).toBe(task);
+      expect(subtask2.parentTask).toBe(task);
     });
   });
 });

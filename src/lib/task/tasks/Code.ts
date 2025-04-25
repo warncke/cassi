@@ -72,9 +72,10 @@ export class Code extends Task {
     );
 
     // Add Coder subtask
-    const coderPrompt = `${this.prompt}\n\nSummary: ${
-      this.evaluation.summary
-    }\n\nSteps:\n${this.evaluation.steps.join("\n")}`;
+    const formattedSteps = this.evaluation.steps
+      .map((step: string) => `- ${step}`)
+      .join("\n"); // Prepend '- ' to each step
+    const coderPrompt = `${this.prompt}\n\nSummary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`; // Use formatted steps
     // Pass only cassi, parentTask (this), and prompt to Coder constructor
     this.addSubtask(new Coder(this.cassi, this, coderPrompt));
   }

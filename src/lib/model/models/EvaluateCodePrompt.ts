@@ -1,6 +1,7 @@
-import { z } from "genkit"; // ModelReference is not needed directly here anymore
-import { Models, GenerateModelOptions } from "../Models.js"; // Import the base class and options type
+import { z } from "genkit"; // Keep one z import
+import { Models, GenerateModelOptions } from "../Models.js";
 // Removed unused import 'prototype' from 'events'
+import { Task } from "../../task/Task.js"; // Import Task
 
 const EvaluateCodePromptSchema = z.object({
   summary: z.string(),
@@ -9,9 +10,10 @@ const EvaluateCodePromptSchema = z.object({
 });
 export class EvaluateCodePrompt extends Models {
   // Extend the base class
-  constructor(plugin: any) {
-    // Updated constructor: only takes plugin
-    super(plugin); // Call the base class constructor with only the plugin
+  constructor(plugin: any, task: Task) {
+    // Add task parameter
+    // Updated constructor: takes plugin and task
+    super(plugin, task); // Pass task to super
   }
 
   // Implement the abstract generate method from Models

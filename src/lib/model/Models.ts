@@ -1,4 +1,5 @@
-import { genkit, GenerateOptions, ModelReference, GenkitError } from "genkit"; // Import GenkitError from main package
+import { genkit, GenerateOptions, ModelReference, GenkitError } from "genkit";
+import { Task } from "../task/Task.js"; // Import Task type with .js extension
 
 // Define a standard structure for generate options, including the model
 export interface GenerateModelOptions extends GenerateOptions {
@@ -8,8 +9,10 @@ export interface GenerateModelOptions extends GenerateOptions {
 
 export abstract class Models {
   protected ai: any; // Consider defining a more specific type if possible
+  protected task: Task; // Add task property
 
-  constructor(plugin: any) {
+  constructor(plugin: any, task: Task) {
+    // Add task parameter
     // Use 'any' for plugin type
     // Initialize genkit with the provided plugin
     if (!plugin) {
@@ -21,6 +24,7 @@ export abstract class Models {
       });
     }
     this.ai = genkit({ plugins: [plugin] });
+    this.task = task; // Assign task property
   }
 
   /**

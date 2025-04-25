@@ -1,208 +1,186 @@
-/// <reference types="vitest/globals" />
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Coder } from "./Coder.js";
-import { type ModelReference } from "genkit"; // Keep ModelReference for mock
-import { GenerateModelOptions } from "../Models.js"; // Import GenerateModelOptions
-// Removed genkit import as it's not directly used/mocked here anymore
-// Do not import defineTool from @genkit-ai/ai here, we will mock it
+import { Models, GenerateModelOptions } from "../Models.js"; // Import base and options
+import { Task } from "../../task/Task.js"; // Import Task
+import { genkit } from "genkit"; // Import genkit only
+import { defineTool } from "@genkit-ai/ai"; // defineTool comes from @genkit-ai/ai
+import { z } from "zod"; // Import z
 
-// Use vi.hoisted to define the mock function ensuring it's available before mocks
-const { topLevelMockDefineTool } = vi.hoisted(() => {
+// --- Mocks ---
+// Mock the Task class
+vi.mock("../../task/Task.js");
+
+// Mock the genkit function itself
+const mockGenerate = vi.fn();
+const mockDefineTool = vi.fn((def, handler) => {
+  return { name: def.name, description: def.description, handler };
+});
+const mockAiObject = {
+  generate: mockGenerate,
+  defineTool: mockDefineTool, // this.ai.defineTool will use this mock
+};
+vi.mock("genkit", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("genkit")>();
   return {
-    topLevelMockDefineTool: vi.fn((config, handler, options) => ({
-      ...config,
-      handler,
-      options,
-    })),
+    ...actual,
+    genkit: vi.fn(() => mockAiObject), // Mock the genkit() function
+    // REMOVED: defineTool: actual.defineTool, // defineTool is not exported here
+  };
+});
+// Mock the defineTool from @genkit-ai/ai as well, as it might be used internally by this.ai.defineTool
+vi.mock("@genkit-ai/ai", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@genkit-ai/ai")>();
+  return {
+    ...actual,
+    defineTool: mockDefineTool, // Use the same mock for consistency
   };
 });
 
-// REMOVED mock for "@genkit-ai/ai"
-// REMOVED mock for "genkit"
+// --- Test Suite ---
+describe("Coder Model", () => {
+  let mockTask: Task; // Declare mock task variable
+  let coderInstance: Coder; // Instance of the class under test
 
-// Mock the Models base class constructor and its methods
-vi.mock("../Models.js", () => {
-  // Define a mock generate function for the ai object
-  const mockAIGenerate = vi.fn(async (options: GenerateModelOptions) => {
-    // Simulate an AI response based on input for testing
-    // Return a structure that includes text and potentially usage
-    const responseText = `AI Response for prompt: ${
-      typeof options.prompt === "string"
-        ? options.prompt
-        : JSON.stringify(options.prompt)
-    }`;
-    const mockUsage = { inputTokens: 10, outputTokens: 20 }; // Example usage data
-    return {
-      text: responseText, // Return text directly now
-      usage: mockUsage, // Include usage data
-      // No need for toJSON or text() method in the mock return anymore
-    };
-  });
-
-  class MockBaseModels {
-    ai: any;
-    constructor(plugin: any) {
-      // Assign the hoisted mock tool and the mock generate function to this.ai
-      this.ai = {
-        defineTool: topLevelMockDefineTool,
-        generate: mockAIGenerate, // Add the mock generate function here
-      };
-      // No model stored here anymore
-      // No actual genkit() call here
-    }
-    // Implement the abstract generate method (though it won't be called directly in these tests)
-    async generate(options: GenerateModelOptions): Promise<string> {
-      throw new Error("Base generate should not be called in this mock");
-    }
-    // Expose the mock generate function for assertions if needed outside the instance
-    static mockAIGenerate = mockAIGenerate;
-  }
-
-  return {
-    Models: MockBaseModels,
-    // Export GenerateModelOptions if it was defined here, but it's imported now
-  };
-});
-
-// Mock plugin and model - Use the imported type
-const mockPlugin = { name: "mock-plugin" } as any;
-const mockModel = { name: "mock-model" } as ModelReference<any>; // Keep mock model reference
-
-describe("Coder", () => {
-  // Reset mocks before each test
   beforeEach(() => {
-    vi.clearAllMocks();
-    // We might need to reset the internal mock function used by the genkit mock if accessible,
-    // but clearAllMocks should handle the topLevelMockDefineTool.
+    // Reset mocks before each test
+    vi.resetAllMocks();
+    mockGenerate.mockClear();
+    mockDefineTool.mockClear();
+    (genkit as ReturnType<typeof vi.fn>).mockClear(); // Clear the genkit mock itself
+
+    // Create a mock Task instance
+    mockTask = new (Task as any)("mock-coder-task") as Task;
+
+    // Create a new instance of Coder, passing a dummy plugin object and mock task
+    coderInstance = new Coder({}, mockTask);
   });
 
-  it("should instantiate correctly with mock plugin", () => {
-    // Instantiation uses the mocked Models base class
-    expect(() => new Coder(mockPlugin)).not.toThrow(); // Only pass plugin
-    const coderInstance = new Coder(mockPlugin); // Only pass plugin
-
-    expect(coderInstance).toBeInstanceOf(Coder);
-
-    // Verify the instance has the 'ai' property with 'defineTool' from the mock
-    expect((coderInstance as any).ai).toBeDefined();
-    expect((coderInstance as any).ai.defineTool).toBeDefined();
-    // Ensure it IS the top-level mock via the base class mock
-    expect((coderInstance as any).ai.defineTool).toBe(topLevelMockDefineTool);
+  afterEach(() => {
+    // Restore mocks after each test
+    vi.restoreAllMocks();
   });
 
-  it("should have an async generate method", () => {
-    // Need to instantiate within the test as beforeEach clears mocks
-    const coderInstance = new Coder(mockPlugin); // Only pass plugin
-    expect(coderInstance.generate).toBeInstanceOf(Function);
+  it("should extend the Models base class", () => {
+    expect(coderInstance).toBeInstanceOf(Models);
   });
 
-  it("should initialize the tools property by calling the mocked ai.defineTool", () => {
-    // Instantiate Coder - constructor calls this.ai.defineTool
-    const coderInstance = new Coder(mockPlugin); // Only pass plugin
+  it("should call the base class constructor and initialize 'ai' via mocked genkit", () => {
+    expect(genkit).toHaveBeenCalledTimes(1);
+    expect(coderInstance).toHaveProperty("ai");
+    expect((coderInstance as any).ai).toBe(mockAiObject);
+    expect((coderInstance as any).ai.generate).toBe(mockGenerate);
+    expect((coderInstance as any).ai.defineTool).toBe(mockDefineTool);
+  });
 
-    // Check if the topLevelMockDefineTool was called by the Coder constructor
-    expect(topLevelMockDefineTool).toHaveBeenCalledTimes(1);
-    expect(topLevelMockDefineTool).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "execute_command" }),
-      expect.any(Function),
-      {} // Assuming default options {}
+  it("should define the 'execute_command' tool correctly using the mocked defineTool", () => {
+    expect(mockDefineTool).toHaveBeenCalledTimes(1);
+
+    const toolDefinitionCall = mockDefineTool.mock.calls[0][0];
+    const toolHandler = mockDefineTool.mock.calls[0][1];
+
+    expect(toolDefinitionCall.name).toBe("execute_command");
+    expect(toolDefinitionCall.description).toContain(
+      "Request to execute a CLI command"
     );
+    expect(toolDefinitionCall.inputSchema).toBeInstanceOf(z.ZodObject);
+    expect(toolDefinitionCall.outputSchema).toBeInstanceOf(z.ZodString);
 
-    // Check the resulting tools array (based on the return value of the mock)
+    const inputSchemaShape = toolDefinitionCall.inputSchema.shape;
+    expect(inputSchemaShape.command).toBeInstanceOf(z.ZodString);
+    expect(inputSchemaShape.requires_approval).toBeInstanceOf(z.ZodBoolean);
+
+    expect(typeof toolHandler).toBe("function");
+
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
     expect(coderInstance.tools.length).toBe(1);
-    const tool = coderInstance.tools[0];
-    expect(tool).toBeDefined();
-    expect(tool.name).toBe("execute_command");
-    expect(tool.description).toBeDefined();
-    expect(tool.inputSchema).toBeDefined();
-    expect(tool.outputSchema).toBeDefined();
-    expect(tool.handler).toBeInstanceOf(Function);
-    expect(tool.options).toEqual({});
+    expect(coderInstance.tools[0].name).toBe("execute_command");
+    expect(typeof coderInstance.tools[0].handler).toBe("function");
   });
 
-  it("should call ai.generate with correct parameters and return the text response", async () => {
-    const coderInstance = new Coder(mockPlugin); // Only pass plugin
-    const testPrompt = "Write a function";
-    const generateOptions: GenerateModelOptions = {
-      model: mockModel, // Pass the mock model reference
-      prompt: testPrompt,
+  it("should call ai.generate with correct parameters in generate method", async () => {
+    const mockResponse = { text: "Generated code", usage: { totalTokens: 10 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Write a function",
     };
-    const expectedText = `AI Response for prompt: ${testPrompt}`; // Expecting string now
+    const { model, prompt, ...restOptions } = options;
 
-    // Access the mock generate function via the instance's ai property
-    const mockGenerateFn = (coderInstance as any).ai.generate;
+    await coderInstance.generate(options);
 
-    // Call the generate method with the options object
-    const responseText = await coderInstance.generate(generateOptions);
-
-    // Assert ai.generate was called
-    expect(mockGenerateFn).toHaveBeenCalledTimes(1);
-
-    // Assert ai.generate was called with the correct arguments object
-    expect(mockGenerateFn).toHaveBeenCalledWith({
-      model: mockModel, // Check model was passed
-      prompt: testPrompt,
-      tools: coderInstance.tools, // Ensure tools are passed
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(mockGenerate).toHaveBeenCalledWith({
+      model: model,
+      prompt: expect.stringContaining(prompt as string),
+      tools: coderInstance.tools,
+      ...restOptions,
     });
-
-    // Assert the method returned the expected text string (now directly from the mock)
-    expect(responseText).toBe(expectedText);
   });
 
-  it("should log usage information when available", async () => {
-    const coderInstance = new Coder(mockPlugin);
-    const testPrompt = "Test prompt for usage logging";
-    const generateOptions: GenerateModelOptions = {
-      model: mockModel,
-      prompt: testPrompt,
+  it("should return the text content from the ai.generate response", async () => {
+    const expectedText = "This is the generated code.";
+    const mockResponse = { text: expectedText, usage: { totalTokens: 5 } };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Generate something",
     };
-    const mockGenerateFn = (coderInstance as any).ai.generate;
-    const expectedUsage = { inputTokens: 10, outputTokens: 20 }; // Matches mock
 
-    // Spy on console.log
-    const consoleSpy = vi.spyOn(console, "log");
-
-    // Call generate
-    await coderInstance.generate(generateOptions);
-
-    // Assert console.log was called with usage
-    expect(consoleSpy).toHaveBeenCalledWith("AI Usage:", expectedUsage);
-
-    // Restore console.log
-    consoleSpy.mockRestore();
+    const result = await coderInstance.generate(options);
+    expect(result).toBe(expectedText);
   });
 
-  it("should handle missing usage information without error", async () => {
-    const coderInstance = new Coder(mockPlugin);
-    const testPrompt = "Test prompt without usage";
-    const generateOptions: GenerateModelOptions = {
-      model: mockModel,
-      prompt: testPrompt,
+  it("should log usage information if present in the response", async () => {
+    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const mockUsage = { inputTokens: 5, outputTokens: 10, totalTokens: 15 };
+    const mockResponse = { text: "Some text", usage: mockUsage };
+    mockGenerate.mockResolvedValue(mockResponse);
+
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Generate with usage",
     };
-    const mockGenerateFn = (coderInstance as any).ai.generate;
 
-    // Temporarily modify the mock to return no usage
-    mockGenerateFn.mockResolvedValueOnce({
-      text: `AI Response for prompt: ${testPrompt}`,
-      // No usage property
-    });
+    await coderInstance.generate(options);
+    expect(consoleLogSpy).toHaveBeenCalledWith("AI Usage:", mockUsage);
+    consoleLogSpy.mockRestore();
+  });
 
-    // Spy on console.log
-    const consoleSpy = vi.spyOn(console, "log");
+  it("should return an empty string and warn if ai.generate response has no text", async () => {
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {});
+    const mockResponse = { usage: { totalTokens: 2 } };
+    mockGenerate.mockResolvedValue(mockResponse);
 
-    // Call generate and expect it not to throw
-    await expect(
-      coderInstance.generate(generateOptions)
-    ).resolves.toBeDefined();
+    const options: GenerateModelOptions = {
+      model: "mockModelRef" as any,
+      prompt: "Generate nothing",
+    };
 
-    // Assert console.log was NOT called for usage
-    expect(consoleSpy).not.toHaveBeenCalledWith("AI Usage:", expect.anything());
+    const result = await coderInstance.generate(options);
+    expect(result).toBe("");
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "AI response did not contain text content."
+    );
+    consoleWarnSpy.mockRestore();
+  });
 
-    // Restore console.log and the mock
-    consoleSpy.mockRestore();
-    // Reset the mock to its default behavior for subsequent tests if needed
-    // (though beforeEach should handle this)
+  it("should execute the placeholder logic in the execute_command tool handler", async () => {
+    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    expect(mockDefineTool).toHaveBeenCalled();
+    const toolHandler = mockDefineTool.mock.calls[0][1];
+    const input = { command: "ls -l", requires_approval: false };
+
+    const result = await toolHandler(input);
+
+    expect(result).toBe("Simulated output for command: ls -l");
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "Placeholder: Would execute command: ls -l (Requires Approval: false)"
+    );
+    consoleLogSpy.mockRestore();
   });
 });
