@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define the expected constructor signature for models stored in the map
-type ModelConstructor = new (plugin: any, task: Task) => Models; // Keep task here as Models subclasses need it
+export type ModelConstructor = new (plugin: any, task: Task) => Models; // Keep task here as Models subclasses need it
 
 export class Model {
   public availableModels: Map<string, ModelConstructor> = new Map(); // Use updated ModelConstructor

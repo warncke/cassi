@@ -5,6 +5,18 @@ import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import { Invocation } from "./Invocation.js";
 import { Task } from "../task/Task.js"; // Import Task
+
+// Define the structure for tool definitions
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: {
+    type: "object";
+    properties: Record<string, { type: string; description?: string }>;
+    required?: string[];
+  };
+}
+
 // Tool classes will be loaded dynamically
 
 // Helper to get __dirname in ES Modules
