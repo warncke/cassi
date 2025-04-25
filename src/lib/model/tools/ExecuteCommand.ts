@@ -1,0 +1,52 @@
+import { z } from "zod";
+import { Models } from "../Models.js"; // Change import from Model to Models
+import { ModelTool } from "./ModelTool.js";
+import { ToolDefinition } from "../../tool/Tool.js";
+
+const executeCommandInputSchema = z.object({
+  command: z.string().describe("The CLI command to execute."),
+  requires_approval: z
+    .boolean()
+    .describe(
+      "Whether the command requires explicit user approval before execution."
+    ),
+});
+
+export class ExecuteCommand extends ModelTool {
+  static toolDefinition: ToolDefinition = {
+    name: "execute_command",
+    description:
+      "Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands. Tailor your command to the user's system and provide a clear explanation of what the command does. Commands will be executed in the current working directory.",
+    parameters: {
+      type: "object",
+      properties: {
+        command: {
+          type: "string",
+          description: "The CLI command to execute.",
+        },
+        requires_approval: {
+          type: "boolean",
+          description:
+            "Whether the command requires explicit user approval before execution.",
+        },
+      },
+      required: ["command", "requires_approval"],
+    },
+  };
+
+  static async toolMethod(
+    model: Models, // Change type to Models
+    input: z.infer<typeof executeCommandInputSchema>
+  ): Promise<string> {
+    console.log(
+      `Placeholder: Would execute command: ${input.command} (Requires Approval: ${input.requires_approval})`
+    );
+
+    // TODO: Implement actual command execution logic using model.task.tools.console.execute
+    // Example (needs refinement based on actual tool implementation):
+    // const result = await model.task.tools.console.execute(input.command, { requiresApproval: input.requires_approval });
+    // return result.stdout || result.stderr;
+
+    return `Simulated output for command: ${input.command}`;
+  }
+}

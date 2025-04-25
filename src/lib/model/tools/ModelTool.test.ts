@@ -94,16 +94,12 @@ class ConcreteModelTool extends ModelTool {
     },
   };
 
-  // Signature matches base class: accepts Model factory
-  static toolMethod = vi.fn(async (modelFactory: Model, param1: string) => {
-    // Assume mockTask is accessible in this scope for newInstance
-    // Use the factory to get a specific model instance
-    const modelInstance = modelFactory.newInstance(
-      "MockModelInstance",
-      mockTask
-    );
-    // Now use the instance's name
-    const modelName = (modelInstance as MockModelInstance).name;
+  // Signature now accepts Models
+  static toolMethod = vi.fn(async (model: Models, param1: string) => {
+    // Change modelFactory: Model to model: Models
+    // The 'model' parameter is now the Models instance itself.
+    // Use the model's class name for the mock response.
+    const modelName = model.constructor.name;
     return `Called with model ${modelName} and param1: ${param1}`;
   });
 }
@@ -113,13 +109,13 @@ const mockCassi = new MockCassi() as Cassi;
 const mockTask = new MockTask(mockCassi);
 
 describe("ModelTool", () => {
-  // Instantiate the mock Model factory
-  const mockModelFactoryInstance = new MockModelFactory();
+  // Instantiate the mock Models instance (which extends Models)
+  const mockModelInstance = new MockModelInstance(mockTask); // Use MockModelInstance
 
-  // Initialize the mock factory before tests run
-  beforeAll(async () => {
-    await mockModelFactoryInstance.init();
-  });
+  // No need to initialize a factory anymore
+  // beforeAll(async () => {
+  //   await mockModelFactoryInstance.init(); // Remove factory initialization
+  // });
 
   // Reset mocks before each test if needed
   beforeEach(() => {
@@ -136,35 +132,33 @@ describe("ModelTool", () => {
   });
 
   it("modelToolArgs should return correct structure and call static toolMethod", async () => {
-    // Pass the mock Model factory instance
-    const toolArgs = ConcreteModelTool.modelToolArgs(mockModelFactoryInstance);
+    // Pass the mock Models instance
+    const toolArgs = ConcreteModelTool.modelToolArgs(mockModelInstance); // Pass mockModelInstance
 
     expect(toolArgs).toBeInstanceOf(Array);
-    expect(toolArgs).toHaveLength(1);
+    expect(toolArgs).toHaveLength(2); // Now returns a tuple of two elements
 
-    const toolArgObject = toolArgs[0];
-    expect(toolArgObject).toHaveProperty("toolDefinition");
-    expect(toolArgObject.toolDefinition).toEqual(
-      ConcreteModelTool.toolDefinition
-    );
-    expect(toolArgObject).toHaveProperty("toolMethod");
-    expect(typeof toolArgObject.toolMethod).toBe("function");
+    const toolDefinition = toolArgs[0];
+    const toolMethod = toolArgs[1];
+
+    expect(toolDefinition).toEqual(ConcreteModelTool.toolDefinition);
+    expect(typeof toolMethod).toBe("function");
 
     const testParam = "hello world";
     // The returned toolMethod is called with args *excluding* the model factory
-    const result = await toolArgObject.toolMethod(testParam);
+    const result = await toolMethod(testParam); // Call toolMethod directly
 
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledTimes(1);
-    // toolMethod is called with the factory instance and the param
+    // toolMethod is called with the Models instance and the param
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledWith(
-      mockModelFactoryInstance,
+      mockModelInstance, // Expect mockModelInstance
       testParam
     );
 
     // The result depends on the logic inside the mocked toolMethod
-    // It should now use the name from the instance created *inside* toolMethod
+    // It should use the class name of the instance passed to it
     expect(result).toBe(
-      `Called with model mock-model-instance and param1: ${testParam}` // Updated expected name
+      `Called with model MockModelInstance and param1: ${testParam}` // Expect class name
     );
   });
 
@@ -177,12 +171,13 @@ describe("ModelTool", () => {
       };
       // No static toolMethod implementation
     }
-    // Pass the mock Model factory instance
+    // Pass the mock Models instance
     const toolArgs = IncompleteModelTool.modelToolArgs(
-      mockModelFactoryInstance
+      mockModelInstance // Pass mockModelInstance
     );
     // The base toolMethod throws, so calling the wrapped one should reject
-    await expect(toolArgs[0].toolMethod()).rejects.toThrow(
+    await expect(toolArgs[1]()).rejects.toThrow(
+      // Access the method at index 1
       "toolMethod must be implemented by subclasses"
     );
   });
