@@ -4,6 +4,7 @@ import { Task } from "../../task/Task.js";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
+import { PatchFile } from "../tools/PatchFile.js";
 
 export class Coder extends Models {
   public tools: any[];
@@ -15,6 +16,7 @@ export class Coder extends Models {
       this.ai.defineTool(...ExecuteCommand.modelToolArgs(this)),
       this.ai.defineTool(...ReadFile.modelToolArgs(this)),
       this.ai.defineTool(...WriteFile.modelToolArgs(this)),
+      this.ai.defineTool(...PatchFile.modelToolArgs(this)),
     ];
   }
 

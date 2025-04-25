@@ -13,7 +13,6 @@ describe("Cassi", () => {
     cassi = new Cassi(user, "config.json", "/repo/dir");
   });
 
-
   test("should create an instance with user, configFile and repositoryDir", () => {
     expect(cassi).toBeTruthy();
     expect(cassi.user).toBe(user);
@@ -42,7 +41,6 @@ describe("Cassi", () => {
     expect(toolInitMock).toHaveBeenCalledTimes(1);
     expect(modelInitMock).toHaveBeenCalledTimes(1);
     expect(repoInitMock).toHaveBeenCalledTimes(1);
-
   });
 
   test("newTask should add a task to the tasks array", () => {
@@ -118,7 +116,8 @@ describe("Cassi", () => {
       expect(runSpy2).toHaveBeenCalledTimes(1);
       expect(runSpy3).toHaveBeenCalledTimes(1);
       expect(errorLogSpy).toHaveBeenCalledWith(
-        `Task failed with error: ${error.message}`
+        "[Cassi] Task Failed with Error:",
+        JSON.stringify({ message: error.message, stack: error.stack })
       );
 
       runSpy1.mockRestore();

@@ -40,7 +40,13 @@ export class Cassi {
         console.log(`[Cassi] Running task: ${task.constructor.name}`);
         await task.run();
         if (task.error) {
-          console.error(`Task failed with error: ${task.error.message}`);
+          console.error(
+            "[Cassi] Task Failed with Error:",
+            JSON.stringify({
+              message: task.error.message,
+              stack: task.error.stack,
+            })
+          );
         }
       }
     }
