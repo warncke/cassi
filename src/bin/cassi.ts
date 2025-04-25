@@ -23,16 +23,14 @@ async function run() {
     console.log("cassi starting");
   }
 
-  // Updated promptFn to handle the entire Prompt sequence at once
   async function promptFn(
     promptSequence: import("../lib/prompt/Prompt.js").Prompt
   ) {
     const { CLIPromptHandler } = await import(
       "../lib/cli-prompt-handler/CLIPromptHandler.js"
     );
-    // Create one handler for the whole sequence
     const handler = new CLIPromptHandler(promptSequence);
-    await handler.handlePrompt(); // Handle all prompts within the sequence
+    await handler.handlePrompt();
   }
 
   const user = new User(initFn, promptFn);
@@ -49,7 +47,7 @@ async function run() {
       await cassi.newTask(new Code(cassi, null, inputPrompt.response));
     } else {
       console.log("No input received, exiting.");
-      break; // Exit the loop if no input is provided
+      break;
     }
   }
 }

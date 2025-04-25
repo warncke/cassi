@@ -16,7 +16,6 @@ export class LocalConsole {
       const { stdout, stderr } = await execAsync(command, { cwd: this.cwd });
       return { stdout, stderr };
     } catch (error: any) {
-      // If exec fails, it throws an error object that includes stdout and stderr
       return {
         stdout: error.stdout || "",
         stderr: error.stderr || error.message,

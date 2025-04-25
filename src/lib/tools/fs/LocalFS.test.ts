@@ -9,31 +9,24 @@ import {
 } from "vitest";
 import * as fs from "fs/promises";
 import * as path from "path";
-import LocalFS from "./LocalFS.js"; // Import the .ts file directly
+import LocalFS from "./LocalFS.js";
 
 describe("LocalFS", () => {
   const localFs = new LocalFS();
-  // Vitest doesn't have __dirname by default in ESM, use import.meta.url
   const testDir = path.join(
     path.dirname(new URL(import.meta.url).pathname),
     "test_temp_dir"
-  ); // Create a temporary directory for testing
+  );
 
-  // Clean up before all tests and after all tests
   beforeAll(async () => {
-    // Ensure the test directory doesn't exist before starting
-    await fs.rm(testDir, { recursive: true, force: true }).catch(() => {}); // Add catch for initial cleanup
+    await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
   });
 
   afterAll(async () => {
-    // Clean up the temporary directory after all tests are done
     await fs.rm(testDir, { recursive: true, force: true });
   });
 
-  // Clean up specific test files/dirs after each test if needed
   afterEach(async () => {
-    // Example: remove a specific file if created in a test
-    // await localFs.deleteFile(path.join(testDir, 'some_test_file.txt')).catch(() => {});
   });
 
   describe("Directory Operations", () => {
@@ -46,24 +39,20 @@ describe("LocalFS", () => {
     });
 
     test("should list directory contents", async () => {
-      // Create a dummy file inside the subDir to list
       const dummyFilePath = path.join(subDir, "dummy.txt");
       await fs.writeFile(dummyFilePath, "dummy content");
 
       const contents = await localFs.listDirectory(subDir);
       expect(contents).toContain("dummy.txt");
 
-      // Clean up the dummy file
       await fs.unlink(dummyFilePath);
     });
 
     test("should delete a directory", async () => {
-      // Ensure directory exists first
       await localFs.createDirectory(subDir);
       await localFs.deleteDirectory(subDir);
 
-      // Check if directory still exists (it shouldn't)
-      await expect(fs.stat(subDir)).rejects.toThrow(); // Expect stat to fail
+      await expect(fs.stat(subDir)).rejects.toThrow();
     });
 
     test("createDirectory should handle nested paths", async () => {
@@ -71,7 +60,6 @@ describe("LocalFS", () => {
       await localFs.createDirectory(nestedDir);
       const stats = await fs.stat(nestedDir);
       expect(stats.isDirectory()).toBe(true);
-      // Clean up nested structure
       await localFs.deleteDirectory(path.join(testDir, "nested"));
     });
   });
@@ -82,13 +70,11 @@ describe("LocalFS", () => {
     const testBufferContent = Buffer.from("Buffer Content");
 
     beforeEach(async () => {
-      // Ensure the base test directory exists for file operations
       await localFs.createDirectory(testDir);
     });
 
     afterEach(async () => {
-      // Clean up the test file after each file operation test
-      await localFs.deleteFile(testFile).catch(() => {}); // Ignore errors if file doesn't exist
+      await localFs.deleteFile(testFile).catch(() => {});
     });
 
     test("should create a file with string content", async () => {
@@ -99,27 +85,24 @@ describe("LocalFS", () => {
 
     test("should create a file with buffer content", async () => {
       await localFs.createFile(testFile, testBufferContent);
-      const content = await fs.readFile(testFile); // Read as buffer
+      const content = await fs.readFile(testFile);
       expect(content).toEqual(testBufferContent);
     });
 
     test("should read a file as string", async () => {
-      // Create file first
       await fs.writeFile(testFile, testContent, "utf8");
-      const content = await localFs.readFile(testFile); // Default is utf8
+      const content = await localFs.readFile(testFile);
       expect(content).toBe(testContent);
     });
 
     test("should read a file as buffer", async () => {
       await fs.writeFile(testFile, testBufferContent);
-      const content = await localFs.readFile(testFile, null); // Specify null for buffer
+      const content = await localFs.readFile(testFile, null);
       expect(content).toEqual(testBufferContent);
     });
 
     test("should write (overwrite) a file with string content", async () => {
-      // Create initial file
       await fs.writeFile(testFile, "initial content", "utf8");
-      // Use writeFile to overwrite
       await localFs.writeFile(testFile, testContent);
       const content = await fs.readFile(testFile, "utf8");
       expect(content).toBe(testContent);
@@ -133,19 +116,15 @@ describe("LocalFS", () => {
     });
 
     test("should delete a file", async () => {
-      // Create file first
       await fs.writeFile(testFile, testContent, "utf8");
       await localFs.deleteFile(testFile);
 
-      // Check if file still exists (it shouldn't)
-      await expect(fs.stat(testFile)).rejects.toThrow(); // Expect stat to fail
+      await expect(fs.stat(testFile)).rejects.toThrow();
     });
 
     test("deleteFile should not throw if file does not exist", async () => {
       const nonExistentFile = path.join(testDir, "non_existent.txt");
-      // Ensure it doesn't exist
       await localFs.deleteFile(nonExistentFile).catch(() => {});
-      // Attempt deletion and expect no error
       await expect(localFs.deleteFile(nonExistentFile)).resolves.not.toThrow();
     });
 
@@ -154,14 +133,12 @@ describe("LocalFS", () => {
       await localFs.createFile(nestedFile, "nested content");
       const content = await fs.readFile(nestedFile, "utf8");
       expect(content).toBe("nested content");
-      // Clean up
       await localFs.deleteDirectory(path.join(testDir, "new_dir"));
     });
   });
 
   test("should return the current working directory", () => {
     const cwd = localFs.getCurrentWorkingDirectory();
-    // Compare against the actual process cwd
     expect(cwd).toBe(process.cwd());
   });
 
@@ -170,16 +147,13 @@ describe("LocalFS", () => {
     const tempDirForCwd = path.join(testDir, "cwd_test_dir");
 
     beforeAll(async () => {
-      // Create the temp directory once for these tests
       await localFs.createDirectory(tempDirForCwd);
     });
 
     afterAll(async () => {
-      // Clean up the temp directory used for CWD tests
       await localFs.deleteDirectory(tempDirForCwd);
     });
 
-    // Restore CWD after each test in this block
     afterEach(() => {
       process.chdir(originalCwd);
     });
@@ -194,20 +168,18 @@ describe("LocalFS", () => {
       expect(() => localFs.setCurrentWorkingDirectory(nonExistentDir)).toThrow(
         /Failed to change directory/
       );
-      // Ensure CWD didn't actually change
       expect(process.cwd()).toBe(originalCwd);
     });
 
     test("should throw an error when setting CWD to a file path", async () => {
       const filePath = path.join(tempDirForCwd, "temp_file.txt");
-      await localFs.createFile(filePath, "content"); // Create a file
+      await localFs.createFile(filePath, "content");
 
       expect(() => localFs.setCurrentWorkingDirectory(filePath)).toThrow(
         /Failed to change directory/
       );
       expect(process.cwd()).toBe(originalCwd);
 
-      // Clean up the file
       await localFs.deleteFile(filePath);
     });
   });

@@ -15,8 +15,7 @@ export default class LocalFS {
       const entries = await fs.readdir(dirPath);
       return entries;
     } catch (error: any) {
-      // Handle specific errors like 'ENOENT' (directory not found) if needed
-      throw error; // Re-throw the error for the caller to handle
+      throw error;
     }
   }
 
@@ -29,7 +28,6 @@ export default class LocalFS {
     try {
       await fs.mkdir(dirPath, { recursive: true });
     } catch (error: any) {
-      // Handle specific errors like 'EEXIST' (directory already exists) if needed
       throw error;
     }
   }
@@ -41,8 +39,7 @@ export default class LocalFS {
    */
   async deleteDirectory(dirPath: string): Promise<void> {
     try {
-      // Use rm for modern Node.js versions, which handles recursive deletion well
-      await fs.rm(dirPath, { recursive: true, force: true }); // force: true suppresses errors if path doesn't exist
+      await fs.rm(dirPath, { recursive: true, force: true });
     } catch (error: any) {
       throw error;
     }
@@ -57,7 +54,6 @@ export default class LocalFS {
   async createFile(filePath: string, content: string | Buffer): Promise<void> {
     try {
       const dir = path.dirname(filePath);
-      // Ensure the directory exists before writing the file
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(filePath, content);
     } catch (error: any) {
@@ -74,12 +70,9 @@ export default class LocalFS {
     try {
       await fs.unlink(filePath);
     } catch (error: any) {
-      // Handle specific errors like 'ENOENT' (file not found) gracefully
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       } else {
-        // Optionally log that the file didn't exist if needed
-        // console.log(`File not found, skipping deletion: ${filePath}`);
       }
     }
   }
@@ -112,8 +105,6 @@ export default class LocalFS {
    * @returns A promise that resolves when the file is written.
    */
   async writeFile(filePath: string, content: string | Buffer): Promise<void> {
-    // This can reuse the createFile logic as writeFile handles creation/overwriting
-    // Ensure the directory exists first
     try {
       const dir = path.dirname(filePath);
       await fs.mkdir(dir, { recursive: true });
@@ -140,7 +131,6 @@ export default class LocalFS {
     try {
       process.chdir(dirPath);
     } catch (error: any) {
-      // Handle specific errors like 'ENOENT' (directory not found)
       throw new Error(
         `Failed to change directory to ${dirPath}: ${error.message}`
       );

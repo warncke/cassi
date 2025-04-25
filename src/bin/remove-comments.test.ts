@@ -17,15 +17,12 @@ const FILE_IN_SUBDIR = path.join(SUB_DIR, "fileInSubdir.ts");
 const FILE_IN_NODE_MODULES = path.join(NODE_MODULES_SUB_DIR, "ignoredFile.ts");
 
 const CONTENT_WITH_COMMENTS = `
-// This is a top-level comment
 import fs from 'fs';
 
 function hello() {
-  // This is a comment inside a function
-  console.log('Hello'); // Trailing comment
+  console.log('Hello');
 }
 
-// Another comment
 export default hello;
 `;
 
@@ -63,7 +60,6 @@ describe("remove-comments script", () => {
     originalCwd = process.cwd;
     vi.stubGlobal("process", { ...process, cwd: () => TEST_DIR });
 
-    // Dynamically import the module to get the exported function
     const module = await import("./remove-comments.js");
     if (!module.removeComments) {
       throw new Error("removeComments function not found in module");

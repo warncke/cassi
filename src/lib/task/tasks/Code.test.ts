@@ -2,17 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Code } from "./Code.js";
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
-import { Models } from "../../model/Models.js"; // Import Models base class
-import { Coder } from "../../model/models/Coder.js"; // Import Coder model
-import { gemini20Flash } from "@genkit-ai/googleai"; // Import model reference used in Code task
+import { Models } from "../../model/Models.js";
+import { Coder } from "../../model/models/Coder.js";
+import { gemini20Flash } from "@genkit-ai/googleai";
 
-// Mocks
-// REMOVED: vi.mock("../Task.js"); // Remove mock for base Task class
 vi.mock("../../cassi/Cassi.js");
-vi.mock("../../model/Models.js"); // Mock the base Models class
-vi.mock("../../model/models/Coder.js"); // Mock the Coder model
+vi.mock("../../model/Models.js");
+vi.mock("../../model/models/Coder.js");
 
-// Mock specific models if EvaluateCodePrompt is used
 vi.mock("../../model/models/EvaluateCodePrompt.js", () => {
   const MockEvaluateCodePrompt = vi.fn().mockImplementation((plugin, task) => {
     return {
@@ -22,12 +19,11 @@ vi.mock("../../model/models/EvaluateCodePrompt.js", () => {
   return { EvaluateCodePrompt: MockEvaluateCodePrompt };
 });
 
-// Mock the specific model reference used in the Code task
 vi.mock("@genkit-ai/googleai", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@genkit-ai/googleai")>();
   return {
     ...actual,
-    gemini20Flash: "mockedGemini20Flash" as any, // Mock the specific model reference
+    gemini20Flash: "mockedGemini20Flash" as any,
   };
 });
 
@@ -119,7 +115,6 @@ describe("Code Task", () => {
       expect.any(Array)
     );
 
-    // Changed assertion to expect.any(Object)
     expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object));
   });
 
@@ -145,7 +140,6 @@ describe("Code Task", () => {
         prompt: codeTask.prompt,
       })
     );
-    // Changed assertion to expect.any(Object)
     expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object));
   });
 
@@ -170,7 +164,6 @@ describe("Code Task", () => {
       expect.any(Array),
       expect.any(Array)
     );
-    // Changed assertion to expect.any(Object)
     expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Object));
   });
 
@@ -224,7 +217,6 @@ describe("Code Task", () => {
       ]
     );
     expect(addSubtaskSpy).toHaveBeenCalledTimes(1);
-    // Changed assertion to expect.any(Object)
     expect(addSubtaskSpy).toHaveBeenCalledWith(expect.any(Object));
 
     const addedSubtask = addSubtaskSpy.mock.calls[0][0] as any;

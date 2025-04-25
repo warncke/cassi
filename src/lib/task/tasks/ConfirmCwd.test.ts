@@ -1,81 +1,37 @@
-import path from "path"; // Import path
-import { describe, it, expect, vi, beforeEach } from "vitest"; // Import vi and beforeEach
+import path from "path";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConfirmCwd } from "./ConfirmCwd.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { User } from "../../user/User.js";
-import { Prompt } from "../../prompt/Prompt.js"; // Import Prompt
-import Confirm from "../../prompt/prompts/Confirm.js"; // Import Confirm
+import { Prompt } from "../../prompt/Prompt.js";
+import Confirm from "../../prompt/prompts/Confirm.js";
 
-// Mock dependencies
 let mockUser: User;
 let mockCassi: Cassi;
 const mockConfigFile = "mock-config.json";
-const initialMockRepoDir = "relative/repo"; // Use a relative path for better testing
-const mockCwd = "/mock/cwd"; // Define a consistent mock CWD
+const initialMockRepoDir = "relative/repo";
+const mockCwd = "/mock/cwd";
 
 describe("ConfirmCwd", () => {
   beforeEach(() => {
-    // Reset mocks and Cassi instance before each test
     mockUser = new User();
     mockCassi = new Cassi(mockUser, mockConfigFile, initialMockRepoDir);
-    vi.restoreAllMocks(); // Ensure all mocks are cleared
+    vi.restoreAllMocks();
   });
 
   it("should instantiate correctly with default parentTask", () => {
-    const task = new ConfirmCwd(mockCassi); // Test default null parentTask
+    const task = new ConfirmCwd(mockCassi);
     expect(task).toBeInstanceOf(ConfirmCwd);
-    expect(task.parentTask).toBeNull(); // Verify default parentTask
-    expect(mockCassi.repository.repositoryDir).toBe(initialMockRepoDir); // Check initial state
+    expect(task.parentTask).toBeNull();
+    expect(mockCassi.repository.repositoryDir).toBe(initialMockRepoDir);
   });
 
   it("initTask should run without errors and update repo dir when user confirms", async () => {
     const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
-    const task = new ConfirmCwd(mockCassi); // Create task instance first
+    const task = new ConfirmCwd(mockCassi);
 
-    // Mock the task's invoke method directly
     const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
 
-    // Mock the user.prompt method on the Cassi instance associated with the task
-    const promptSpy = vi
-      .spyOn(mockCassi.user, "prompt")
-      .mockImplementation(async (prompt: Prompt) => {
-        const confirmPrompt = prompt.prompts.find(
-          (p) => p instanceof Confirm
-        ) as Confirm | undefined;
-        expect(confirmPrompt?.message).toContain(expectedResolvedPath); // Check resolved path in prompt
-        if (confirmPrompt) {
-          confirmPrompt.response = true; // Simulate confirmation
-        }
-      });
-
-    // Run the task's initTask
-    await expect(task.initTask()).resolves.toBeUndefined();
-
-    // Verify mocks were called
-    // Expect invoke to be called on the task instance with tool name, method name, and empty toolArgs
-    expect(invokeSpy).toHaveBeenCalledWith(
-      "fs",
-      "getCurrentWorkingDirectory",
-      []
-    );
-    expect(promptSpy).toHaveBeenCalled();
-
-    // Verify repositoryDir was updated
-    expect(mockCassi.repository.repositoryDir).toBe(expectedResolvedPath);
-  });
-
-  // Test for the denial case
-  it("initTask should exit if user denies the directory", async () => {
-    const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
-    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
-      throw new Error("process.exit called"); // Throw error to catch exit call
-    });
-    const task = new ConfirmCwd(mockCassi); // Create task instance first
-
-    // Mock the task's invoke method directly
-    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
-
-    // Mock user.prompt on the Cassi instance associated with the task to simulate denial
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
@@ -84,14 +40,12 @@ describe("ConfirmCwd", () => {
         ) as Confirm | undefined;
         expect(confirmPrompt?.message).toContain(expectedResolvedPath);
         if (confirmPrompt) {
-          confirmPrompt.response = false; // Simulate denial
+          confirmPrompt.response = true;
         }
       });
 
-    // Expect initTask to eventually lead to process.exit being called
-    await expect(task.initTask()).rejects.toThrow("process.exit called");
+    await expect(task.initTask()).resolves.toBeUndefined();
 
-    // Verify mocks were called
     expect(invokeSpy).toHaveBeenCalledWith(
       "fs",
       "getCurrentWorkingDirectory",
@@ -99,12 +53,43 @@ describe("ConfirmCwd", () => {
     );
     expect(promptSpy).toHaveBeenCalled();
 
-    // Verify process.exit was called with code 1
+    expect(mockCassi.repository.repositoryDir).toBe(expectedResolvedPath);
+  });
+
+  it("initTask should exit if user denies the directory", async () => {
+    const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
+    const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw new Error("process.exit called");
+    });
+    const task = new ConfirmCwd(mockCassi);
+
+    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
+
+    const promptSpy = vi
+      .spyOn(mockCassi.user, "prompt")
+      .mockImplementation(async (prompt: Prompt) => {
+        const confirmPrompt = prompt.prompts.find(
+          (p) => p instanceof Confirm
+        ) as Confirm | undefined;
+        expect(confirmPrompt?.message).toContain(expectedResolvedPath);
+        if (confirmPrompt) {
+          confirmPrompt.response = false;
+        }
+      });
+
+    await expect(task.initTask()).rejects.toThrow("process.exit called");
+
+    expect(invokeSpy).toHaveBeenCalledWith(
+      "fs",
+      "getCurrentWorkingDirectory",
+      []
+    );
+    expect(promptSpy).toHaveBeenCalled();
+
     expect(mockExit).toHaveBeenCalledWith(1);
 
-    // Verify repositoryDir was NOT updated
     expect(mockCassi.repository.repositoryDir).toBe(initialMockRepoDir);
 
-    mockExit.mockRestore(); // Restore mock exit
+    mockExit.mockRestore();
   });
 });

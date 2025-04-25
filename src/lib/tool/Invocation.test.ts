@@ -1,30 +1,29 @@
 import { describe, it, expect, vi } from "vitest";
 import { Invocation } from "./Invocation.js";
-import { Task } from "../task/Task.js"; // Import Task
-import { Cassi } from "../cassi/Cassi.js"; // Import Cassi for mocking Task
+import { Task } from "../task/Task.js";
+import { Cassi } from "../cassi/Cassi.js";
 
 describe("Invocation", () => {
   it("should correctly store toolName, toolImplementationName, and method", () => {
     const toolName = "fs";
     const toolImplementationName = "Local";
     const method = "readFile";
-    const mockToolMethod = () => {}; // Mock function
-    const mockToolInstance = {}; // Mock instance
-    const mockToolArgs = ["toolArg1", true]; // Mock tool constructor arguments
-    const mockArgs = ["arg1", 2, { key: "value" }]; // Mock method arguments
-    // Need a mock task for the constructor test as well
+    const mockToolMethod = () => {};
+    const mockToolInstance = {};
+    const mockToolArgs = ["toolArg1", true];
+    const mockArgs = ["arg1", 2, { key: "value" }];
     const mockCassiForTask = {} as Cassi;
     const mockTaskForConstructor = new Task(mockCassiForTask);
 
     const invocation = new Invocation(
-      mockTaskForConstructor, // Pass mock task
+      mockTaskForConstructor,
       toolName,
       toolImplementationName,
       method,
       mockToolMethod,
       mockToolInstance,
-      mockToolArgs, // Pass mock toolArgs
-      mockArgs // Pass mock args
+      mockToolArgs,
+      mockArgs
     );
 
     expect(invocation.toolName).toBe(toolName);
@@ -32,49 +31,43 @@ describe("Invocation", () => {
     expect(invocation.method).toBe(method);
     expect(invocation.toolMethod).toBe(mockToolMethod);
     expect(invocation.toolInstance).toBe(mockToolInstance);
-    expect(invocation.task).toBe(mockTaskForConstructor); // Check stored task
-    expect(invocation.toolArgs).toEqual(mockToolArgs); // Check stored toolArgs
-    expect(invocation.methodArgs).toEqual(mockArgs); // Check stored methodArgs (renamed from args)
-    expect(invocation.startTime).toBeNull(); // startTime should be null initially
-    expect(invocation.endTime).toBeNull(); // endTime should be null initially
-    expect(invocation.error).toBeNull(); // error should be null initially
+    expect(invocation.task).toBe(mockTaskForConstructor);
+    expect(invocation.toolArgs).toEqual(mockToolArgs);
+    expect(invocation.methodArgs).toEqual(mockArgs);
+    expect(invocation.startTime).toBeNull();
+    expect(invocation.endTime).toBeNull();
+    expect(invocation.error).toBeNull();
   });
 
   describe("invoke", () => {
-    // Create a mock Task instance to be used in tests
-    // We need a mock Cassi instance for the Task constructor
     const mockCassi = {
-      // Mock necessary Cassi properties/methods if Task uses them
     } as Cassi;
-    const mockTask = new Task(mockCassi); // Create a base mock task
+    const mockTask = new Task(mockCassi);
 
     it("should execute the tool method with task and args, returning the result", async () => {
       const expectedResult = "Success!";
       const arg1 = "hello";
       const arg2 = 123;
-      // Mock method no longer expects task as the first argument
       const mockToolMethod = vi.fn(async (a: string, b: number) => {
-        // Task is no longer passed via apply
         expect(a).toBe(arg1);
         expect(b).toBe(arg2);
         return expectedResult;
       });
       const invocation = new Invocation(
-        mockTask, // Pass task to constructor
+        mockTask,
         "testTool",
         "TestImpl",
         "testMethod",
         mockToolMethod,
         {},
-        [], // Add empty toolArgs
-        [arg1, arg2] // Pass args to constructor
+        [],
+        [arg1, arg2]
       );
 
-      // Invoke without task argument
       const result = await invocation.invoke();
 
       expect(result).toBe(expectedResult);
-      expect(mockToolMethod).toHaveBeenCalledWith(arg1, arg2); // Verify call signature (no task)
+      expect(mockToolMethod).toHaveBeenCalledWith(arg1, arg2);
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
@@ -83,26 +76,23 @@ describe("Invocation", () => {
 
     it("should capture errors thrown by the tool method", async () => {
       const errorMessage = "Something went wrong";
-      // Mock method no longer expects task
       const mockToolMethod = vi.fn(async () => {
-        // Task is no longer passed via apply
         throw new Error(errorMessage);
       });
       const invocation = new Invocation(
-        mockTask, // Pass task to constructor
+        mockTask,
         "testTool",
         "TestImpl",
         "testMethod",
         mockToolMethod,
         {},
-        [], // Add empty toolArgs
+        [],
         []
       );
 
-      // Invoke without task argument
       await expect(invocation.invoke()).rejects.toThrow(errorMessage);
 
-      expect(mockToolMethod).toHaveBeenCalledWith(); // Verify call signature (no task)
+      expect(mockToolMethod).toHaveBeenCalledWith();
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
@@ -112,56 +102,48 @@ describe("Invocation", () => {
 
     it("should capture non-Error objects thrown by the tool method", async () => {
       const errorObject = { message: "Just an object" };
-      // Mock method no longer expects task
       const mockToolMethod = vi.fn(async () => {
-        // Task is no longer passed via apply
         throw errorObject;
       });
       const invocation = new Invocation(
-        mockTask, // Pass task to constructor
+        mockTask,
         "testTool",
         "TestImpl",
         "testMethod",
         mockToolMethod,
         {},
-        [], // Add empty toolArgs
+        [],
         []
       );
 
-      // Invoke without task argument
-      await expect(invocation.invoke()).rejects.toEqual(errorObject); // Check if the original object is re-thrown
+      await expect(invocation.invoke()).rejects.toEqual(errorObject);
 
-      expect(mockToolMethod).toHaveBeenCalledWith(); // Verify call signature (no task)
+      expect(mockToolMethod).toHaveBeenCalledWith();
       expect(invocation.startTime).toBeTypeOf("number");
       expect(invocation.endTime).toBeTypeOf("number");
       expect(invocation.startTime).toBeLessThanOrEqual(invocation.endTime!);
-      expect(invocation.error).toBeInstanceOf(Error); // Should be wrapped in an Error
-      expect(invocation.error?.message).toBe(String(errorObject)); // Message should be string representation
+      expect(invocation.error).toBeInstanceOf(Error);
+      expect(invocation.error?.message).toBe(String(errorObject));
     });
 
     it("should throw an error if toolMethod is not a function", async () => {
       const toolName = "invalidTool";
       const method = "invalidMethod";
       const invocation = new Invocation(
-        mockTask, // Pass task to constructor
+        mockTask,
         toolName,
         "InvalidImpl",
         method,
-        {} as any, // Pass an object instead of a function
+        {} as any,
         {},
-        [], // Add empty toolArgs
+        [],
         []
       );
 
-      // Invoke without task argument
       await expect(invocation.invoke()).rejects.toThrow(
         `Invocation error: toolMethod for "${toolName}.${method}" is not a function.`
       );
 
-      // Even though it throws early, startTime might be set just before the check
-      // Depending on exact timing, startTime could be null or a number.
-      // endTime and error should remain null as the main try block wasn't entered.
-      // Let's check they remain null.
       expect(invocation.endTime).toBeNull();
       expect(invocation.error).toBeNull();
     });

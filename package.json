@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "test": "vitest run src --exclude .cassi/**",
     "watch": "tsc --watch",
-    "remove-comments": "ts-node src/bin/remove-comments.ts"
+    "remove-comments": "node --loader ts-node/esm src/bin/remove-comments.ts"
   },
   "repository": {
     "type": "git",

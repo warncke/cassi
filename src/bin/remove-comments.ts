@@ -22,18 +22,15 @@ export async function removeComments() {
       const newLines = lines.map((line) => {
         const commentIndex = line.indexOf("//");
         if (commentIndex !== -1) {
-          // Check if the '//' is inside a string literal (simple check for quotes)
           const quotesBefore = (
             line.substring(0, commentIndex).match(/["'`]/g) || []
           ).length;
           if (quotesBefore % 2 === 0) {
-            // If not inside a string literal
             return line.substring(0, commentIndex).trimEnd();
           }
         }
         return line;
       });
-      // Filter out lines that become empty after removing comments, unless they were originally just whitespace
       const finalLines = newLines.filter(
         (line, index) => line.trim() !== "" || lines[index].trim() === ""
       );
@@ -56,7 +53,6 @@ removeComments().catch((error) => {
   process.exit(1);
 });
 
-// Check if the script is being run directly
 const scriptPath = fileURLToPath(import.meta.url);
 if (scriptPath === process.argv[1]) {
   removeComments().catch((error) => {

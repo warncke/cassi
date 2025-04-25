@@ -6,42 +6,34 @@ import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import { Repository } from "../repository/Repository.js";
 import { Tool } from "../tool/Tool.js";
-import { Model } from "../model/Model.js"; // Import Model
-import { Models } from "../model/Models.js"; // Import Models
-import { genkit } from "genkit"; // Import genkit for mocking super call
+import { Model } from "../model/Model.js";
+import { Models } from "../model/Models.js";
+import { genkit } from "genkit";
 
-// Mocks
 vi.mock("../cassi/Cassi.js");
 vi.mock("../user/User.js");
 vi.mock("../config/Config.js");
 vi.mock("../repository/Repository.js");
 vi.mock("../tool/Tool.js");
-vi.mock("../model/Model.js"); // Mock Model
+vi.mock("../model/Model.js");
 
-// Mock genkit minimally for the super() call in MockModel
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
     ...actual,
     genkit: vi.fn(() => ({
-      // Mock genkit() to return a dummy object with 'plugins'
       plugins: [],
-      ai: {}, // Add a dummy 'ai' object if needed by Models constructor logic
+      ai: {},
     })),
   };
 });
 
-// Define a mock plugin function for this test file
 const mockPluginInstance = { name: "mock-task-test-plugin" };
-// This function now represents the plugin *initializer* like googleAI()
 const mockPluginInitializer = vi.fn(() => () => mockPluginInstance);
 
-// Mock Models subclass for testing newModel
 class MockModel extends Models {
   constructor(pluginInitializer: () => any, task: Task) {
-    // Expect initializer function
-    // Pass the initializer function and task to super
-    super(pluginInitializer(), task); // Execute the initializer before passing to super
+    super(pluginInitializer(), task);
   }
   async generate(options: any): Promise<string> {
     return "mock generated content";
@@ -54,45 +46,39 @@ describe("Task", () => {
   let mockConfig: Config;
   let mockRepository: Repository;
   let mockTool: Tool;
-  let mockModel: Model; // Mock Model instance
+  let mockModel: Model;
   let task: Task;
 
   beforeEach(() => {
-    // Reset mocks
     vi.resetAllMocks();
     mockPluginInitializer.mockClear();
     (genkit as ReturnType<typeof vi.fn>).mockClear();
 
-    // Create instances of mocks
     mockUser = new User();
     mockConfig = new Config("mock-config.json", mockUser);
     mockRepository = new Repository("/mock/repo/dir", mockUser);
     mockTool = new Tool(mockUser, mockConfig);
-    mockModel = new Model(); // Instantiate the mocked Model
+    mockModel = new Model();
 
-    // Mock the Cassi instance and its properties
     mockCassi = {
       user: mockUser,
       config: mockConfig,
       repository: mockRepository,
       tool: mockTool,
-      model: mockModel, // Assign the mocked Model instance
+      model: mockModel,
       tasks: [],
       init: vi.fn(),
       newTask: vi.fn(),
       runTasks: vi.fn(),
-    } as unknown as Cassi; // Use unknown cast for partial mock
+    } as unknown as Cassi;
 
-    // Create a new Task instance for each test
     task = new Task(mockCassi);
 
-    // Mock the initTask and cleanupTask methods on the Task prototype
     vi.spyOn(Task.prototype, "initTask").mockResolvedValue();
     vi.spyOn(Task.prototype, "cleanupTask").mockResolvedValue();
   });
 
   afterEach(() => {
-    // Restore original implementations
     vi.restoreAllMocks();
   });
 
@@ -326,7 +312,7 @@ describe("Task", () => {
         toolName,
         methodName,
         toolArgs,
-        methodArgs // Pass methodArgs as an array
+        methodArgs
       );
 
       expect(mockTool.invoke).toHaveBeenCalledTimes(1);
@@ -335,7 +321,7 @@ describe("Task", () => {
         toolName,
         methodName,
         toolArgs,
-        methodArgs // Pass methodArgs as an array
+        methodArgs
       );
       expect(result).toBe(expectedResult);
     });
@@ -347,7 +333,7 @@ describe("Task", () => {
       );
 
       await expect(
-        task.invoke("fs", "writeFile", [], ["a.txt", "data"]) // Wrap method args in an array
+        task.invoke("fs", "writeFile", [], ["a.txt", "data"])
       ).rejects.toThrow(testError);
     });
   });
@@ -359,7 +345,6 @@ describe("Task", () => {
       newInstanceSpy = vi
         .spyOn(mockModel, "newInstance")
         .mockImplementation((modelName: string, taskInstance: Task) => {
-          // Pass the mock plugin *initializer* function
           return new MockModel(mockPluginInitializer, taskInstance);
         }) as any;
     });
@@ -374,7 +359,6 @@ describe("Task", () => {
 
     it("should return the model instance created by cassi.model.newInstance", () => {
       const modelClassName = "AnotherModel";
-      // Pass the mock plugin *initializer* function
       const expectedInstance = new MockModel(mockPluginInitializer, task);
       newInstanceSpy.mockReturnValue(expectedInstance);
 
@@ -430,64 +414,57 @@ describe("Task", () => {
     const mockProcessCwd = "/current/process/dir";
 
     beforeEach(() => {
-      // Ensure mockRepository has the init method mocked if necessary for these tests
-      // If Repository class itself has init, the mock instance should have it.
-      // If init is added dynamically or needs specific mock behavior for cwd tests, add it here.
-      // Example: mockRepository.init = vi.fn();
     });
 
     it("should return task.worktreeDir if set", () => {
       task = new Task(mockCassi);
-      task.worktreeDir = mockWorktreeDir; // Set worktreeDir directly on the task
-      expect(task.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
+      task.worktreeDir = mockWorktreeDir;
+      expect(task.getCwd()).toBe(mockWorktreeDir);
     });
 
     it("should return parentTask.getCwd() if task.worktreeDir is not set and parentTask exists", () => {
       const parentTask = new Task(mockCassi);
-      // Spy on the parent's getCwd method
       const parentGetCwdSpy = vi
-        .spyOn(parentTask, "getCwd") // Spy on the method directly
+        .spyOn(parentTask, "getCwd")
         .mockReturnValue(mockWorktreeDir);
 
       const childTask = new Task(mockCassi, parentTask);
-      childTask.worktreeDir = undefined; // Ensure child's worktreeDir is not set
+      childTask.worktreeDir = undefined;
 
-      expect(childTask.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
+      expect(childTask.getCwd()).toBe(mockWorktreeDir);
       expect(parentGetCwdSpy).toHaveBeenCalled();
 
-      parentGetCwdSpy.mockRestore(); // Clean up the spy
+      parentGetCwdSpy.mockRestore();
     });
 
     it("should return process.cwd() if task.worktreeDir and parentTask are not set", () => {
       const processCwdSpy = vi
         .spyOn(process, "cwd")
         .mockReturnValue(mockProcessCwd);
-      task = new Task(mockCassi); // Recreate task, parentTask is null by default
-      task.worktreeDir = undefined; // Ensure task's worktreeDir is not set
+      task = new Task(mockCassi);
+      task.worktreeDir = undefined;
 
-      expect(task.getCwd()).toBe(mockProcessCwd); // Call getCwd() method
+      expect(task.getCwd()).toBe(mockProcessCwd);
       expect(processCwdSpy).toHaveBeenCalled();
 
-      processCwdSpy.mockRestore(); // Clean up the spy
+      processCwdSpy.mockRestore();
     });
 
     it("should handle nested parent tasks correctly", () => {
       const grandParentTask = new Task(mockCassi);
-      // Spy on the grandparent's getCwd method
       const grandParentGetCwdSpy = vi
-        .spyOn(grandParentTask, "getCwd") // Spy on the method directly
+        .spyOn(grandParentTask, "getCwd")
         .mockReturnValue(mockWorktreeDir);
 
       const parentTask = new Task(mockCassi, grandParentTask);
-      parentTask.worktreeDir = undefined; // Ensure parent's worktreeDir is not set
+      parentTask.worktreeDir = undefined;
       const childTask = new Task(mockCassi, parentTask);
-      childTask.worktreeDir = undefined; // Ensure child's worktreeDir is not set
+      childTask.worktreeDir = undefined;
 
-      expect(childTask.getCwd()).toBe(mockWorktreeDir); // Call getCwd() method
-      // Check that the grandparent's getCwd was eventually called
+      expect(childTask.getCwd()).toBe(mockWorktreeDir);
       expect(grandParentGetCwdSpy).toHaveBeenCalled();
 
-      grandParentGetCwdSpy.mockRestore(); // Clean up the spy
+      grandParentGetCwdSpy.mockRestore();
     });
   });
 });

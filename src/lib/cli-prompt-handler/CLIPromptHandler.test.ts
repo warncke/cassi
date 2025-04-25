@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CLIPromptHandler } from "./CLIPromptHandler.js";
-import { Prompt } from "../prompt/Prompt.js"; // Import the container Prompt class
-import Input from "../prompt/prompts/Input.js"; // Import specific prompt types
+import { Prompt } from "../prompt/Prompt.js";
+import Input from "../prompt/prompts/Input.js";
 import Confirm from "../prompt/prompts/Confirm.js";
 import * as readline from "node:readline/promises";
 
-// Mock the readline module
 vi.mock("node:readline/promises");
 
 describe("CLIPromptHandler", () => {
@@ -13,28 +12,23 @@ describe("CLIPromptHandler", () => {
   let mockClose: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    // Reset mocks before each test
     mockQuestion = vi.fn();
     mockClose = vi.fn();
     vi.mocked(readline.createInterface).mockReturnValue({
       question: mockQuestion,
       close: mockClose,
-    } as any); // Use 'as any' for simplicity or define a more specific mock type
+    } as any);
   });
 
   it("should create an instance with a Prompt object containing prompts", () => {
-    // Create mock individual prompts
     const mockInput = new Input("Enter your name:");
     const mockConfirm = new Confirm("Are you sure?");
 
-    // Create the container Prompt object
     const mockPromptSequence = new Prompt([mockInput, mockConfirm]);
 
-    // Pass the container object to the handler
     const handler = new CLIPromptHandler(mockPromptSequence);
     expect(handler).toBeInstanceOf(CLIPromptHandler);
-    // Add more specific assertions if needed, e.g., checking internal state
-    expect(vi.mocked(readline.createInterface)).not.toHaveBeenCalled(); // Ensure readline isn't created prematurely
+    expect(vi.mocked(readline.createInterface)).not.toHaveBeenCalled();
   });
 
   it("should handle an 'input' prompt", async () => {
@@ -114,8 +108,8 @@ describe("CLIPromptHandler", () => {
     const handler = new CLIPromptHandler(mockPromptSequence);
 
     mockQuestion
-      .mockResolvedValueOnce("Cline") // Answer for input
-      .mockResolvedValueOnce("y"); // Answer for confirm
+      .mockResolvedValueOnce("Cline")
+      .mockResolvedValueOnce("y");
 
     await handler.handlePrompt();
 
@@ -128,7 +122,6 @@ describe("CLIPromptHandler", () => {
   });
 
   it("should handle unknown prompt types gracefully", async () => {
-    // Mock console.warn
     const consoleWarnSpy = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
@@ -139,14 +132,12 @@ describe("CLIPromptHandler", () => {
 
     await handler.handlePrompt();
 
-    // Check if console.warn was called with the expected message
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       "Unknown prompt type encountered: unknown"
     );
-    expect(mockQuestion).not.toHaveBeenCalled(); // readline shouldn't be used for unknown types
-    expect(mockClose).toHaveBeenCalledTimes(1); // close should still be called
+    expect(mockQuestion).not.toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalledTimes(1);
 
-    // Restore console.warn
     consoleWarnSpy.mockRestore();
   });
 });

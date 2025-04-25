@@ -1,17 +1,15 @@
 import { User } from "../user/User.js";
 import { readFile } from "fs/promises";
-import Ajv from "ajv"; // Use default import
-import type { JSONSchemaType, ErrorObject } from "ajv"; // Import types separately
+import Ajv from "ajv";
+import type { JSONSchemaType, ErrorObject } from "ajv";
 
-// Define the interface for the expected config structure
 interface ConfigData {
   apiKeys: {
     gemini: string;
   };
-  srcDir?: string; // Optional, will have a default
+  srcDir?: string;
 }
 
-// Define the JSON schema for validation
 const configSchema: JSONSchemaType<ConfigData> = {
   type: "object",
   properties: {
@@ -21,33 +19,33 @@ const configSchema: JSONSchemaType<ConfigData> = {
         gemini: { type: "string" },
       },
       required: ["gemini"],
-      additionalProperties: false, // Disallow other keys within apiKeys
+      additionalProperties: false,
     },
     srcDir: {
       type: "string",
-      nullable: true, // Allow it to be missing, Ajv will use default
+      nullable: true,
       default: "src",
     },
   },
   required: ["apiKeys"],
-  additionalProperties: false, // Disallow other top-level keys
+  additionalProperties: false,
 };
 
 export class Config {
   configFile: string;
   user: User;
-  configData: ConfigData | null; // Use the interface type, allow null initially
+  configData: ConfigData | null;
 
   constructor(configFile: string, user: User) {
     this.configFile = configFile;
     this.user = user;
-    this.configData = null; // Initialize configData
+    this.configData = null;
   }
 
   async init() {
     try {
       const fileContent = await readFile(this.configFile, "utf-8");
-      let parsedData: any; // Temporary variable for parsed data
+      let parsedData: any;
       try {
         parsedData = JSON.parse(fileContent);
       } catch (parseError: any) {
@@ -56,18 +54,16 @@ export class Config {
         );
       }
 
-      // Validate the parsed data against the schema
-      const ajv = new (Ajv as any).default({ useDefaults: true }); // Enable useDefaults
+      const ajv = new (Ajv as any).default({ useDefaults: true });
       const validate = ajv.compile(configSchema);
 
       if (validate(parsedData)) {
-        this.configData = parsedData; // Assign validated data
+        this.configData = parsedData;
       } else {
-        // Construct a more informative error message
         const errors = validate.errors
           ?.map(
             (
-              err: ErrorObject // Add explicit type for err
+              err: ErrorObject
             ) =>
               `${err.instancePath || "root"} ${err.message} (schema path: ${
                 err.schemaPath
@@ -79,7 +75,6 @@ export class Config {
         );
       }
     } catch (readError: any) {
-      // Catch read errors or validation errors from above
       throw new Error(
         `Error processing config file ${this.configFile}: ${readError.message}`
       );

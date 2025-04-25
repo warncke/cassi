@@ -1,37 +1,28 @@
 import { Cassi } from "./Cassi.js";
 import { User } from "../user/User.js";
 import { Task } from "../task/Task.js";
-import { Model } from "../model/Model.js"; // Import Model
-import { describe, expect, test, beforeEach, vi } from "vitest"; // Remove afterEach
+import { Model } from "../model/Model.js";
+import { describe, expect, test, beforeEach, vi } from "vitest";
 
-// Removed vi.mock for Model as init is now an instance method
 describe("Cassi", () => {
   let cassi: Cassi;
   let user: User;
-  // No modelInitSpy needed here anymore
 
   beforeEach(() => {
-    // No spy setup needed here anymore
-    // No longer need vi.clearAllMocks() for Model mock
     user = new User();
     cassi = new Cassi(user, "config.json", "/repo/dir");
   });
 
-  // No afterEach needed anymore
 
   test("should create an instance with user, configFile and repositoryDir", () => {
     expect(cassi).toBeTruthy();
     expect(cassi.user).toBe(user);
     expect(cassi.config.configFile).toBe("config.json");
     expect(cassi.repository.repositoryDir).toBe("/repo/dir");
-    // Verify model is instantiated
     expect(cassi.model).toBeInstanceOf(Model);
-    // Removed checks for user/config on model instance
   });
 
   test("should call init on user, config, tool, model, and repository", async () => {
-    // Directly mock the init method on the instance for this test
-    // Directly mock the init methods on the instances for this test
     const modelInitMock = vi.fn().mockResolvedValue(undefined);
     const userInitMock = vi.fn().mockResolvedValue(undefined);
     const repoInitMock = vi.fn().mockResolvedValue(undefined);
@@ -46,14 +37,12 @@ describe("Cassi", () => {
 
     await cassi.init();
 
-    // Assert calls on the direct mocks
     expect(userInitMock).toHaveBeenCalledTimes(1);
     expect(configInitMock).toHaveBeenCalledTimes(1);
     expect(toolInitMock).toHaveBeenCalledTimes(1);
     expect(modelInitMock).toHaveBeenCalledTimes(1);
     expect(repoInitMock).toHaveBeenCalledTimes(1);
 
-    // No need to restore spies as they were direct assignments
   });
 
   test("newTask should add a task to the tasks array", () => {
@@ -85,7 +74,7 @@ describe("Cassi", () => {
     test("should not run tasks that have already started", async () => {
       const task1 = new Task(cassi);
       const task2 = new Task(cassi);
-      task2.startedAt = new Date(); // Mark task2 as started
+      task2.startedAt = new Date();
 
       const runSpy1 = vi.spyOn(task1, "run").mockResolvedValue();
       const runSpy2 = vi.spyOn(task2, "run").mockResolvedValue();

@@ -13,7 +13,6 @@ export class LocalGit {
    * @param options Optional SimpleGit options.
    */
   constructor(basePath: string, options?: Partial<SimpleGitOptions>) {
-    // Use simpleGit directly as the function
     this.git = simpleGit.simpleGit(basePath, options);
   }
 
@@ -31,8 +30,6 @@ export class LocalGit {
    * @returns A promise that resolves when the branch is created.
    */
   async branch(branchName: string) {
-    // The branch method in simple-git takes an array of command options.
-    // To create a branch, we just pass the branch name.
     return this.git.branch([branchName]);
   }
 
@@ -43,7 +40,6 @@ export class LocalGit {
    * @returns A promise that resolves when the worktree is added.
    */
   async addWorktree(directory: string, branchName: string) {
-    // Use the raw method to execute the git worktree add command
     return this.git.raw(["worktree", "add", directory, branchName]);
   }
 
@@ -53,7 +49,6 @@ export class LocalGit {
    * @returns A promise that resolves when the worktree is removed.
    */
   async remWorkTree(directory: string) {
-    // Use the raw method to execute the git worktree remove command
     return this.git.raw(["worktree", "remove", directory]);
   }
 }

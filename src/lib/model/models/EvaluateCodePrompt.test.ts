@@ -1,49 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { EvaluateCodePrompt } from "./EvaluateCodePrompt.js";
-import { Models, GenerateModelOptions } from "../Models.js"; // Import base and options
-import { Task } from "../../task/Task.js"; // Import Task
-import { genkit } from "genkit"; // Import genkit
-import { z } from "zod"; // Import z from zod, not genkit
+import { Models, GenerateModelOptions } from "../Models.js";
+import { Task } from "../../task/Task.js";
+import { genkit } from "genkit";
+import { z } from "zod";
 
-// --- Mocks ---
-// Mock the Task class
 vi.mock("../../task/Task.js");
 
-// Mock the genkit function itself
 const mockGenerate = vi.fn();
 const mockAiObject = {
   generate: mockGenerate,
-  // No defineTool needed for this model's mock
 };
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
     ...actual,
-    genkit: vi.fn(() => mockAiObject), // Mock the genkit() function
-    z: actual.z, // Keep original z export if needed elsewhere, or remove if only zod is used
+    genkit: vi.fn(() => mockAiObject),
+    z: actual.z,
   };
 });
 
-// --- Test Suite ---
 describe("EvaluateCodePrompt Model", () => {
-  let mockTask: Task; // Declare mock task variable
-  let evaluateInstance: EvaluateCodePrompt; // Instance of the class under test
+  let mockTask: Task;
+  let evaluateInstance: EvaluateCodePrompt;
 
   beforeEach(() => {
-    // Reset mocks before each test
     vi.resetAllMocks();
     mockGenerate.mockClear();
-    (genkit as ReturnType<typeof vi.fn>).mockClear(); // Clear the genkit mock
+    (genkit as ReturnType<typeof vi.fn>).mockClear();
 
-    // Create a mock Task instance
     mockTask = new (Task as any)("mock-eval-task") as Task;
 
-    // Create a new instance of EvaluateCodePrompt, passing dummy plugin and mock task
     evaluateInstance = new EvaluateCodePrompt({}, mockTask);
   });
 
   afterEach(() => {
-    // Restore mocks after each test
     vi.restoreAllMocks();
   });
 
@@ -73,7 +64,7 @@ describe("EvaluateCodePrompt Model", () => {
     mockGenerate.mockResolvedValue(mockResponse);
 
     const options: GenerateModelOptions = {
-      model: "test-model" as any, // Model ref doesn't need to exist now
+      model: "test-model" as any,
       prompt: "Analyze this code.",
     };
     const { model, prompt, ...restOptions } = options;

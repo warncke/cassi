@@ -8,8 +8,7 @@ import { InitializeGit } from "./InitializeGit.js";
  */
 export class InitializeRepository extends Task {
   constructor(cassi: Cassi, parentTask: Task | null = null) {
-    super(cassi, parentTask); // Pass parentTask to super
-    // Pass 'this' as the parentTask for the subtasks
+    super(cassi, parentTask);
     this.subTasks = [
       new ConfirmCwd(cassi, this),
       new InitializeGit(cassi, this),

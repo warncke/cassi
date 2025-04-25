@@ -1,7 +1,6 @@
-import { z } from "genkit"; // Keep one z import
+import { z } from "genkit";
 import { Models, GenerateModelOptions } from "../Models.js";
-// Removed unused import 'prototype' from 'events'
-import { Task } from "../../task/Task.js"; // Import Task
+import { Task } from "../../task/Task.js";
 
 const EvaluateCodePromptSchema = z.object({
   summary: z.string(),
@@ -9,24 +8,19 @@ const EvaluateCodePromptSchema = z.object({
   steps: z.array(z.string()),
 });
 export class EvaluateCodePrompt extends Models {
-  // Extend the base class
   constructor(plugin: any, task: Task) {
-    // Add task parameter
-    // Updated constructor: takes plugin and task
-    super(plugin, task); // Pass task to super
+    super(plugin, task);
   }
 
-  // Implement the abstract generate method from Models
   async generate(options: GenerateModelOptions): Promise<string> {
-    const { model, prompt, ...restOptions } = options; // Destructure options
+    const { model, prompt, ...restOptions } = options;
 
-    // Ensure prompt is a string for this specific model's logic
     if (typeof prompt !== "string") {
       throw new Error("EvaluateCodePrompt requires a string prompt.");
     }
 
     const { text } = await this.ai.generate({
-      model: model, // Use the model from options
+      model: model,
       prompt: `
 OUTPUT the following JSON object, substituting in the results of model queries for properties. use the following CONTEXT when generating text for JSON properties:
 
@@ -46,10 +40,9 @@ The JSON object to OUTPUT is:
 }            
 `,
       output: { schema: EvaluateCodePromptSchema },
-      ...restOptions, // Pass any other generation options
+      ...restOptions,
     });
 
-    // Return the text content, defaulting to an empty string if null/undefined
     return text ?? "";
   }
 }

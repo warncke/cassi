@@ -1,16 +1,14 @@
 import { LocalGit } from "./LocalGit.js";
 import { simpleGit, SimpleGit, StatusResult } from "simple-git";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"; // Added afterEach
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import path from "path";
 import fs from "fs-extra";
 
-// Mock the simple-git library
 vi.mock("simple-git");
 vi.mock("fs-extra", () => ({
   ensureDir: vi.fn().mockResolvedValue(undefined),
   remove: vi.fn().mockResolvedValue(undefined),
   default: {
-    // Handle default export if needed by other parts of the code
     ensureDir: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
   },
@@ -22,24 +20,20 @@ describe("LocalGit", () => {
   const mockGitInstance = {
     status: vi.fn(),
     branch: vi.fn(),
-    raw: vi.fn(), // Add mock for raw method
+    raw: vi.fn(),
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
-    // Reset mocks before each test
     vi.resetAllMocks();
 
-    // Mock the simpleGit function to return our mock instance
     vi.mocked(simpleGit).mockReturnValue(mockGitInstance);
 
-    // Create a dummy directory for testing (optional, depends on test needs)
     await fs.ensureDir(testRepoPath);
 
     localGit = new LocalGit(testRepoPath);
   });
 
   afterEach(async () => {
-    // Clean up the dummy directory
     await fs.remove(testRepoPath);
   });
 
@@ -62,7 +56,7 @@ describe("LocalGit", () => {
         behind: 0,
         current: "main",
         tracking: "origin/main",
-        detached: false, // Add the missing 'detached' property
+        detached: false,
         isClean: () => false,
       };
       vi.mocked(mockGitInstance.status).mockResolvedValue(mockStatus);
@@ -85,8 +79,6 @@ describe("LocalGit", () => {
   describe("branch", () => {
     it("should call git.branch with the correct branch name", async () => {
       const branchName = "new-feature-branch";
-      // Mock the branch method to resolve successfully (simple-git branch returns BranchSummary on success)
-      // Added the missing 'detached' property
       const mockBranchSummary = {
         current: branchName,
         branches: {},
@@ -97,7 +89,6 @@ describe("LocalGit", () => {
 
       await localGit.branch(branchName);
 
-      // Expect branch to be called with an array containing the branch name
       expect(mockGitInstance.branch).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.branch).toHaveBeenCalledWith([branchName]);
     });
@@ -118,7 +109,6 @@ describe("LocalGit", () => {
       const directory = "../new-worktree-dir";
       const branchName = "feature/new-worktree";
       const expectedCommand = ["worktree", "add", directory, branchName];
-      // Mock the raw method to resolve successfully (simple-git raw returns the raw string output)
       vi.mocked(mockGitInstance.raw).mockResolvedValue("Worktree created");
 
       await localGit.addWorktree(directory, branchName);
@@ -146,7 +136,6 @@ describe("LocalGit", () => {
     it("should call git.raw with the correct arguments for worktree remove", async () => {
       const directory = "../existing-worktree-dir";
       const expectedCommand = ["worktree", "remove", directory];
-      // Mock the raw method to resolve successfully
       vi.mocked(mockGitInstance.raw).mockResolvedValue("Worktree removed");
 
       await localGit.remWorkTree(directory);

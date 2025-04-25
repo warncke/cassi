@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Models } from "../Models.js"; // Change import from Model to Models
+import { Models } from "../Models.js";
 import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
 
@@ -35,15 +35,15 @@ export class ExecuteCommand extends ModelTool {
   };
 
   static async toolMethod(
-    model: Models, // Change type to Models
+    model: Models,
     input: z.infer<typeof executeCommandInputSchema>
   ): Promise<string> {
     console.log("XXX", model.task.getCwd());
     const result = await model.task.invoke(
       "console",
       "exec",
-      [model.task.getCwd()], // Pass cwd as toolArgs using getCwd()
-      [input.command] // Pass command as an element in the methodArgs array
+      [model.task.getCwd()],
+      [input.command]
     );
 
     let output = "";

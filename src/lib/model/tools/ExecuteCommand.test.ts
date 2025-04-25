@@ -5,7 +5,6 @@ import { Task } from "../../task/Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { genkit } from "genkit";
 
-// --- Mocks ---
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
@@ -37,7 +36,7 @@ class MockTask extends Task {
       throw new Error(`Unexpected tool invocation: ${toolName}.${methodName}`);
     }
   );
-  getCwd = vi.fn(() => "/mock/cwd"); // Mock getCwd
+  getCwd = vi.fn(() => "/mock/cwd");
 
   constructor(cassi: Cassi) {
     super(cassi);
@@ -46,7 +45,7 @@ class MockTask extends Task {
 
 class MockCoderModel extends Models {
   constructor(task: Task) {
-    super({}, task); // Pass dummy plugin, real task
+    super({}, task);
   }
   async generate(options: GenerateModelOptions): Promise<string> {
     return `mock coder response for ${options.prompt}`;
@@ -60,7 +59,6 @@ const mockModelInstance = new MockCoderModel(mockTask);
 describe("ExecuteCommand", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset genkit mock if needed
     (genkit as any).mockImplementation(() => ({
       ai: {
         generate: vi.fn(async (options: GenerateModelOptions) => ({
@@ -69,10 +67,8 @@ describe("ExecuteCommand", () => {
         })),
       },
     }));
-    // Reset task invoke and getCwd mocks
     vi.mocked(mockTask.invoke).mockClear();
     vi.mocked(mockTask.getCwd).mockClear();
-    // Ensure getCwd mock is set for each test if needed, or rely on the class mock
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
   });
 
@@ -96,7 +92,7 @@ describe("ExecuteCommand", () => {
   it("modelToolArgs should return correct structure", () => {
     const toolArgs = ExecuteCommand.modelToolArgs(mockModelInstance);
     expect(toolArgs).toBeInstanceOf(Array);
-    expect(toolArgs).toHaveLength(2); // Expect tuple of length 2
+    expect(toolArgs).toHaveLength(2);
     const toolDefinition = toolArgs[0];
     const toolMethod = toolArgs[1];
     expect(toolDefinition).toEqual(ExecuteCommand.toolDefinition);
@@ -106,26 +102,23 @@ describe("ExecuteCommand", () => {
   it("toolMethod should invoke console.exec via task.invoke and format output", async () => {
     const input = { command: "ls -l", requires_approval: false };
     const toolArgs = ExecuteCommand.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1]; // Get method from index 1
+    const toolMethod = toolArgs[1];
 
-    const result = await toolMethod(input); // Call the method
+    const result = await toolMethod(input);
 
-    // Verify task.invoke was called correctly
     expect(mockTask.invoke).toHaveBeenCalledTimes(1);
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      [mockTask.getCwd()], // Expect cwd array as toolArgs
-      [input.command] // Expect command wrapped in methodArgs array
+      [mockTask.getCwd()],
+      [input.command]
     );
 
-    // Verify the output formatting
     expect(result).toBe(`STDOUT:\nmock output for ${input.command}`);
   });
 
   it("toolMethod should handle stderr output", async () => {
     const input = { command: "error-command", requires_approval: true };
-    // Mock task.invoke to return stderr
     mockTask.invoke.mockResolvedValueOnce({
       stdout: "",
       stderr: "mock error output",
@@ -139,15 +132,14 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      [mockTask.getCwd()], // Expect cwd array as toolArgs
-      [input.command] // Expect command wrapped in methodArgs array
+      [mockTask.getCwd()],
+      [input.command]
     );
     expect(result).toBe("STDERR:\nmock error output");
   });
 
   it("toolMethod should handle combined stdout and stderr", async () => {
     const input = { command: "mixed-command", requires_approval: false };
-    // Mock task.invoke to return both
     mockTask.invoke.mockResolvedValueOnce({
       stdout: "some output",
       stderr: "some error",
@@ -161,15 +153,14 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      [mockTask.getCwd()], // Expect cwd array as toolArgs
-      [input.command] // Expect command wrapped in methodArgs array
+      [mockTask.getCwd()],
+      [input.command]
     );
     expect(result).toBe("STDOUT:\nsome output\nSTDERR:\nsome error");
   });
 
   it("toolMethod should handle no output", async () => {
     const input = { command: "silent-command", requires_approval: false };
-    // Mock task.invoke to return empty stdout/stderr
     mockTask.invoke.mockResolvedValueOnce({ stdout: "", stderr: "" });
 
     const toolArgs = ExecuteCommand.modelToolArgs(mockModelInstance);
@@ -180,8 +171,8 @@ describe("ExecuteCommand", () => {
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
-      [mockTask.getCwd()], // Expect cwd array as toolArgs
-      [input.command] // Expect command wrapped in methodArgs array
+      [mockTask.getCwd()],
+      [input.command]
     );
     expect(result).toBe("Command executed successfully with no output.");
   });

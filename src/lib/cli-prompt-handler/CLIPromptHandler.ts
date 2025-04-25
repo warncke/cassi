@@ -1,12 +1,11 @@
-import { Prompt } from "../prompt/Prompt.js"; // Import the container class
+import { Prompt } from "../prompt/Prompt.js";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
 export class CLIPromptHandler {
-  private promptSequence: Prompt; // Rename internal property
+  private promptSequence: Prompt;
 
   constructor(promptSequence: Prompt) {
-    // Accept the container Prompt object
     this.promptSequence = promptSequence;
   }
 
@@ -26,7 +25,6 @@ export class CLIPromptHandler {
           break;
         }
         default:
-          // Optional: Handle unknown prompt types if necessary
           console.warn(
             `Unknown prompt type encountered: ${(prompt as any).type}`
           );
