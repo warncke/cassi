@@ -21,16 +21,27 @@ const { topLevelMockDefineTool } = vi.hoisted(() => {
 
 // Mock the Models base class constructor to control `this.ai` initialization
 vi.mock("../Models.js", () => {
+  // Define a mock generate function for the ai object
+  const mockAIGenerate = vi.fn(async (args) => {
+    // Simulate an AI response based on input for testing
+    return { simulatedResponse: `Response for prompt: ${args.prompt}` };
+  });
+
   return {
     Models: class MockModels {
       ai: any;
       model: ModelReference<any>;
       constructor(plugin: any, model: ModelReference<any>) {
-        // Assign the hoisted mock tool to this.ai
-        this.ai = { defineTool: topLevelMockDefineTool };
+        // Assign the hoisted mock tool and the mock generate function to this.ai
+        this.ai = {
+          defineTool: topLevelMockDefineTool,
+          generate: mockAIGenerate, // Add the mock generate function here
+        };
         this.model = model; // Keep the model reference
         // No actual genkit() call here
       }
+      // Expose the mock generate function for assertions if needed outside the instance
+      static mockAIGenerate = mockAIGenerate;
     },
   };
 });
@@ -94,5 +105,31 @@ describe("Coder", () => {
     expect(tool.outputSchema).toBeDefined();
     expect(tool.handler).toBeInstanceOf(Function);
     expect(tool.options).toEqual({});
+  });
+
+  it("should call ai.generate with correct parameters and return its response", async () => {
+    const coderInstance = new Coder(mockPlugin, mockModel);
+    const testPrompt = "Write a function";
+    const expectedResponse = {
+      simulatedResponse: `Response for prompt: ${testPrompt}`,
+    };
+
+    // Access the mock generate function via the instance's ai property
+    const mockGenerateFn = (coderInstance as any).ai.generate;
+
+    // Call the generate method
+    const response = await coderInstance.generate(testPrompt);
+
+    // Assert ai.generate was called
+    expect(mockGenerateFn).toHaveBeenCalledTimes(1);
+
+    // Assert ai.generate was called with the correct arguments
+    expect(mockGenerateFn).toHaveBeenCalledWith({
+      prompt: testPrompt,
+      tools: coderInstance.tools, // Ensure tools are passed
+    });
+
+    // Assert the method returned the expected response from the mock
+    expect(response).toEqual(expectedResponse);
   });
 });

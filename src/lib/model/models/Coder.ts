@@ -47,11 +47,14 @@ export class Coder extends Models {
     ];
   }
 
-  // Empty generate method as requested
-  async generate(promptText: string): Promise<void> {
-    // This method is intentionally empty for now.
-    console.log(`Coder.generate called with prompt: ${promptText}`); // Added log for visibility
-    // Actual implementation will be added later.
-    return Promise.resolve();
+  async generate(promptText: string): Promise<any> {
+    // Changed return type to any for now
+    const response = await this.ai.generate({
+      prompt: promptText,
+      tools: this.tools,
+    });
+    // TODO: Process the response
+    console.log("AI Response:", response); // Log the response for now
+    return response; // Return the response
   }
 }
