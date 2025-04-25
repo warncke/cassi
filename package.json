@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest run src --exclude .cassi/**",
+    "test": "vitest run --dir src --exclude .cassi/** --exclude test/e2e/**",
     "test:e2e": "vitest run src/test/e2e",
     "start:cli": "node dist/bin/cassi.js",
     "watch": "tsc --watch",

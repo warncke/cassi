@@ -5,11 +5,13 @@ import { Task } from "../../task/Task.js";
 import { genkit } from "genkit";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
+import { WriteFile } from "../tools/WriteFile.js";
 
 vi.mock("../../task/Task.js");
 
 let executeCommandModelToolArgsSpy: any;
 let readFileModelToolArgsSpy: any;
+let writeFileModelToolArgsSpy: any;
 
 const mockGenerate = vi.fn();
 const mockDefineTool = vi.fn((toolDefinition, toolMethod) => {
@@ -44,6 +46,12 @@ describe("Coder Model", () => {
     description: "mockReadFileDesc",
     parameters: {},
   };
+  const mockWriteFileToolMethod = vi.fn();
+  const mockWriteFileToolDefinition = {
+    name: "mockWriteFileDef",
+    description: "mockWriteFileDesc",
+    parameters: {},
+  };
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -61,6 +69,12 @@ describe("Coder Model", () => {
     readFileModelToolArgsSpy.mockReturnValue([
       mockReadFileToolDefinition,
       mockReadFileToolMethod,
+    ]);
+
+    writeFileModelToolArgsSpy = vi.spyOn(WriteFile, "modelToolArgs");
+    writeFileModelToolArgsSpy.mockReturnValue([
+      mockWriteFileToolDefinition,
+      mockWriteFileToolMethod,
     ]);
 
     mockTask = new (Task as any)("mock-coder-task") as Task;
@@ -89,8 +103,10 @@ describe("Coder Model", () => {
     expect(executeCommandModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(readFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(readFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+    expect(writeFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(writeFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
 
-    expect(mockDefineTool).toHaveBeenCalledTimes(2);
+    expect(mockDefineTool).toHaveBeenCalledTimes(3);
 
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       1,
@@ -102,14 +118,21 @@ describe("Coder Model", () => {
       mockReadFileToolDefinition,
       mockReadFileToolMethod
     );
+    expect(mockDefineTool).toHaveBeenNthCalledWith(
+      3,
+      mockWriteFileToolDefinition,
+      mockWriteFileToolMethod
+    );
 
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
-    expect(coderInstance.tools.length).toBe(2);
+    expect(coderInstance.tools.length).toBe(3);
     expect(coderInstance.tools[0].name).toBe(mockToolDefinition.name);
     expect(coderInstance.tools[0].handler).toBe(mockExecuteCommandToolMethod);
     expect(coderInstance.tools[1].name).toBe(mockReadFileToolDefinition.name);
     expect(coderInstance.tools[1].handler).toBe(mockReadFileToolMethod);
+    expect(coderInstance.tools[2].name).toBe(mockWriteFileToolDefinition.name);
+    expect(coderInstance.tools[2].handler).toBe(mockWriteFileToolMethod);
   });
 
   it("should call ai.generate with correct parameters in generate method", async () => {
@@ -183,9 +206,9 @@ describe("Coder Model", () => {
     consoleWarnSpy.mockRestore();
   });
 
-  it("should execute the placeholder logic in the execute_command tool handler", async () => {
+  it("should execute the placeholder logic in the tool handlers", async () => {
     const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    expect(mockDefineTool).toHaveBeenCalledTimes(2);
+    expect(mockDefineTool).toHaveBeenCalledTimes(3);
 
     const executeCommandHandler = mockDefineTool.mock.calls[0][1];
     expect(executeCommandHandler).toBe(mockExecuteCommandToolMethod);
@@ -204,6 +227,14 @@ describe("Coder Model", () => {
     await readFileHandler(readFileInput);
     expect(mockReadFileToolMethod).toHaveBeenCalledWith(readFileInput);
     expect(coderInstance.tools[1].handler).toBe(mockReadFileToolMethod);
+
+    const writeFileHandler = mockDefineTool.mock.calls[2][1];
+    expect(writeFileHandler).toBe(mockWriteFileToolMethod);
+
+    const writeFileInput = { path: "new.txt", content: "hello world" };
+    await writeFileHandler(writeFileInput);
+    expect(mockWriteFileToolMethod).toHaveBeenCalledWith(writeFileInput);
+    expect(coderInstance.tools[2].handler).toBe(mockWriteFileToolMethod);
 
     consoleLogSpy.mockRestore();
   });

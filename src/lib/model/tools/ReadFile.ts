@@ -14,7 +14,7 @@ const readFileInputSchema = z.object({
 
 export class ReadFile extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "read_file",
+    name: "READ_FILE",
     description:
       "Request to read the contents of a file at the specified path. Use this when you need to examine the contents of an existing file you do not know the contents of, for example to analyze code, review text files, or extract information from configuration files. Automatically extracts raw text from PDF and DOCX files. May not be suitable for other types of binary files, as it returns the raw content as a string.",
     parameters: {
