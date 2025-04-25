@@ -45,6 +45,9 @@ that can be processed by the linux patch command.
 
 You can also use the WRITE_FILE tool to create or replace the contents of any file.
 
+When calling READ_FILE, WRITE_FILE, and PATCH_FILE always inlude the "path" argument with the
+relative path of the file to access.
+
 PROMPT: ${prompt}
       
 `, // Pass the prompt
