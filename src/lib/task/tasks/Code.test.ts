@@ -4,6 +4,7 @@ import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { Task } from "../Task.js"; // Import Task for parentTask type hint
 import { describe, it, expect, vi, beforeEach } from "vitest"; // Import vitest functions including beforeEach
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; // Import the actual model for type hinting if needed
+import { Coder } from "./Coder.js"; // Import Coder task for testing
 
 // Mock EvaluateCodePrompt
 const mockGenerate = vi.fn();
@@ -67,7 +68,11 @@ describe("Code Task", () => {
   it("should call newModel, generate, and initFileTask during initTask when modifiesFiles is true", async () => {
     const promptText = "Generate some code.";
     // Mock generate to return a JSON string
-    const mockEvaluation = { modifiesFiles: true, summary: "Test Summary" };
+    const mockEvaluation = {
+      modifiesFiles: true,
+      summary: "Test Summary",
+      steps: [],
+    }; // Added steps
     mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
     const codeTask = new Code(mockCassi, null, promptText);
 
@@ -96,7 +101,11 @@ describe("Code Task", () => {
   it("should correctly parse the JSON string returned by model.generate", async () => {
     const promptText = "Generate some code.";
     // Mock generate to return a JSON *string*
-    const mockJsonResponse = { modifiesFiles: true, summary: "Parsed Summary" };
+    const mockJsonResponse = {
+      modifiesFiles: true,
+      summary: "Parsed Summary",
+      steps: [],
+    }; // Added steps
     const mockJsonString = JSON.stringify(mockJsonResponse);
     mockGenerate.mockResolvedValue(mockJsonString); // Return the stringified JSON
 
@@ -127,6 +136,7 @@ describe("Code Task", () => {
     const mockEvaluation = {
       modifiesFiles: true,
       summary: "Another Test Summary",
+      steps: [], // Added steps
     };
     mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
 
@@ -205,16 +215,18 @@ describe("Code Task", () => {
 
   // Removed test 'should throw an error and log error if JSON parsing fails' as JSON parsing is no longer done.
 
-  // Modify this test to check invoke calls and logs
-  it("should call initFileTask, create branch/worktree, and log details when modifiesFiles is true", async () => {
+  // Modify this test to check invoke calls, logs, and subtask creation
+  it("should call initFileTask, create branch/worktree, log details, and add Coder subtask when modifiesFiles is true", async () => {
     const promptText = "Generate code that modifies files.";
     const summaryText = "This Is My Summary";
+    const steps = ["Step 1", "Step 2"]; // Add mock steps
     const expectedRepoSlug = "this-is-my-summary";
     const mockTimestamp = 1713996743000; // Fixed timestamp for predictable hash
     // Mock generate to return a JSON string
     const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
+      steps: steps, // Include steps in mock evaluation
     };
     mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
 
@@ -226,6 +238,8 @@ describe("Code Task", () => {
     // Spy on the private method initFileTask to ensure it's called
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const initFileTaskSpy = vi.spyOn(codeTask as any, "initFileTask");
+    // Spy on addSubtask
+    const addSubtaskSpy = vi.spyOn(codeTask, "addSubtask");
 
     await codeTask.initTask();
 
@@ -288,9 +302,23 @@ describe("Code Task", () => {
       `Executing file modification task for: ${expectedRepoSlug}`
     );
 
+    // Check that addSubtask was called correctly
+    expect(addSubtaskSpy).toHaveBeenCalledTimes(1);
+    expect(addSubtaskSpy).toHaveBeenCalledWith(expect.any(Coder));
+
+    // Verify the arguments passed to the Coder constructor
+    const coderInstance = addSubtaskSpy.mock.calls[0][0] as Coder;
+    expect(coderInstance.cassi).toBe(mockCassi);
+    expect(coderInstance.parentTask).toBe(codeTask);
+    const expectedCoderPrompt = `${promptText}\n\nSummary: ${summaryText}\n\nSteps:\n${steps.join(
+      "\n"
+    )}`;
+    expect(coderInstance.prompt).toBe(expectedCoderPrompt);
+
     consoleSpy.mockRestore();
     initFileTaskSpy.mockRestore();
     dateNowSpy.mockRestore();
+    addSubtaskSpy.mockRestore(); // Restore addSubtask spy
   });
 
   // Keep the test for ID generation if desired, but remove the initFileTaskSpy checks
@@ -304,6 +332,7 @@ describe("Code Task", () => {
     const mockEvaluation = {
       modifiesFiles: true,
       summary: summaryText,
+      steps: [], // Added steps
     };
     mockGenerate.mockResolvedValue(JSON.stringify(mockEvaluation)); // Stringify the mock
     const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);

@@ -403,4 +403,31 @@ describe("Task", () => {
       expect(newInstanceSpy).toHaveBeenCalledWith(modelClassName);
     });
   });
+
+  describe("addSubtask", () => {
+    test("should add the subtask to the subTasks array", () => {
+      const subTask = new Task(mockCassi);
+      task.addSubtask(subTask);
+      expect(task.subTasks).toContain(subTask);
+      expect(task.subTasks).toHaveLength(1);
+    });
+
+    test("should set the parentTask property on the subtask", () => {
+      const subTask = new Task(mockCassi);
+      expect(subTask.parentTask).toBeNull(); // Verify initial state
+      task.addSubtask(subTask);
+      expect(subTask.parentTask).toBe(task); // Verify parent is set
+    });
+
+    test("should allow adding multiple subtasks", () => {
+      const subTask1 = new Task(mockCassi);
+      const subTask2 = new Task(mockCassi);
+      task.addSubtask(subTask1);
+      task.addSubtask(subTask2);
+      expect(task.subTasks).toHaveLength(2);
+      expect(task.subTasks).toEqual([subTask1, subTask2]);
+      expect(subTask1.parentTask).toBe(task);
+      expect(subTask2.parentTask).toBe(task);
+    });
+  });
 });

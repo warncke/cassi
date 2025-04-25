@@ -8,6 +8,7 @@ import { Task } from "../Task.js";
 import { kebabCase } from "change-case"; // Import kebabCase
 import { Cassi } from "../../cassi/Cassi.js"; // Import Cassi
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js"; // Import EvaluateCodePrompt
+import { Coder } from "./Coder.js"; // Import Coder task
 
 export class Code extends Task {
   public prompt: string; // Added prompt property
@@ -69,8 +70,11 @@ export class Code extends Task {
       `Added worktree at ${this.worktreeDir} for branch ${this.taskId}`
     );
 
-    // TODO: Implement file modification logic using the generated id and worktreeDir
-    // This method will handle the actual file changes within the worktree
+    // Add Coder subtask
+    const coderPrompt = `${this.prompt}\n\nSummary: ${
+      this.evaluation.summary
+    }\n\nSteps:\n${this.evaluation.steps.join("\n")}`;
+    this.addSubtask(new Coder(this.cassi, this, coderPrompt));
   }
 
   public async initTask(): Promise<void> {

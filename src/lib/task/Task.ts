@@ -98,4 +98,13 @@ export class Task {
     // Call newInstance which returns Models directly
     return this.cassi.model.newInstance(modelClassName); // Removed cast
   }
+
+  /**
+   * Adds a subtask to this task and sets its parent.
+   * @param subtask The Task instance to add as a subtask.
+   */
+  addSubtask(subtask: Task): void {
+    subtask.parentTask = this;
+    this.subTasks.push(subtask);
+  }
 }
