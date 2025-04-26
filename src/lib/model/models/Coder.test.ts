@@ -1,601 +1,91 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Coder } from "./Coder.js";
-import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
-import { genkit } from "genkit";
+import { ModelReference } from "genkit/model";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
 import { ReplaceInFile } from "../tools/ReplaceInFile.js";
 import { RunBuild } from "../tools/RunBuild.js";
 import { ListFiles } from "../tools/ListFiles.js";
-import { ToolDefinition } from "../../tool/Tool.js";
 
 vi.mock("../../task/Task.js");
-
-let executeCommandModelToolArgsSpy: any;
-let readFileModelToolArgsSpy: any;
-let writeFileModelToolArgsSpy: any;
-let replaceInFileModelToolArgsSpy: any;
-let runBuildModelToolArgsSpy: any;
-let listFilesModelToolArgsSpy: any;
-
-const mockGenerate = vi.fn();
-const mockDefineTool = vi.fn((toolDefinition, handler) => {
-  return toolDefinition;
+vi.mock("../Models.js", async (importOriginal) => {
+  const actual = (await importOriginal()) as any;
+  return {
+    Models: class {
+      plugin: any;
+      task: Task;
+      tools: any[] = [];
+      constructor(plugin: any, task: Task) {
+        this.plugin = plugin;
+        this.task = task;
+      }
+      initializeTools(tools: any[]) {
+        this.tools = tools;
+      }
+      async generateWithTools(options: any): Promise<void> {
+        return Promise.resolve();
+      }
+    },
+  };
 });
 
-const mockAiObject = {
-  generate: mockGenerate,
-  defineTool: mockDefineTool,
-};
-
-vi.mock("genkit", () => ({
-  genkit: vi.fn(() => mockAiObject),
-}));
-
-describe("Coder Model", () => {
+describe("Coder", () => {
   let mockTask: Task;
-  let coderInstance: Coder;
-  const mockExecuteCommandToolDefinition: ToolDefinition = {
-    name: "EXECUTE_COMMAND",
-    description: "Executes commands",
-    parameters: { type: "object", properties: { command: { type: "string" } } },
-  };
-  const mockExecuteCommandToolMethod = vi
-    .fn()
-    .mockResolvedValue("Command output");
-
-  const mockReadFileToolDefinition: ToolDefinition = {
-    name: "READ_FILE",
-    description: "Reads files",
-    parameters: { type: "object", properties: { path: { type: "string" } } },
-  };
-  const mockReadFileToolMethod = vi.fn().mockResolvedValue("File content");
-
-  const mockWriteFileToolDefinition: ToolDefinition = {
-    name: "WRITE_FILE",
-    description: "Writes files",
-    parameters: {
-      type: "object",
-      properties: { path: { type: "string" }, content: { type: "string" } },
-    },
-  };
-  const mockWriteFileToolMethod = vi.fn().mockResolvedValue("File written");
-
-  const mockReplaceInFileToolDefinition: ToolDefinition = {
-    name: "REPLACE_IN_FILE",
-    description: "Replaces content in files",
-    parameters: {
-      type: "object",
-      properties: { path: { type: "string" }, diff: { type: "string" } },
-    },
-  };
-  const mockReplaceInFileToolMethod = vi
-    .fn()
-    .mockResolvedValue("Content replaced");
-
-  const mockRunBuildToolDefinition: ToolDefinition = {
-    name: "RUN_BUILD",
-    description: "Runs build",
-    parameters: { type: "object", properties: {} },
-  };
-  const mockRunBuildToolMethod = vi.fn().mockResolvedValue("Build successful");
-
-  const mockListFilesToolDefinition: ToolDefinition = {
-    name: "LIST_FILES",
-    description: "Lists files",
-    parameters: { type: "object", properties: { path: { type: "string" } } },
-  };
-  const mockListFilesToolMethod = vi
-    .fn()
-    .mockResolvedValue(["file1.ts", "file2.ts"]);
+  let mockPlugin: any;
 
   beforeEach(() => {
-    vi.resetAllMocks();
-    mockGenerate.mockClear();
-    mockDefineTool.mockClear();
-    (genkit as ReturnType<typeof vi.fn>).mockClear();
-
-    executeCommandModelToolArgsSpy = vi
-      .spyOn(ExecuteCommand, "modelToolArgs")
-      .mockReturnValue([
-        mockExecuteCommandToolDefinition,
-        mockExecuteCommandToolMethod,
-      ]);
-    readFileModelToolArgsSpy = vi
-      .spyOn(ReadFile, "modelToolArgs")
-      .mockReturnValue([mockReadFileToolDefinition, mockReadFileToolMethod]);
-    writeFileModelToolArgsSpy = vi
-      .spyOn(WriteFile, "modelToolArgs")
-      .mockReturnValue([mockWriteFileToolDefinition, mockWriteFileToolMethod]);
-    replaceInFileModelToolArgsSpy = vi
-      .spyOn(ReplaceInFile, "modelToolArgs")
-      .mockReturnValue([
-        mockReplaceInFileToolDefinition,
-        mockReplaceInFileToolMethod,
-      ]);
-    runBuildModelToolArgsSpy = vi
-      .spyOn(RunBuild, "modelToolArgs")
-      .mockReturnValue([mockRunBuildToolDefinition, mockRunBuildToolMethod]);
-    listFilesModelToolArgsSpy = vi
-      .spyOn(ListFiles, "modelToolArgs")
-      .mockReturnValue([mockListFilesToolDefinition, mockListFilesToolMethod]);
-
-    mockTask = new (Task as any)("mock-coder-task") as Task;
-
-    coderInstance = new Coder({}, mockTask);
+    mockTask = new Task({} as any);
+    mockPlugin = {};
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it("should instantiate correctly", () => {
+    const coder = new Coder(mockPlugin, mockTask);
+    expect(coder).toBeInstanceOf(Coder);
   });
 
-  it("should extend the Models base class", () => {
-    expect(coderInstance).toBeInstanceOf(Models);
+  it("should initialize the correct tools", () => {
+    const coder = new Coder(mockPlugin, mockTask);
+    expect(coder.tools).toHaveLength(6);
+    expect(coder.tools.some((tool) => tool[0].name === "EXECUTE_COMMAND")).toBe(
+      true
+    );
+    expect(coder.tools.some((tool) => tool[0].name === "READ_FILE")).toBe(true);
+    expect(coder.tools.some((tool) => tool[0].name === "WRITE_FILE")).toBe(
+      true
+    );
+    expect(coder.tools.some((tool) => tool[0].name === "REPLACE_IN_FILE")).toBe(
+      true
+    );
+    expect(coder.tools.some((tool) => tool[0].name === "RUN_BUILD")).toBe(true);
+    expect(coder.tools.some((tool) => tool[0].name === "LIST_FILES")).toBe(
+      true
+    );
   });
 
-  it("should call the base class constructor and initialize 'ai' via mocked genkit", () => {
-    expect(genkit).toHaveBeenCalledTimes(1);
-    expect(coderInstance).toHaveProperty("ai");
-    expect(coderInstance.ai).toBe(mockAiObject);
-    expect(coderInstance.ai.generate).toBe(mockGenerate);
-    expect(coderInstance.ai.defineTool).toBe(mockDefineTool);
-  });
+  it("should call generateWithTools in generate method", async () => {
+    const coder = new Coder(mockPlugin, mockTask);
+    const generateWithToolsSpy = vi.spyOn(coder, "generateWithTools");
 
-  it("should call modelToolArgs for each tool, store handlers, and define tools with ai.defineTool", () => {
-    expect(executeCommandModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(executeCommandModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(readFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(readFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(writeFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(writeFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(replaceInFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(replaceInFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(runBuildModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(runBuildModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(listFilesModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(listFilesModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-
-    expect(mockDefineTool).toHaveBeenCalledTimes(6);
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      1,
-      mockExecuteCommandToolDefinition,
-      mockExecuteCommandToolMethod
-    );
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      2,
-      mockReadFileToolDefinition,
-      mockReadFileToolMethod
-    );
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      3,
-      mockWriteFileToolDefinition,
-      mockWriteFileToolMethod
-    );
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      4,
-      mockReplaceInFileToolDefinition,
-      mockReplaceInFileToolMethod
-    );
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      5,
-      mockRunBuildToolDefinition,
-      mockRunBuildToolMethod
-    );
-    expect(mockDefineTool).toHaveBeenNthCalledWith(
-      6,
-      mockListFilesToolDefinition,
-      mockListFilesToolMethod
-    );
-
-    expect((coderInstance as any).toolHandlers.get("EXECUTE_COMMAND")).toBe(
-      mockExecuteCommandToolMethod
-    );
-    expect((coderInstance as any).toolHandlers.get("READ_FILE")).toBe(
-      mockReadFileToolMethod
-    );
-    expect((coderInstance as any).toolHandlers.get("WRITE_FILE")).toBe(
-      mockWriteFileToolMethod
-    );
-    expect((coderInstance as any).toolHandlers.get("REPLACE_IN_FILE")).toBe(
-      mockReplaceInFileToolMethod
-    );
-    expect((coderInstance as any).toolHandlers.get("RUN_BUILD")).toBe(
-      mockRunBuildToolMethod
-    );
-    expect((coderInstance as any).toolHandlers.get("LIST_FILES")).toBe(
-      mockListFilesToolMethod
-    );
-
-    expect(coderInstance.tools).toBeDefined();
-    expect(Array.isArray(coderInstance.tools)).toBe(true);
-    expect(coderInstance.tools.length).toBe(6);
-    expect(coderInstance.tools[0].name).toBe(
-      mockExecuteCommandToolDefinition.name
-    );
-    expect(coderInstance.tools[5].name).toBe(mockListFilesToolDefinition.name);
-  });
-
-  it("should call ai.generate initially with correct parameters including returnToolRequests", async () => {
-    const mockResponse = {
-      text: () => "Generated code",
-      usage: { totalTokens: 10 },
-      toolRequests: [],
-    };
-    mockGenerate.mockResolvedValue(mockResponse);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Write a function",
-      messages: [
-        { role: "user" as const, content: [{ text: "Initial message" }] },
-      ],
-    };
-    const { model, prompt, messages, ...restOptions } = options;
-
-    await coderInstance.generate(options);
-
-    expect(mockGenerate).toHaveBeenCalledTimes(1);
-    expect(mockGenerate).toHaveBeenCalledWith({
-      model: model,
-      prompt: expect.any(String),
-      tools: coderInstance.tools,
-      returnToolRequests: true,
-      messages: messages,
-      ...restOptions,
-    });
-  });
-
-  it("should return an empty string when no tool requests are made", async () => {
-    const mockResponse = {
-      text: () => "This is the final generated code.", // Mock text is still needed for the internal logic before the final return
-      usage: { totalTokens: 5 },
-      toolRequests: [],
-    };
-    mockGenerate.mockResolvedValue(mockResponse);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Generate something simple",
-    };
-    // Removed duplicate options declaration below
-    // mockGenerate.mockResolvedValue(mockResponse); // This line was also duplicated, removing
-
-    const result = await coderInstance.generate(options); // Use the options declared above
-    expect(result).toBe(""); // Expect empty string now
-    expect(mockGenerate).toHaveBeenCalledTimes(1);
-  });
-
-  it("should log usage information from the final response", async () => {
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const mockUsage = { inputTokens: 5, outputTokens: 10, totalTokens: 15 };
-    const mockResponse = {
-      text: () => "Some text",
-      usage: mockUsage,
-      toolRequests: [],
-    };
-    mockGenerate.mockResolvedValue(mockResponse);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Generate with usage",
+    const mockModelRef = {} as ModelReference<any>;
+    const options = {
+      model: mockModelRef,
+      prompt: "test-prompt",
+      messages: [],
     };
 
-    await coderInstance.generate(options);
-    expect(consoleLogSpy).toHaveBeenCalledWith("AI Usage:", mockUsage);
-    consoleLogSpy.mockRestore();
-  });
+    await coder.generate(options);
 
-  it("should return an empty string and warn if final response has no text", async () => {
-    const consoleWarnSpy = vi
-      .spyOn(console, "warn")
-      .mockImplementation(() => {});
-    const mockResponse = { usage: { totalTokens: 2 }, toolRequests: [] };
-    mockGenerate.mockResolvedValue(mockResponse);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Generate nothing",
-    };
-
-    const result = await coderInstance.generate(options);
-    expect(result).toBe("");
-    // Removed the entire problematic test case "should return an empty string and warn if final response has no text"
-  }); // Closing brace for the test above ("should log usage information...")
-
-  it("should handle a single tool request, call the handler, log the call, and return empty string", async () => {
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-    const toolInput = { command: "ls", requires_approval: false };
-    const toolOutput = "file1\nfile2";
-    const initialMessages = [
-      { role: "user" as const, content: [{ text: "list files" }] },
-    ];
-    const messagesAfterToolRequest = [
-      ...initialMessages,
-      {
-        role: "model",
-        parts: [
-          {
-            toolRequest: {
-              name: "EXECUTE_COMMAND",
-              ref: "r1",
-              input: toolInput,
-            },
-          },
-        ],
-      },
-    ];
-
-    mockGenerate
-      .mockResolvedValueOnce({
-        toolRequests: [
-          {
-            toolRequest: {
-              name: "EXECUTE_COMMAND",
-              ref: "r1",
-              input: toolInput,
-            },
-          },
-        ],
-        messages: messagesAfterToolRequest,
-        usage: { totalTokens: 10 },
+    expect(generateWithToolsSpy).toHaveBeenCalled();
+    expect(generateWithToolsSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: options.model,
+        prompt: expect.stringContaining(options.prompt),
+        tools: coder.tools,
+        returnToolRequests: true,
+        messages: options.messages,
       })
-      .mockResolvedValueOnce({
-        text: () => "Okay, I listed the files.", // Mock text still needed internally
-        toolRequests: [],
-        usage: { totalTokens: 20 },
-      });
-
-    mockExecuteCommandToolMethod.mockResolvedValueOnce(toolOutput);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Run ls",
-      messages: initialMessages,
-    };
-
-    const result = await coderInstance.generate(options);
-
-    expect(mockGenerate).toHaveBeenCalledTimes(2);
-
-    const secondCallArgs = mockGenerate.mock.calls[1][0];
-
-    expect(mockExecuteCommandToolMethod).toHaveBeenCalledTimes(1);
-    expect(mockExecuteCommandToolMethod).toHaveBeenCalledWith(toolInput);
-
-    const expectedToolResponsePart = {
-      toolResponse: {
-        name: "EXECUTE_COMMAND",
-        ref: "r1",
-        output: toolOutput,
-      },
-    };
-    // Assert messages and prompt separately
-    expect(secondCallArgs.messages).toEqual([
-      ...messagesAfterToolRequest,
-      { role: "tool", content: [expectedToolResponsePart] },
-    ]);
-    expect(secondCallArgs.prompt).toBeUndefined();
-    expect(result).toBe(""); // Expect empty string now
-  });
-
-  it("should handle multiple tool requests in one turn and return empty string", async () => {
-    const toolInput1 = { command: "pwd", requires_approval: false };
-    const toolOutput1 = "/current/dir";
-    const toolInput2 = { path: "file.txt" };
-    const toolOutput2 = "file content";
-    const initialMessages = [
-      { role: "user" as const, content: [{ text: "get dir and read file" }] },
-    ];
-    const messagesAfterToolRequests = [
-      ...initialMessages,
-      {
-        role: "model",
-        parts: [
-          {
-            toolRequest: {
-              name: "EXECUTE_COMMAND",
-              ref: "r1",
-              input: toolInput1,
-            },
-          },
-          { toolRequest: { name: "READ_FILE", ref: "r2", input: toolInput2 } },
-        ],
-      },
-    ];
-
-    mockGenerate.mockResolvedValueOnce({
-      toolRequests: [
-        {
-          toolRequest: {
-            name: "EXECUTE_COMMAND",
-            ref: "r1",
-            input: toolInput1,
-          },
-        },
-        { toolRequest: { name: "READ_FILE", ref: "r2", input: toolInput2 } },
-      ],
-      messages: messagesAfterToolRequests,
-      usage: { totalTokens: 30 },
-    });
-    mockGenerate.mockResolvedValueOnce({
-      text: () => "Got dir and file content.", // Mock text still needed internally
-      toolRequests: [],
-      usage: { totalTokens: 40 },
-    });
-
-    mockExecuteCommandToolMethod.mockResolvedValueOnce(toolOutput1);
-    mockReadFileToolMethod.mockResolvedValueOnce(toolOutput2);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Run pwd and read file.txt",
-      messages: initialMessages,
-    };
-
-    const result = await coderInstance.generate(options);
-
-    expect(mockGenerate).toHaveBeenCalledTimes(2);
-    expect(mockExecuteCommandToolMethod).toHaveBeenCalledWith(toolInput1);
-    expect(mockReadFileToolMethod).toHaveBeenCalledWith(toolInput2);
-    const expectedToolResponsePart1 = {
-      toolResponse: {
-        name: "EXECUTE_COMMAND",
-        ref: "r1",
-        output: toolOutput1,
-      },
-    };
-    const expectedToolResponsePart2 = {
-      toolResponse: { name: "READ_FILE", ref: "r2", output: toolOutput2 },
-    };
-    // Assert messages and prompt separately for the second call
-    const secondCallArgsMulti = mockGenerate.mock.calls[1][0];
-    expect(secondCallArgsMulti.messages).toEqual([
-      ...messagesAfterToolRequests,
-      { role: "tool", content: [expectedToolResponsePart1] },
-      { role: "tool", content: [expectedToolResponsePart2] },
-    ]);
-    expect(secondCallArgsMulti.prompt).toBeUndefined();
-    expect(result).toBe(""); // Expect empty string now
-  });
-
-  it("should handle unknown tool request and return empty string", async () => {
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const toolInput = { some: "data" };
-    const unknownToolName = "UNKNOWN_TOOL";
-    const initialMessages = [
-      { role: "user" as const, content: [{ text: "call unknown tool" }] },
-    ];
-    const messagesAfterToolRequest = [
-      ...initialMessages,
-      {
-        role: "model",
-        parts: [
-          {
-            toolRequest: { name: unknownToolName, ref: "r1", input: toolInput },
-          },
-        ],
-      },
-    ];
-
-    mockGenerate.mockResolvedValueOnce({
-      toolRequests: [
-        { toolRequest: { name: unknownToolName, ref: "r1", input: toolInput } },
-      ],
-      messages: messagesAfterToolRequest,
-      usage: { totalTokens: 10 },
-    });
-    mockGenerate.mockResolvedValueOnce({
-      text: () => "Couldn't find that tool.", // Mock text still needed internally
-      toolRequests: [],
-      usage: { totalTokens: 20 },
-    });
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Call unknown tool",
-      messages: initialMessages,
-    };
-
-    const result = await coderInstance.generate(options);
-
-    expect(mockGenerate).toHaveBeenCalledTimes(2);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      `Tool handler not found for: ${unknownToolName}`
     );
-    const expectedErrorResponsePart = {
-      toolResponse: {
-        name: unknownToolName,
-        ref: "r1",
-        output: { error: `Tool not found: ${unknownToolName}` },
-      },
-    };
-    // Assert messages and prompt separately for the second call
-    const secondCallArgsUnknown = mockGenerate.mock.calls[1][0];
-    expect(secondCallArgsUnknown.messages).toEqual([
-      ...messagesAfterToolRequest,
-      { role: "tool", content: [expectedErrorResponsePart] },
-    ]);
-    expect(secondCallArgsUnknown.prompt).toBeUndefined();
-    expect(result).toBe(""); // Expect empty string now
-    consoleErrorSpy.mockRestore();
-  });
-
-  it("should handle tool execution error and return empty string", async () => {
-    const consoleErrorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    const toolInput = { command: "bad-command", requires_approval: false };
-    const errorMsg = "Command failed";
-    const initialMessages = [
-      { role: "user" as const, content: [{ text: "run bad command" }] },
-    ];
-    const messagesAfterToolRequest = [
-      ...initialMessages,
-      {
-        role: "model",
-        parts: [
-          {
-            toolRequest: {
-              name: "EXECUTE_COMMAND",
-              ref: "r1",
-              input: toolInput,
-            },
-          },
-        ],
-      },
-    ];
-
-    mockGenerate.mockResolvedValueOnce({
-      toolRequests: [
-        {
-          toolRequest: { name: "EXECUTE_COMMAND", ref: "r1", input: toolInput },
-        },
-      ],
-      messages: messagesAfterToolRequest,
-      usage: { totalTokens: 10 },
-    });
-    mockGenerate.mockResolvedValueOnce({
-      text: () => "The command failed.", // Mock text still needed internally
-      toolRequests: [],
-      usage: { totalTokens: 20 },
-    });
-
-    const executionError = new Error(errorMsg);
-    mockExecuteCommandToolMethod.mockRejectedValueOnce(executionError);
-
-    const options: GenerateModelOptions = {
-      model: "mockModelRef" as any,
-      prompt: "Run bad command",
-      messages: initialMessages,
-    };
-
-    const result = await coderInstance.generate(options);
-
-    expect(mockGenerate).toHaveBeenCalledTimes(2);
-    expect(mockExecuteCommandToolMethod).toHaveBeenCalledWith(toolInput);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      `Error executing tool EXECUTE_COMMAND:`,
-      executionError
-    );
-    const expectedExecErrorResponsePart = {
-      toolResponse: {
-        name: "EXECUTE_COMMAND",
-        ref: "r1",
-        output: { error: `Tool execution failed: ${errorMsg}` },
-      },
-    };
-    // Assert messages and prompt separately for the second call
-    const secondCallArgsExecError = mockGenerate.mock.calls[1][0];
-    expect(secondCallArgsExecError.messages).toEqual([
-      ...messagesAfterToolRequest,
-      { role: "tool", content: [expectedExecErrorResponsePart] },
-    ]);
-    expect(secondCallArgsExecError.prompt).toBeUndefined();
-    expect(result).toBe(""); // Expect empty string now
-    consoleErrorSpy.mockRestore();
   });
 });

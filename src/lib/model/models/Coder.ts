@@ -168,77 +168,7 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
       ...restOptions,
     };
 
-    let llmResponse;
-    let finalUsage;
-
-    while (true) {
-      llmResponse = await this.ai.generate(generateOptions);
-      finalUsage = llmResponse.usage;
-
-      const toolRequests = llmResponse.toolRequests ?? [];
-      if (toolRequests.length < 1) {
-        break;
-      }
-
-      const toolResponses: ToolResponsePart[] = await Promise.all(
-        toolRequests.map(async (part: ToolRequestPart) => {
-          const handler = this.toolHandlers.get(part.toolRequest.name);
-          if (!handler) {
-            console.error(
-              `Tool handler not found for: ${part.toolRequest.name}`
-            );
-            return {
-              toolResponse: {
-                name: part.toolRequest.name,
-                ref: part.toolRequest.ref,
-                output: { error: `Tool not found: ${part.toolRequest.name}` },
-              },
-            };
-          }
-          try {
-            const output = await handler(part.toolRequest.input);
-            return {
-              toolResponse: {
-                name: part.toolRequest.name,
-                ref: part.toolRequest.ref,
-                output: output,
-              },
-            };
-          } catch (error: any) {
-            console.error(
-              `Error executing tool ${part.toolRequest.name}:`,
-              error
-            );
-            return {
-              toolResponse: {
-                name: part.toolRequest.name,
-                ref: part.toolRequest.ref,
-                output: {
-                  error: `Tool execution failed: ${error.message || error}`,
-                },
-              },
-            };
-          }
-        })
-      );
-
-      // Clone messages from the previous response and ensure it's an array
-      let nextMessages = llmResponse.messages ? [...llmResponse.messages] : [];
-      // Append tool responses to the new messages array
-      toolResponses.forEach((toolResponsePart) => {
-        nextMessages.push({
-          role: "tool", // Use 'tool' role for responses in Genkit
-          content: [toolResponsePart], // Content should be an array of ToolResponsePart
-        });
-      });
-      generateOptions.messages = nextMessages; // Assign the updated array
-      // Clear the prompt field as responses are now in messages
-      generateOptions.prompt = undefined;
-    }
-
-    if (finalUsage) {
-      console.log("AI Usage:", finalUsage);
-    }
+    await this.generateWithTools(generateOptions);
 
     return "";
   }
