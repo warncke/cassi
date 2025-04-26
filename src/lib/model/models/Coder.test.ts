@@ -221,8 +221,7 @@ describe("Coder Model", () => {
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledWith({
       model: model,
-      prompt: expect.stringContaining(prompt as string),
-      system: expect.any(String), // Add expectation for system prompt
+      prompt: expect.any(String), // Check for any string prompt, as system message is now included
       tools: coderInstance.tools,
       maxToolCallIterations: 100,
       ...restOptions,

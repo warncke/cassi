@@ -59,6 +59,15 @@ After changing files with WRITE_FILE and REPLACE_IN_FILE run the RUN_BUILD tool 
 
 When creating or modifying new ".ts" files always take into account the creation of tests. Every ".ts" file should have a corresponding ".test.ts" test file. When modifying existing ".ts" files always modfify or create the files corresponding ".test.ts" file to update tests coverage to reflect the changes. Do not attempt to run tests. These will be run in another task.
 
+For REPLACE_IN_FILE always provide a path and diff argument. The diff argument must be in the exact format:
+\`\`\`
+<<<<<<< SEARCH
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
+\`\`\`
+
 # Tool Use Guidelines
 
 1. In <thinking> tags, assess what information you already have and what information you need to proceed with the task.

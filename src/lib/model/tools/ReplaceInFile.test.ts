@@ -65,6 +65,7 @@ describe("ReplaceInFile", () => {
   const testFilePath = "some/dir/file.txt";
   const fullTestPath = path.join(mockTask.getCwd(), testFilePath);
   const testDir = path.dirname(fullTestPath);
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks(); // Clear hoisted mocks as well
@@ -74,10 +75,12 @@ describe("ReplaceInFile", () => {
     mockReadFile.mockReset().mockResolvedValue("initial file content");
     mockWriteFile.mockReset().mockResolvedValue(undefined);
     mockMkdir.mockReset().mockResolvedValue(undefined);
+    consoleLogSpy = vi.spyOn(console, "log");
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    consoleLogSpy.mockRestore();
   });
 
   it("should have correct toolDefinition", () => {
@@ -119,8 +122,13 @@ Hello universe!
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockMkdir).toHaveBeenCalledWith(testDir, {
       // Assert on the named mock
@@ -155,8 +163,13 @@ Third Line
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Restore original assertion
     expect(mockWriteFile).toHaveBeenCalledWith(
@@ -188,8 +201,13 @@ Line 2 to delete
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
     expect(mockWriteFile).toHaveBeenCalledWith(
@@ -242,8 +260,13 @@ Line 2 to delete
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
     expect(mockWriteFile).toHaveBeenCalled(); // Assert on the named mock
@@ -263,8 +286,13 @@ Replacement
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toContain(
@@ -377,8 +405,13 @@ Third Line
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
 
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "ReplaceInFile toolMethod called with:",
+      { path: input.path, diff: input.diff }
+    );
     expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
     expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
     expect(mockWriteFile).toHaveBeenCalledWith(
