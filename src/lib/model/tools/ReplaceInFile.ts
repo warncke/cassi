@@ -1,6 +1,5 @@
 import { z } from "zod";
 import path from "path";
-import fs from "fs/promises";
 import { Models } from "../Models.js";
 import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
@@ -96,17 +95,17 @@ Critical rules:
       /(<<<<<<< SEARCH\n[\s\S]*?\n=======[\s\S]*?\n>>>>>>> REPLACE)/g
     );
 
-    let fileContent: string;
+    let fileContent: string | null;
     try {
-      fileContent = await fs.readFile(fullPath, "utf-8");
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
+      fileContent = await model.task.invoke("fs", "readFile", [], [fullPath]);
+      if (fileContent === null) {
         return `Error: File not found at path ${input.path}`;
       }
+    } catch (error: any) {
       return `Error reading file ${input.path}: ${error.message}`;
     }
 
-    let modifiedContent = fileContent;
+    let modifiedContent = fileContent as string;
     let replacementsMade = 0;
     const errors: string[] = [];
     let blockIndex = 0;
@@ -213,15 +212,23 @@ Critical rules:
 
     const dirPath = path.dirname(fullPath);
     try {
-      await fs.mkdir(dirPath, { recursive: true });
+      await model.task.invoke(
+        "fs",
+        "mkdir",
+        [],
+        [dirPath, { recursive: true }]
+      );
     } catch (mkdirError: any) {
-      if (mkdirError.code !== "EEXIST") {
-        return `Error creating directory ${dirPath}: ${mkdirError.message}`;
-      }
+      return `Error creating directory ${dirPath}: ${mkdirError.message}`;
     }
 
     try {
-      await fs.writeFile(fullPath, modifiedContent, "utf-8");
+      await model.task.invoke(
+        "fs",
+        "writeFile",
+        [],
+        [fullPath, modifiedContent]
+      );
       return `Successfully applied ${replacementsMade} replacement(s) to ${input.path}.\n\nFinal file content:\n\`\`\`\n${modifiedContent}\n\`\`\``;
     } catch (writeError: any) {
       return `Error writing modified content to ${input.path}: ${writeError.message}`;

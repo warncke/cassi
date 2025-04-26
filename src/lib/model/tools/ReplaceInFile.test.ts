@@ -6,25 +6,6 @@ import { Task } from "../../task/Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Repository } from "../../repository/Repository.js";
 
-const { mockReadFile, mockWriteFile, mockMkdir } = vi.hoisted(() => {
-  return {
-    mockReadFile: vi.fn(),
-    mockWriteFile: vi.fn(),
-    mockMkdir: vi.fn(),
-  };
-});
-
-vi.mock("fs/promises", () => ({
-  readFile: mockReadFile,
-  writeFile: mockWriteFile,
-  mkdir: mockMkdir,
-  default: {
-    readFile: mockReadFile,
-    writeFile: mockWriteFile,
-    mkdir: mockMkdir,
-  },
-}));
-
 class MockRepository {
   repositoryDir = "/mock/repo";
 }
@@ -65,10 +46,7 @@ describe("ReplaceInFile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
-
-    mockReadFile.mockReset().mockResolvedValue("initial file content");
-    mockWriteFile.mockReset().mockResolvedValue(undefined);
-    mockMkdir.mockReset().mockResolvedValue(undefined);
+    vi.mocked(mockTask.invoke).mockReset(); // Reset the invoke mock
     consoleLogSpy = vi.spyOn(console, "log");
   });
 
@@ -112,7 +90,18 @@ Hello world!
 =======
 Hello universe!
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        return undefined; // Simulate successful mkdir
+      }
+      if (tool === "fs" && method === "writeFile") {
+        return undefined; // Simulate successful writeFile
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -123,14 +112,23 @@ Hello universe!
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, {
-      recursive: true,
-    });
-    expect(mockWriteFile).toHaveBeenCalledWith(
-      fullTestPath,
-      finalContent,
-      "utf-8"
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      [fullTestPath, finalContent]
     );
     expect(result).toContain(
       `Successfully applied 1 replacement(s) to ${testFilePath}`
@@ -151,7 +149,18 @@ Line 3
 =======
 Third Line
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        return undefined; // Simulate successful mkdir
+      }
+      if (tool === "fs" && method === "writeFile") {
+        return undefined; // Simulate successful writeFile
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -162,12 +171,23 @@ Third Line
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
-    expect(mockWriteFile).toHaveBeenCalledWith(
-      fullTestPath,
-      finalContent,
-      "utf-8"
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      [fullTestPath, finalContent]
     );
     expect(result).toContain(
       `Successfully applied 2 replacement(s) to ${testFilePath}`
@@ -176,14 +196,17 @@ Third Line
   });
 
   it.skip("toolMethod should handle deletion using an empty REPLACE block", async () => {
-
     const initialContent = "Line 1\nLine 2 to delete\nLine 3";
-    const finalContent = "Line 1\n\nLine 3";
+    const finalContent = "Line 1\n\nLine 3"; // Note: Deletion results in empty line if newline was present
     const diff = `<<<<<<< SEARCH
 Line 2 to delete
 =======
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent);
+    // Use mockImplementationOnce for specific call sequence
+    mockTask.invoke
+      .mockImplementationOnce(async () => initialContent) // readFile
+      .mockImplementationOnce(async () => undefined) // mkdir
+      .mockImplementationOnce(async () => undefined); // writeFile
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -194,67 +217,175 @@ Line 2 to delete
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
-    expect(mockWriteFile).toHaveBeenCalledWith(
-      fullTestPath,
-      finalContent,
-      "utf-8"
+
+    // Assert calls in order
+    expect(mockTask.invoke).toHaveBeenNthCalledWith(
+      1, // First call
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
     );
+    expect(mockTask.invoke).toHaveBeenNthCalledWith(
+      2, // Second call
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).toHaveBeenNthCalledWith(
+      3, // Third call
+      "fs",
+      "writeFile",
+      [],
+      [fullTestPath, finalContent]
+    );
+
     expect(result).toContain(
       `Successfully applied 1 replacement(s) to ${testFilePath}`
     );
     expect(result).toContain(finalContent);
   });
 
-  it("toolMethod should return error if file not found (ENOENT)", async () => {
+  it("toolMethod should return error if file not found", async () => {
     const diff = `<<<<<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE`;
-    const error = new Error("File not found") as NodeJS.ErrnoException;
-    error.code = "ENOENT";
-    mockReadFile.mockRejectedValue(error);
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return null; // Simulate file not found
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toBe(`Error: File not found at path ${testFilePath}`);
   });
 
   it("toolMethod should return error on other read errors", async () => {
     const diff = `<<<<<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE`;
     const error = new Error("Permission denied");
-    mockReadFile.mockRejectedValue(error);
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        throw error; // Simulate read error
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toBe(`Error reading file ${testFilePath}: ${error.message}`);
   });
 
-  it("toolMethod should return error on write error", async () => {
+  it("toolMethod should return error on mkdir error", async () => {
     const initialContent = "Content to replace";
     const diff = `<<<<<<< SEARCH\nContent to replace\n=======\nNew Content\n>>>>>>> REPLACE`;
-    const error = new Error("Disk full");
-    mockReadFile.mockResolvedValue(initialContent);
-    mockWriteFile.mockRejectedValue(error);
+    const error = new Error("Mkdir failed");
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        throw error; // Simulate mkdir error
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
-    expect(mockWriteFile).toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
+    expect(result).toBe(
+      `Error creating directory ${testDir}: ${error.message}`
+    );
+  });
+
+  it("toolMethod should return error on write error", async () => {
+    const initialContent = "Content to replace";
+    const diff = `<<<<<<< SEARCH\nContent to replace\n=======\nNew Content\n>>>>>>> REPLACE`;
+    const error = new Error("Disk full");
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        return undefined; // Simulate successful mkdir
+      }
+      if (tool === "fs" && method === "writeFile") {
+        throw error; // Simulate write error
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
+
+    const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const input = { path: testFilePath, diff };
+    const result = await toolMethod(input);
+
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      [fullTestPath, "New Content"]
+    );
     expect(result).toBe(
       `Error writing modified content to ${testFilePath}: ${error.message}`
     );
@@ -267,19 +398,25 @@ Content not present
 =======
 Replacement
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toContain(
       `Block 1: SEARCH content not found in the current state of the file.`
     );
@@ -301,14 +438,24 @@ Line 4 not present
 =======
 Fourth Line
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toContain(
       `Block 2: SEARCH content not found in the current state of the file.`
     );
@@ -325,14 +472,24 @@ Hello world!
 =======
 Hello world!
 >>>>>>> REPLACE`; // Replace with identical content
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toBe(
       `No effective changes resulted from the replacements in ${testFilePath}. File content remains identical.`
     );
@@ -341,14 +498,24 @@ Hello world!
   it("toolMethod should return error for invalid diff format (malformed block)", async () => {
     const initialContent = "Some content";
     const diff = `<<<&;<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE\n some extra text \n<<<<<<< SEARCH\nno end marker`;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toContain("Invalid SEARCH/REPLACE block format");
     expect(result).toContain("No changes were written.");
   });
@@ -356,14 +523,24 @@ Hello world!
   it("toolMethod should return error if diff contains no valid blocks", async () => {
     const initialContent = "Some content";
     const diff = ` just some random text, not a diff block `;
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockWriteFile).not.toHaveBeenCalled();
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).not.toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      expect.anything()
+    );
     expect(result).toBe(
       `Error: The provided 'diff' content for ${testFilePath} does not contain any valid SEARCH/REPLACE blocks. No changes were made.`
     );
@@ -386,7 +563,18 @@ Line 3
 Third Line
 >>>>>>> REPLACE
 `; // Whitespace between blocks
-    mockReadFile.mockResolvedValue(initialContent);
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        return undefined; // Simulate successful mkdir
+      }
+      if (tool === "fs" && method === "writeFile") {
+        return undefined; // Simulate successful writeFile
+      }
+      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -397,12 +585,23 @@ Third Line
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
-    expect(mockWriteFile).toHaveBeenCalledWith(
-      fullTestPath,
-      finalContent,
-      "utf-8"
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "readFile",
+      [],
+      [fullTestPath]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "mkdir",
+      [],
+      [testDir, { recursive: true }]
+    );
+    expect(mockTask.invoke).toHaveBeenCalledWith(
+      "fs",
+      "writeFile",
+      [],
+      [fullTestPath, finalContent]
     );
     expect(result).toContain(
       `Successfully applied 2 replacement(s) to ${testFilePath}`
