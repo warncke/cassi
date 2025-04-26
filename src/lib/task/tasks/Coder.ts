@@ -12,7 +12,6 @@ export class Coder extends Task {
   }
 
   public async initTask(): Promise<void> {
-    console.log(`Coder task initializing...`);
     const modelInstance = this.newModel("Coder") as CoderModel;
 
     const generateOptions = {
@@ -20,10 +19,6 @@ export class Coder extends Task {
       prompt: this.prompt,
     };
 
-    const generatedCode = await modelInstance.generate(generateOptions);
-
-    console.log("--- Generated Code ---");
-    console.log(generatedCode);
-    console.log("----------------------");
+    await modelInstance.generate(generateOptions);
   }
 }
