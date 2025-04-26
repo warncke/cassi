@@ -58,4 +58,14 @@ export class LocalGit {
   async remWorkTree(directory: string) {
     return this.git.raw(["worktree", "remove", directory]);
   }
+
+  /**
+   * Shows changes between commits, commit and working tree, etc.
+   * @param target Optional target to compare against (e.g., a branch or commit hash). If omitted, shows unstaged changes.
+   * @returns A promise that resolves with the diff output.
+   */
+  async diff(target?: string): Promise<string> {
+    const options = target ? [target] : [];
+    return this.git.diff(options);
+  }
 }

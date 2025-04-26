@@ -136,4 +136,18 @@ export class Task {
       return process.cwd();
     }
   }
+
+  getTaskId(): string {
+    if (this.taskId) {
+      return this.taskId;
+    }
+    if (this.parentTask) {
+      return this.parentTask.getTaskId();
+    }
+    return "XXXXXXXX";
+  }
+
+  getTaskIdShort(): string {
+    return this.getTaskId().substring(0, 8);
+  }
 }

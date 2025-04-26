@@ -631,4 +631,120 @@ describe("Task", () => {
       expect(task.worktree).toBeUndefined();
     });
   });
+
+  describe("getTaskId", () => {
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should return taskId if set on the current task", () => {
+      const testId = "task-123";
+      task.taskId = testId;
+      expect(task.getTaskId()).toBe(testId);
+    });
+
+    it("should return parentTask's taskId if current task's taskId is null and parent exists", () => {
+      const parentId = "parent-456";
+      const parentTask = new Task(mockCassi);
+      parentTask.taskId = parentId;
+      task.parentTask = parentTask;
+      task.taskId = null;
+      expect(task.getTaskId()).toBe(parentId);
+    });
+
+    it("should return grandparentTask's taskId if current and parent task's taskId are null", () => {
+      const grandParentId = "grandparent-789";
+      const grandParentTask = new Task(mockCassi);
+      grandParentTask.taskId = grandParentId;
+
+      const parentTask = new Task(mockCassi, grandParentTask);
+      parentTask.taskId = null;
+
+      task.parentTask = parentTask;
+      task.taskId = null;
+
+      expect(task.getTaskId()).toBe(grandParentId);
+    });
+
+    it('should return "XXXXXXXX" if taskId is null and there is no parentTask', () => {
+      task.taskId = null;
+      task.parentTask = null;
+      expect(task.getTaskId()).toBe("XXXXXXXX");
+    });
+
+    it('should return "XXXXXXXX" if taskId is null and parentTask exists but also has null taskId and no further parent', () => {
+      const parentTask = new Task(mockCassi);
+      parentTask.taskId = null;
+      parentTask.parentTask = null; // Explicitly no grandparent
+
+      task.parentTask = parentTask;
+      task.taskId = null;
+
+      expect(task.getTaskId()).toBe("XXXXXXXX");
+    });
+  });
+
+  describe("getTaskIdShort", () => {
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should return the first 8 characters of taskId if set", () => {
+      const testId = "task-1234567890";
+      task.taskId = testId;
+      expect(task.getTaskIdShort()).toBe("task-123");
+    });
+
+    it("should return the first 8 characters of parentTask's taskId if current taskId is null", () => {
+      const parentId = "parent-abcdefghij";
+      const parentTask = new Task(mockCassi);
+      parentTask.taskId = parentId;
+      task.parentTask = parentTask;
+      task.taskId = null;
+      expect(task.getTaskIdShort()).toBe("parent-a");
+    });
+
+    it("should return the first 8 characters of grandparentTask's taskId if current and parent taskId are null", () => {
+      const grandParentId = "grandpa-qwertyuiop";
+      const grandParentTask = new Task(mockCassi);
+      grandParentTask.taskId = grandParentId;
+      const parentTask = new Task(mockCassi, grandParentTask);
+      parentTask.taskId = null;
+      task.parentTask = parentTask;
+      task.taskId = null;
+      expect(task.getTaskIdShort()).toBe("grandpa-");
+    });
+
+    it('should return the first 8 characters of "XXXXXXXX" if no taskId is found', () => {
+      task.taskId = null;
+      task.parentTask = null;
+      expect(task.getTaskIdShort()).toBe("XXXXXXXX"); // XXXXXXXX is 8 chars
+    });
+
+    it('should return the first 8 characters of "XXXXXXXX" even if parent exists but has no taskId', () => {
+      const parentTask = new Task(mockCassi);
+      parentTask.taskId = null;
+      task.parentTask = parentTask;
+      task.taskId = null;
+      expect(task.getTaskIdShort()).toBe("XXXXXXXX");
+    });
+  });
 });

@@ -21,6 +21,7 @@ describe("LocalGit", () => {
     status: vi.fn(),
     branch: vi.fn(),
     raw: vi.fn(),
+    diff: vi.fn(),
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
@@ -167,6 +168,52 @@ describe("LocalGit", () => {
       await expect(localGit.remWorkTree(directory)).rejects.toThrow(mockError);
       expect(mockGitInstance.raw).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.raw).toHaveBeenCalledWith(expectedCommand);
+    });
+  });
+
+  describe("diff", () => {
+    it("should call git.diff with an empty array when no target is provided", async () => {
+      const expectedDiffOutput =
+        "diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-old content\n+new content";
+      vi.mocked(mockGitInstance.diff).mockResolvedValue(expectedDiffOutput);
+
+      const diffOutput = await localGit.diff();
+
+      expect(mockGitInstance.diff).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.diff).toHaveBeenCalledWith([]);
+      expect(diffOutput).toBe(expectedDiffOutput);
+    });
+
+    it("should call git.diff with [target] when a target is provided", async () => {
+      const target = "develop";
+      const expectedDiffOutput =
+        "diff --git a/another.txt b/another.txt\n--- a/another.txt\n+++ b/another.txt\n@@ -1 +1 @@\n-old line\n+new line";
+      vi.mocked(mockGitInstance.diff).mockResolvedValue(expectedDiffOutput);
+
+      const diffOutput = await localGit.diff(target);
+
+      expect(mockGitInstance.diff).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.diff).toHaveBeenCalledWith([target]);
+      expect(diffOutput).toBe(expectedDiffOutput);
+    });
+
+    it("should handle errors from git.diff when calling diff", async () => {
+      const mockError = new Error("Git diff failed");
+      vi.mocked(mockGitInstance.diff).mockRejectedValue(mockError);
+
+      await expect(localGit.diff()).rejects.toThrow(mockError);
+      expect(mockGitInstance.diff).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.diff).toHaveBeenCalledWith([]);
+    });
+
+    it("should handle errors from git.diff when calling diff with a target", async () => {
+      const target = "main";
+      const mockError = new Error("Git diff target failed");
+      vi.mocked(mockGitInstance.diff).mockRejectedValue(mockError);
+
+      await expect(localGit.diff(target)).rejects.toThrow(mockError);
+      expect(mockGitInstance.diff).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.diff).toHaveBeenCalledWith([target]);
     });
   });
 });
