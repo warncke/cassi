@@ -11,37 +11,17 @@ import { RunBuild } from "../tools/RunBuild.js";
 import { ListFiles } from "../tools/ListFiles.js";
 
 export class Coder extends Models {
-  public tools: any[];
-  private toolHandlers: Map<string, (input: any) => Promise<any>>;
-
   constructor(plugin: any, task: Task) {
     super(plugin, task);
-    this.toolHandlers = new Map();
 
-    const toolDefinitions = [
+    this.initializeTools([
       ExecuteCommand.modelToolArgs(this),
       ReadFile.modelToolArgs(this),
       WriteFile.modelToolArgs(this),
       ReplaceInFile.modelToolArgs(this),
       RunBuild.modelToolArgs(this),
       ListFiles.modelToolArgs(this),
-    ];
-
-    this.tools = toolDefinitions.map(
-      (args: [ToolDefinition, (input: any) => Promise<any>]) => {
-        const [localToolDefinition, handler] = args;
-        if (
-          typeof localToolDefinition.name !== "string" ||
-          typeof handler !== "function"
-        ) {
-          throw new Error(
-            `Invalid tool definition: ${localToolDefinition.name}`
-          );
-        }
-        this.toolHandlers.set(localToolDefinition.name, handler);
-        return this.ai.defineTool(localToolDefinition, handler);
-      }
-    );
+    ]);
   }
 
   async generate(options: GenerateModelOptions): Promise<string> {
