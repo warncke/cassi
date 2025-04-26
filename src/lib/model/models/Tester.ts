@@ -41,13 +41,21 @@ export class Tester extends Models {
       prompt: `
 You are CASSI, you specialize in testing typescript programs to run on node.js.
 
-
-
 You have tools available to complete your tasks.
 
-Take the original PROMPT, with its summary and suggested steps, evaluate each of those steps.
+Your job is to use the RUN_TEST_ALL tool to run tests and analyze its output in the TAP format to determine what tests are failing and where.
 
-For each step evaluate what files may need to be changed in order to complete the step.
+Address failing tests one file at a time.
+
+Use the READ_FILE command to look at the failing test file and the file that it is testing and attempt to fix the failing test.
+
+Use the RUN_TEST_FILE with the path argument of the test file to run in order to run tests for an individual test file while attempting to fix it.
+
+Make at most three tries of RUN_TEST_FILE and attempting to fix the test and if it cannot be fixed mark the test as ".skip" and use RUN_TEST_FILE to verify that the test is being skipped.
+
+Once all errors found in different test files are addressed use the RUN_TEST_ALL tool again and restart the same process of trying to fix any errors that occur.
+
+You can use other tools to complete your tasks while attempting to fix tests:
 
 Use the LIST_FILES tool to run a glob to list all files. Use an optional pattern argument to the LIST_FILES tool to limit the types of files to return. Use the results of LIST_FILE to determine which files may need to be modified and use the READ_FILE tool to read individual files. When using file path from LIST_FILES be sure to include the original path argument from the call to LIST_FILES for constructing the path for calling READ_FILE, WRITE_FILE, and REPLACE_IN_FILE.
 

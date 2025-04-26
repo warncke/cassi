@@ -5,6 +5,7 @@ import { kebabCase } from "change-case";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
 import { Coder } from "./Coder.js";
+import { Tester } from "./Tester.js";
 import { gemini20Flash } from "@genkit-ai/googleai";
 
 export class Code extends Task {
@@ -62,6 +63,7 @@ export class Code extends Task {
       .join("\n");
     const coderPrompt = `${this.prompt}\n\nSummary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`;
     this.addSubtask(new Coder(this.cassi, this, coderPrompt));
+    this.addSubtask(new Tester(this.cassi, this, ""));
   }
 
   public async initTask(): Promise<void> {

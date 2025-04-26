@@ -133,7 +133,7 @@ describe("Code Task", () => {
       ["npm install"]
     );
 
-    expect(codeTask.addSubtask).toHaveBeenCalledTimes(1);
+    expect(codeTask.addSubtask).toHaveBeenCalledTimes(2);
     const MockCoder = vi.mocked(Coder);
     expect(MockCoder).toHaveBeenCalledTimes(1);
     expect(codeTask.addSubtask).toHaveBeenCalledWith(
