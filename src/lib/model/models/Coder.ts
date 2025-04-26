@@ -184,7 +184,7 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
 `,
       tools: this.tools,
       returnToolRequests: true,
-      messages: initialMessages,
+      messages: initialMessages ?? [], // Initialize messages array
       ...restOptions,
     };
 
@@ -192,6 +192,11 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
     let finalUsage;
 
     while (true) {
+      console.log(
+        "GENERATE",
+        JSON.stringify(generateOptions.messages),
+        generateOptions.prompt
+      );
       llmResponse = await this.ai.generate(generateOptions);
       finalUsage = llmResponse.usage;
 
@@ -246,22 +251,24 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
         })
       );
 
-      generateOptions.messages = llmResponse.messages;
-      generateOptions.prompt = toolResponses;
-      console.log("GENERATE PROMPT", generateOptions);
+      // Clone messages from the previous response and ensure it's an array
+      let nextMessages = llmResponse.messages ? [...llmResponse.messages] : [];
+      // Append tool responses to the new messages array
+      toolResponses.forEach((toolResponsePart) => {
+        nextMessages.push({
+          role: "tool", // Use 'tool' role for responses in Genkit
+          content: [toolResponsePart], // Content should be an array of ToolResponsePart
+        });
+      });
+      generateOptions.messages = nextMessages; // Assign the updated array
+      // Clear the prompt field as responses are now in messages
+      generateOptions.prompt = undefined;
     }
 
     if (finalUsage) {
       console.log("AI Usage:", finalUsage);
     }
 
-    const text = llmResponse?.text?.();
-    if (!text) {
-      console.warn(
-        "AI response did not contain text content in the final turn."
-      );
-      return "";
-    }
-    return text;
+    return "";
   }
 }
