@@ -21,7 +21,7 @@ export class Cassi {
     this.repository = new Repository(repositoryDir, user);
     this.tool = new Tool(this.user, this.config);
     this.model = new Model();
-    this.task = new Tasks();
+    this.task = new Tasks(this);
   }
 
   async init() {
@@ -34,7 +34,7 @@ export class Cassi {
   }
 
   newTask(taskName: string, parentTask?: Task): Task {
-    const newTask = this.task.newTask(taskName, this, parentTask);
+    const newTask = this.task.newTask(taskName, parentTask);
     this.tasks.push(newTask);
     return newTask;
   }

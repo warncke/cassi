@@ -16,7 +16,7 @@ export class Task {
   public error: Error | null = null;
   public taskId: string | null = null;
 
-  constructor(cassi: Cassi, parentTask: Task | null = null) {
+  constructor(cassi: Cassi, parentTask: Task | null = null, ...args: any[]) {
     this.cassi = cassi;
     this.parentTask = parentTask;
   }

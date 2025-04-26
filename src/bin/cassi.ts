@@ -34,7 +34,7 @@ async function run() {
   const user = new User(initFn, promptFn);
   const cassi = new Cassi(user, options.configFile, options.repositoryDir);
   await cassi.init();
-  await cassi.newTask("InitializeRepository");
+  cassi.newTask("InitializeRepository");
 
   while (true) {
     await cassi.runTasks();

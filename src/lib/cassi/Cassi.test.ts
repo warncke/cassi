@@ -63,11 +63,7 @@ describe("Cassi", () => {
 
     const returnedTask = cassi.newTask("MockTask");
 
-    expect(cassi.task.newTask).toHaveBeenCalledWith(
-      "MockTask",
-      cassi,
-      undefined
-    );
+    expect(cassi.task.newTask).toHaveBeenCalledWith("MockTask", undefined);
     expect(cassi.tasks).toHaveLength(1);
     expect(cassi.tasks[0]).toBe(mockTaskInstance);
     expect(returnedTask).toBe(mockTaskInstance);

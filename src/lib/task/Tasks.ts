@@ -1,20 +1,35 @@
 import fs from "fs/promises";
-import path from "path";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 import { Task } from "./Task.js";
 import type { Cassi } from "../cassi/Cassi.js";
 
 export class Tasks {
   public availableTasks: Map<string, typeof Task> = new Map();
+  public cassi: Cassi;
 
-  async init(tasksDir: string = path.join(__dirname, "tasks")): Promise<void> {
+  constructor(cassi: Cassi) {
+    this.cassi = cassi;
+  }
+
+  async init(tasksDir?: string): Promise<void> {
+    if (!tasksDir) {
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = dirname(__filename);
+      tasksDir = path.join(__dirname, "tasks");
+    }
     this.availableTasks.clear();
     const files = await fs.readdir(tasksDir);
+    const fileExtension = import.meta.url.endsWith(".ts") ? ".ts" : ".js";
 
     for (const file of files) {
-      if (file.endsWith(".ts") && !file.endsWith(".test.ts")) {
-        const filePath = path.join(tasksDir, file);
+      if (file.endsWith(fileExtension) && !file.includes(".test.")) {
+        // Construct the import path relative to the current file's location
+        // Use path.join for cross-platform compatibility and ensure it's a file URL
+        const filePathUrl = new URL(path.join(tasksDir, file), import.meta.url)
+          .href;
         try {
-          const module = await import(filePath);
+          const module = await import(filePathUrl);
           for (const key in module) {
             const exportedItem = module[key];
             if (
@@ -29,17 +44,17 @@ export class Tasks {
             }
           }
         } catch (error) {
-          console.error(`Error loading task from ${filePath}:`, error);
+          console.error(`Error loading task from ${filePathUrl}:`, error);
         }
       }
     }
   }
 
-  newTask(taskName: string, cassi: Cassi, parentTask?: Task): Task {
+  newTask(taskName: string, parentTask?: Task, ...args: any[]): Task {
     const TaskClass = this.availableTasks.get(taskName);
     if (!TaskClass) {
       throw new Error(`Task "${taskName}" not found.`);
     }
-    return new TaskClass(cassi, parentTask);
+    return new TaskClass(this.cassi, parentTask, ...args);
   }
 }

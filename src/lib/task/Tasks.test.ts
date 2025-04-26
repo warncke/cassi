@@ -15,8 +15,18 @@ class NotATask {}
 class MockTaskTest extends Task {
   async run() {}
 }
+class MockTaskWithArgs extends Task {
+  public arg1: any;
+  public arg2: any;
+  constructor(cassi: Cassi, parentTask: Task | null, arg1: any, arg2: any) {
+    super(cassi, parentTask);
+    this.arg1 = arg1;
+    this.arg2 = arg2;
+  }
+  async run() {}
+}
 
-const mockCassi = {} as Cassi;
+const mockCassi = { name: "MockCassi" } as unknown as Cassi; // Add a property for easier identification
 
 describe("Tasks", () => {
   let tasks: Tasks;
@@ -25,11 +35,15 @@ describe("Tasks", () => {
   let readdirSpy: Mock;
 
   beforeEach(() => {
-    tasks = new Tasks();
+    tasks = new Tasks(mockCassi);
     vi.resetAllMocks();
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     readdirSpy = vi.spyOn(fs, "readdir") as Mock;
+  });
+
+  it("should store the cassi instance passed in the constructor", () => {
+    expect(tasks.cassi).toBe(mockCassi);
   });
 
   afterEach(() => {
@@ -112,10 +126,11 @@ describe("Tasks", () => {
   describe("newTask", () => {
     beforeEach(async () => {
       tasks.availableTasks.set("MockTask", MockTask);
+      tasks.availableTasks.set("MockTaskWithArgs", MockTaskWithArgs);
     });
 
     it("should create a new task instance if the task name exists", () => {
-      const taskInstance = tasks.newTask("MockTask", mockCassi);
+      const taskInstance = tasks.newTask("MockTask");
       expect(taskInstance).toBeInstanceOf(MockTask);
       expect(taskInstance.cassi).toBe(mockCassi);
       expect(taskInstance.parentTask).toBeNull();
@@ -123,16 +138,46 @@ describe("Tasks", () => {
 
     it("should create a new task instance with a parent task", () => {
       const parent = new MockTask(mockCassi);
-      const taskInstance = tasks.newTask("MockTask", mockCassi, parent);
+      const taskInstance = tasks.newTask("MockTask", parent);
       expect(taskInstance).toBeInstanceOf(MockTask);
       expect(taskInstance.cassi).toBe(mockCassi);
       expect(taskInstance.parentTask).toBe(parent);
     });
 
     it("should throw an error if the task name does not exist", () => {
-      expect(() => tasks.newTask("NonExistentTask", mockCassi)).toThrow(
+      expect(() => tasks.newTask("NonExistentTask")).toThrow(
         'Task "NonExistentTask" not found.'
       );
+    });
+
+    it("should pass additional arguments to the task constructor", () => {
+      const parent = new MockTask(mockCassi);
+      const arg1 = "testArg1";
+      const arg2 = { key: "value" };
+
+      const taskInstance1 = tasks.newTask(
+        "MockTaskWithArgs",
+        undefined,
+        arg1,
+        arg2
+      );
+      expect(taskInstance1).toBeInstanceOf(MockTaskWithArgs);
+      expect(taskInstance1.cassi).toBe(mockCassi);
+      expect(taskInstance1.parentTask).toBeNull();
+      expect((taskInstance1 as MockTaskWithArgs).arg1).toBe(arg1);
+      expect((taskInstance1 as MockTaskWithArgs).arg2).toBe(arg2);
+
+      const taskInstance2 = tasks.newTask(
+        "MockTaskWithArgs",
+        parent,
+        arg1,
+        arg2
+      );
+      expect(taskInstance2).toBeInstanceOf(MockTaskWithArgs);
+      expect(taskInstance2.cassi).toBe(mockCassi);
+      expect(taskInstance2.parentTask).toBe(parent);
+      expect((taskInstance2 as MockTaskWithArgs).arg1).toBe(arg1);
+      expect((taskInstance2 as MockTaskWithArgs).arg2).toBe(arg2);
     });
   });
 });
