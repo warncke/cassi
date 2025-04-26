@@ -109,22 +109,18 @@ Critical rules:
     let modifiedContent = fileContent;
     let replacementsMade = 0;
     const errors: string[] = [];
-    let blockIndex = 0; // For more informative error messages
+    let blockIndex = 0;
 
     for (const block of diffBlocks) {
-      if (!block.trim()) continue; // Skip empty splits resulting from split
+      if (!block.trim()) continue;
 
-      blockIndex++; // Increment for each potential block segment
+      blockIndex++;
 
-      // Check if the segment actually conforms to the block structure
       const match = block.match(
         /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE$/
       );
 
       if (!match) {
-        // This might happen if the input diff string doesn't strictly adhere
-        // to the block structure or has extra text between blocks.
-        // We'll treat this as an invalid format for now.
         if (
           block.includes("<<<<<<< SEARCH") ||
           block.includes("=======") ||
@@ -134,7 +130,6 @@ Critical rules:
             `Block ${blockIndex}: Invalid SEARCH/REPLACE block format. Ensure it starts with '<<<<<<< SEARCH' and ends with '>>>>>>> REPLACE' with '=======' in between.`
           );
         } else {
-          // Ignore segments that are clearly not intended as blocks (e.g., whitespace between valid blocks)
         }
         continue;
       }
@@ -145,14 +140,12 @@ Critical rules:
       const index = modifiedContent.indexOf(searchContent);
 
       if (index === -1) {
-        // Try to provide more context in the error message
         const contextLines = 5;
         const searchLines = searchContent.split("\n");
         const fileLines = modifiedContent.split("\n");
         let bestMatchLine = -1;
         let maxMatchingChars = -1;
 
-        // Simple heuristic to find a potentially close match for context
         for (let i = 0; i < fileLines.length; i++) {
           let currentMatchChars = 0;
           for (
@@ -161,10 +154,9 @@ Critical rules:
             j++
           ) {
             if (fileLines[i + j].trim() === searchLines[j].trim()) {
-              // Simple trim comparison
               currentMatchChars += searchLines[j].length;
             } else {
-              break; // Stop matching this block
+              break;
             }
           }
           if (currentMatchChars > maxMatchingChars) {
@@ -185,11 +177,9 @@ Critical rules:
         errors.push(
           `Block ${blockIndex}: SEARCH content not found in the current state of the file. Content to search for:\n---\n${searchContent}\n---${fileContext}`
         );
-        // Stop processing further blocks if one fails, to avoid cascading errors
         break;
       }
 
-      // Perform the replacement
       modifiedContent =
         modifiedContent.substring(0, index) +
         replaceContent +
@@ -197,14 +187,12 @@ Critical rules:
       replacementsMade++;
     }
 
-    // If errors occurred during block processing, report them and don't write
     if (errors.length > 0) {
       return `Errors encountered during replacement in ${
         input.path
       }:\n- ${errors.join("\n- ")}\nNo changes were written.`;
     }
 
-    // Check if any valid blocks were provided
     const validBlocksProvided = diffBlocks.some((block) =>
       block.match(
         /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE$/
@@ -215,25 +203,18 @@ Critical rules:
       return `Error: The provided 'diff' content for ${input.path} does not contain any valid SEARCH/REPLACE blocks. No changes were made.`;
     }
 
-    // If no replacements were made despite valid blocks (e.g., all SEARCH failed), report it.
     if (replacementsMade === 0 && validBlocksProvided) {
-      // This case is now handled by the SEARCH content not found error above.
-      // If we reach here with replacementsMade = 0, it means no valid blocks were found or processed.
-      // This state should ideally be caught earlier, but as a safeguard:
       return `No replacements were applied to ${input.path}. Ensure SEARCH content exists in the file.`;
     }
 
-    // Avoid writing if the content hasn't actually changed
     if (modifiedContent === fileContent) {
       return `No effective changes resulted from the replacements in ${input.path}. File content remains identical.`;
     }
 
-    // Ensure the directory exists *before* trying to write, if changes were made
     const dirPath = path.dirname(fullPath);
     try {
       await fs.mkdir(dirPath, { recursive: true });
     } catch (mkdirError: any) {
-      // Ignore EEXIST error (directory already exists), but throw others
       if (mkdirError.code !== "EEXIST") {
         return `Error creating directory ${dirPath}: ${mkdirError.message}`;
       }
@@ -241,7 +222,6 @@ Critical rules:
 
     try {
       await fs.writeFile(fullPath, modifiedContent, "utf-8");
-      // Return the final state of the file after modification
       return `Successfully applied ${replacementsMade} replacement(s) to ${input.path}.\n\nFinal file content:\n\`\`\`\n${modifiedContent}\n\`\`\``;
     } catch (writeError: any) {
       return `Error writing modified content to ${input.path}: ${writeError.message}`;

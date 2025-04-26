@@ -1,14 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import path from "path";
-// Keep fs import for type checking if needed, but rely on mocks
-// import fs from "fs/promises";
 import { ReplaceInFile } from "./ReplaceInFile.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Repository } from "../../repository/Repository.js";
 
-// Hoist the mock functions
 const { mockReadFile, mockWriteFile, mockMkdir } = vi.hoisted(() => {
   return {
     mockReadFile: vi.fn(),
@@ -17,7 +14,6 @@ const { mockReadFile, mockWriteFile, mockMkdir } = vi.hoisted(() => {
   };
 });
 
-// Mock the fs/promises module using the hoisted mocks
 vi.mock("fs/promises", () => ({
   readFile: mockReadFile,
   writeFile: mockWriteFile,
@@ -29,7 +25,6 @@ vi.mock("fs/promises", () => ({
   },
 }));
 
-// Mock Repository
 class MockRepository {
   repositoryDir = "/mock/repo";
 }
@@ -68,10 +63,9 @@ describe("ReplaceInFile", () => {
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    vi.clearAllMocks(); // Clear hoisted mocks as well
+    vi.clearAllMocks();
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
 
-    // Reset and set default behavior on the named mocks
     mockReadFile.mockReset().mockResolvedValue("initial file content");
     mockWriteFile.mockReset().mockResolvedValue(undefined);
     mockMkdir.mockReset().mockResolvedValue(undefined);
@@ -118,7 +112,7 @@ Hello world!
 =======
 Hello universe!
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -129,13 +123,11 @@ Hello universe!
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockMkdir).toHaveBeenCalledWith(testDir, {
-      // Assert on the named mock
       recursive: true,
     });
     expect(mockWriteFile).toHaveBeenCalledWith(
-      // Assert on the named mock
       fullTestPath,
       finalContent,
       "utf-8"
@@ -159,7 +151,7 @@ Line 3
 =======
 Third Line
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -170,10 +162,9 @@ Third Line
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Restore original assertion
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
+    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
     expect(mockWriteFile).toHaveBeenCalledWith(
-      // Assert on the named mock
       fullTestPath,
       finalContent,
       "utf-8"
@@ -184,20 +175,15 @@ Third Line
     expect(result).toContain(finalContent);
   });
 
-  // Skipping this test due to persistent mock failure
   it.skip("toolMethod should handle deletion using an empty REPLACE block", async () => {
-    // Rely on beforeEach for mock resets
 
     const initialContent = "Line 1\nLine 2 to delete\nLine 3";
-    // Adjust expected content based on current implementation (keeps surrounding newlines)
     const finalContent = "Line 1\n\nLine 3";
     const diff = `<<<<<<< SEARCH
 Line 2 to delete
 =======
 >>>>>>> REPLACE`;
-    // Set specific mock behavior for this test (overrides beforeEach default)
     mockReadFile.mockResolvedValue(initialContent);
-    // No need to reset/set writeFile and mkdir here if beforeEach default is fine
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -208,10 +194,9 @@ Line 2 to delete
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
+    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
     expect(mockWriteFile).toHaveBeenCalledWith(
-      // Assert on the named mock
       fullTestPath,
       finalContent,
       "utf-8"
@@ -226,13 +211,13 @@ Line 2 to delete
     const diff = `<<<<<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE`;
     const error = new Error("File not found") as NodeJS.ErrnoException;
     error.code = "ENOENT";
-    mockReadFile.mockRejectedValue(error); // Use the named mock
+    mockReadFile.mockRejectedValue(error);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toBe(`Error: File not found at path ${testFilePath}`);
   });
@@ -240,13 +225,13 @@ Line 2 to delete
   it("toolMethod should return error on other read errors", async () => {
     const diff = `<<<<<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE`;
     const error = new Error("Permission denied");
-    mockReadFile.mockRejectedValue(error); // Use the named mock
+    mockReadFile.mockRejectedValue(error);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toBe(`Error reading file ${testFilePath}: ${error.message}`);
   });
@@ -255,8 +240,8 @@ Line 2 to delete
     const initialContent = "Content to replace";
     const diff = `<<<<<<< SEARCH\nContent to replace\n=======\nNew Content\n>>>>>>> REPLACE`;
     const error = new Error("Disk full");
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
-    mockWriteFile.mockRejectedValue(error); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
+    mockWriteFile.mockRejectedValue(error);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -267,9 +252,9 @@ Line 2 to delete
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
-    expect(mockWriteFile).toHaveBeenCalled(); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
+    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
+    expect(mockWriteFile).toHaveBeenCalled();
     expect(result).toBe(
       `Error writing modified content to ${testFilePath}: ${error.message}`
     );
@@ -282,7 +267,7 @@ Content not present
 =======
 Replacement
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -293,7 +278,7 @@ Replacement
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toContain(
       `Block 1: SEARCH content not found in the current state of the file.`
@@ -316,14 +301,14 @@ Line 4 not present
 =======
 Fourth Line
 >>>>>>> REPLACE`;
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
-    expect(mockWriteFile).not.toHaveBeenCalled(); // Write shouldn't happen if any block fails
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
+    expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toContain(
       `Block 2: SEARCH content not found in the current state of the file.`
     );
@@ -340,13 +325,13 @@ Hello world!
 =======
 Hello world!
 >>>>>>> REPLACE`; // Replace with identical content
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toBe(
       `No effective changes resulted from the replacements in ${testFilePath}. File content remains identical.`
@@ -355,14 +340,14 @@ Hello world!
 
   it("toolMethod should return error for invalid diff format (malformed block)", async () => {
     const initialContent = "Some content";
-    const diff = `<<<&;<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE\n some extra text \n<<<<<<< SEARCH\nno end marker`; // Malformed second part
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    const diff = `<<<&;<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE\n some extra text \n<<<<<<< SEARCH\nno end marker`;
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toContain("Invalid SEARCH/REPLACE block format");
     expect(result).toContain("No changes were written.");
@@ -371,13 +356,13 @@ Hello world!
   it("toolMethod should return error if diff contains no valid blocks", async () => {
     const initialContent = "Some content";
     const diff = ` just some random text, not a diff block `;
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
     const result = await toolMethod({ path: testFilePath, diff });
 
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
     expect(mockWriteFile).not.toHaveBeenCalled();
     expect(result).toBe(
       `Error: The provided 'diff' content for ${testFilePath} does not contain any valid SEARCH/REPLACE blocks. No changes were made.`
@@ -401,7 +386,7 @@ Line 3
 Third Line
 >>>>>>> REPLACE
 `; // Whitespace between blocks
-    mockReadFile.mockResolvedValue(initialContent); // Use the named mock
+    mockReadFile.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -412,10 +397,9 @@ Third Line
       "ReplaceInFile toolMethod called with:",
       { path: input.path, diff: input.diff }
     );
-    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8"); // Assert on the named mock
-    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true }); // Assert on the named mock
+    expect(mockReadFile).toHaveBeenCalledWith(fullTestPath, "utf-8");
+    expect(mockMkdir).toHaveBeenCalledWith(testDir, { recursive: true });
     expect(mockWriteFile).toHaveBeenCalledWith(
-      // Assert on the named mock
       fullTestPath,
       finalContent,
       "utf-8"

@@ -2,9 +2,9 @@ import { z } from "zod";
 import { Models } from "../Models.js";
 import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
-import { Config } from "../../config/Config.js"; // Need Config to get the build command
+import { Config } from "../../config/Config.js";
 
-const runBuildInputSchema = z.object({}); // No input parameters
+const runBuildInputSchema = z.object({});
 
 export class RunBuild extends ModelTool {
   static toolDefinition: ToolDefinition = {
@@ -12,16 +12,15 @@ export class RunBuild extends ModelTool {
     description: "Runs the build command specified in the cassi configuration.",
     parameters: {
       type: "object",
-      properties: {}, // No parameters
+      properties: {},
       required: [],
     },
   };
 
   static async toolMethod(
     model: Models,
-    input: z.infer<typeof runBuildInputSchema> // Input is empty object
+    input: z.infer<typeof runBuildInputSchema>
   ): Promise<string> {
-    // Get build command directly from config data
     const configData = model.task.cassi.config.configData;
     if (!configData) {
       return "Error: Configuration data not found.";
@@ -40,7 +39,7 @@ export class RunBuild extends ModelTool {
       const result = await model.task.invoke(
         "console",
         "exec",
-        [model.task.getCwd()], // Execute in the current working directory
+        [model.task.getCwd()],
         [buildCommand]
       );
 
@@ -52,7 +51,6 @@ export class RunBuild extends ModelTool {
       if (result.stderr) {
         outputDetails += `\nSTDERR:\n${result.stderr}`;
       }
-      // If there are no details, adjust the base message
       if (!outputDetails) {
         baseMessage = `Build command "${buildCommand}" executed successfully with no output.`;
       }

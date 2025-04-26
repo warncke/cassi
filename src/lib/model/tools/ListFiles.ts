@@ -24,7 +24,7 @@ export class ListFiles extends ModelTool {
 
     const options: GlobOptions = {
       cwd: cwd,
-      nodir: true, // Usually, we want to list files, not directories
+      nodir: true,
       ignore: ["node_modules/**", ".cassi/**", "dist/**"],
     };
 

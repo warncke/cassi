@@ -44,7 +44,7 @@ class MockTask extends Task {
   getCwd = vi.fn(() => "/mock/cwd");
 
   constructor(cassi: Cassi) {
-    super(cassi, null); // Pass null for parentTask
+    super(cassi, null);
   }
 }
 
@@ -67,7 +67,7 @@ describe("ReadFile", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {}); // Spy and suppress output
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     (genkit as any).mockImplementation(() => ({
       ai: {
         generate: vi.fn(async (options: GenerateModelOptions) => ({
@@ -82,7 +82,7 @@ describe("ReadFile", () => {
   });
 
   afterEach(() => {
-    consoleLogSpy.mockRestore(); // Restore original console.log
+    consoleLogSpy.mockRestore();
   });
 
   it("should have correct toolDefinition", () => {

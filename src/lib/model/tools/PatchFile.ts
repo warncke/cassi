@@ -1,11 +1,9 @@
 import { z } from "zod";
 import path from "path";
-import fs from "fs/promises"; // Import fs.promises
+import fs from "fs/promises";
 import { Models } from "../Models.js";
 import { ModelTool } from "./ModelTool.js";
 import { ToolDefinition } from "../../tool/Tool.js";
-// No longer need ExecuteCommand directly
-// import { ExecuteCommand } from "./ExecuteCommand.js";
 
 const patchFileInputSchema = z.object({
   path: z
@@ -46,16 +44,15 @@ export class PatchFile extends ModelTool {
     input: z.infer<typeof patchFileInputSchema>
   ): Promise<string> {
     const fullPath = path.join(model.task.getCwd(), input.path);
-    const command = `patch ${JSON.stringify(fullPath)}`; // Ensure path is quoted
+    const command = `patch ${JSON.stringify(fullPath)}`;
 
     try {
-      // Invoke the console tool's exec method with stdin data
       const result = (await model.task.invoke(
-        "console", // Tool name
-        "exec", // Method name
-        [], // Tool constructor args (LocalConsole takes cwd, handled by Tool system)
-        [command, input.patchContent] // Method args: command, stdinData
-      )) as { stdout: string; stderr: string; code: number | null }; // Cast result
+        "console",
+        "exec",
+        [],
+        [command, input.patchContent]
+      )) as { stdout: string; stderr: string; code: number | null };
 
       if (result.code !== 0) {
         throw new Error(
@@ -63,7 +60,6 @@ export class PatchFile extends ModelTool {
         );
       }
 
-      // Consider stderr as potential warnings even on success
       let outputMessage = `Patch applied successfully to ${input.path}.`;
       if (result.stdout) {
         outputMessage += `\nStdout:\n${result.stdout}`;
@@ -83,25 +79,20 @@ export class PatchFile extends ModelTool {
       const origFilePath = path.join(errorDir, "orig.file");
 
       try {
-        // Ensure the error directory exists using fs.promises
         await fs.mkdir(errorDir, { recursive: true });
 
-        // Save the patch content using fs.promises
         await fs.writeFile(patchFilePath, input.patchContent);
 
-        // Attempt to read and save the original file content using fs.promises
         try {
-          const originalContent = await fs.readFile(fullPath, "utf-8"); // Assuming utf-8
+          const originalContent = await fs.readFile(fullPath, "utf-8");
           await fs.writeFile(origFilePath, originalContent);
         } catch (readError: any) {
-          // If reading the original file fails, save the read error instead using fs.promises
           await fs.writeFile(
             origFilePath,
             `Error reading original file: ${readError.message}`
           );
         }
       } catch (saveError: any) {
-        // Log if saving the error files fails, but still return the original error
         console.error(
           `Failed to save patch error details: ${saveError.message}`
         );

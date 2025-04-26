@@ -38,7 +38,7 @@ const configSchema: JSONSchemaType<ConfigData> = {
       },
       nullable: true,
       additionalProperties: false,
-      default: {}, // Add default empty object here
+      default: {},
     },
   },
   required: ["apiKeys"],

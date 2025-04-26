@@ -5,7 +5,6 @@ import {
   vi,
   beforeEach,
   afterEach,
-  // SpyInstance, // Remove incorrect import
 } from "vitest";
 import { Coder } from "./Coder.js";
 import { Models, GenerateModelOptions } from "../Models.js";
@@ -17,12 +16,11 @@ import { WriteFile } from "../tools/WriteFile.js";
 import { ReplaceInFile } from "../tools/ReplaceInFile.js";
 import { RunBuild } from "../tools/RunBuild.js";
 import { ListFiles } from "../tools/ListFiles.js";
-import { ToolDefinition } from "../../tool/Tool.js"; // Import local ToolDefinition
+import { ToolDefinition } from "../../tool/Tool.js";
 
 vi.mock("../../task/Task.js");
 
-// Let TypeScript infer spy types
-let executeCommandModelToolArgsSpy: any; // Use any or let TS infer
+let executeCommandModelToolArgsSpy: any;
 let readFileModelToolArgsSpy: any;
 let writeFileModelToolArgsSpy: any;
 let replaceInFileModelToolArgsSpy: any;
@@ -30,10 +28,8 @@ let runBuildModelToolArgsSpy: any;
 let listFilesModelToolArgsSpy: any;
 
 const mockGenerate = vi.fn();
-// Update mockDefineTool to match the new call signature (toolDefinition, handler)
-// It should return the toolDefinition object as that's what's stored in coderInstance.tools
 const mockDefineTool = vi.fn((toolDefinition, handler) => {
-  return toolDefinition; // Return the first argument (the definition)
+  return toolDefinition;
 });
 
 const mockAiObject = {
@@ -48,7 +44,6 @@ vi.mock("genkit", () => ({
 describe("Coder Model", () => {
   let mockTask: Task;
   let coderInstance: Coder;
-  // Use the imported ToolDefinition type
   const mockExecuteCommandToolDefinition: ToolDefinition = {
     name: "EXECUTE_COMMAND",
     description: "Executes commands",
@@ -109,7 +104,6 @@ describe("Coder Model", () => {
     mockDefineTool.mockClear();
     (genkit as ReturnType<typeof vi.fn>).mockClear();
 
-    // Setup spies for each tool's modelToolArgs
     executeCommandModelToolArgsSpy = vi
       .spyOn(ExecuteCommand, "modelToolArgs")
       .mockReturnValue([
@@ -156,9 +150,7 @@ describe("Coder Model", () => {
     expect(coderInstance.ai.defineTool).toBe(mockDefineTool);
   });
 
-  // Updated constructor test
   it("should call modelToolArgs for each tool, store handlers, and define tools with ai.defineTool", () => {
-    // Check spies
     expect(executeCommandModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(executeCommandModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(readFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
@@ -172,7 +164,6 @@ describe("Coder Model", () => {
     expect(listFilesModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(listFilesModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
 
-    // Check defineTool calls with the new signature (toolDefinition, handler)
     expect(mockDefineTool).toHaveBeenCalledTimes(6);
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       1,
@@ -205,7 +196,6 @@ describe("Coder Model", () => {
       mockListFilesToolMethod
     );
 
-    // Check toolHandlers map
     expect((coderInstance as any).toolHandlers.get("EXECUTE_COMMAND")).toBe(
       mockExecuteCommandToolMethod
     );
@@ -225,7 +215,6 @@ describe("Coder Model", () => {
       mockListFilesToolMethod
     );
 
-    // Check the structure of coderInstance.tools (it holds the *results* of defineTool)
     expect(coderInstance.tools).toBeDefined();
     expect(Array.isArray(coderInstance.tools)).toBe(true);
     expect(coderInstance.tools.length).toBe(6);
@@ -235,7 +224,6 @@ describe("Coder Model", () => {
     expect(coderInstance.tools[5].name).toBe(mockListFilesToolDefinition.name);
   });
 
-  // Updated generate method tests
   it("should call ai.generate initially with correct parameters including returnToolRequests", async () => {
     const mockResponse = {
       text: () => "Generated code",
@@ -247,7 +235,6 @@ describe("Coder Model", () => {
     const options: GenerateModelOptions = {
       model: "mockModelRef" as any,
       prompt: "Write a function",
-      // Fix message structure here as well
       messages: [
         { role: "user" as const, content: [{ text: "Initial message" }] },
       ],
@@ -259,10 +246,10 @@ describe("Coder Model", () => {
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledWith({
       model: model,
-      prompt: expect.any(String), // Use expect.any(String) to bypass complex type check for the initial prompt
+      prompt: expect.any(String),
       tools: coderInstance.tools,
-      returnToolRequests: true, // Check this flag
-      messages: messages, // Check messages are passed
+      returnToolRequests: true,
+      messages: messages,
       ...restOptions,
     });
   });
@@ -283,7 +270,7 @@ describe("Coder Model", () => {
 
     const result = await coderInstance.generate(options);
     expect(result).toBe(expectedText);
-    expect(mockGenerate).toHaveBeenCalledTimes(1); // Only one call needed
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
   });
 
   it("should log usage information from the final response", async () => {
@@ -310,7 +297,6 @@ describe("Coder Model", () => {
     const consoleWarnSpy = vi
       .spyOn(console, "warn")
       .mockImplementation(() => {});
-    // Simulate a final response (no tool requests) but without the text method or it returning undefined/null
     const mockResponse = { usage: { totalTokens: 2 }, toolRequests: [] };
     mockGenerate.mockResolvedValue(mockResponse);
 
@@ -327,13 +313,11 @@ describe("Coder Model", () => {
     consoleWarnSpy.mockRestore();
   });
 
-  // New tests for tool handling loop
   it("should handle a single tool request, call the handler, log the call, and continue generation", async () => {
-    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {}); // Add spy
+    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const toolInput = { command: "ls", requires_approval: false };
     const toolOutput = "file1\nfile2";
     const finalOutputText = "Okay, I listed the files.";
-    // Fix message structure
     const initialMessages = [
       { role: "user" as const, content: [{ text: "list files" }] },
     ];
@@ -353,10 +337,8 @@ describe("Coder Model", () => {
       },
     ];
 
-    // Revert to mockResolvedValueOnce
     mockGenerate
       .mockResolvedValueOnce({
-        // First call: Return tool request
         toolRequests: [
           {
             toolRequest: {
@@ -370,13 +352,11 @@ describe("Coder Model", () => {
         usage: { totalTokens: 10 },
       })
       .mockResolvedValueOnce({
-        // Second call: Return final text
         text: () => finalOutputText,
         toolRequests: [],
         usage: { totalTokens: 20 },
       });
 
-    // Mock the specific tool handler
     mockExecuteCommandToolMethod.mockResolvedValueOnce(toolOutput);
 
     const options: GenerateModelOptions = {
@@ -387,25 +367,17 @@ describe("Coder Model", () => {
 
     const result = await coderInstance.generate(options);
 
-    // Assert call count first
     expect(mockGenerate).toHaveBeenCalledTimes(2);
 
-    // Assertions using mock.calls array
-    const secondCallArgs = mockGenerate.mock.calls[1][0]; // Keep second call args check
+    const secondCallArgs = mockGenerate.mock.calls[1][0];
 
-    // Check tool handler call happened correctly between generate calls
     expect(mockExecuteCommandToolMethod).toHaveBeenCalledTimes(1);
     expect(mockExecuteCommandToolMethod).toHaveBeenCalledWith(toolInput);
 
-    // Assertions for the second call's arguments
     expect(secondCallArgs).toEqual(
       expect.objectContaining({
-        messages: messagesAfterToolRequest, // Check messages passed to second call
+        messages: messagesAfterToolRequest,
         prompt: [
-          // Check tool response is passed as prompt to second call
-          // Check tool response is passed as prompt to second call
-          // Check tool response is passed as prompt to second call
-          // Check tool response is passed as prompt to second call
           {
             toolResponse: {
               name: "EXECUTE_COMMAND",
@@ -413,18 +385,16 @@ describe("Coder Model", () => {
               output: toolOutput,
             },
           },
-        ], // Check tool response is passed back
+        ],
       })
     );
-    // Check final result
     expect(result).toBe(finalOutputText);
 
-    // Check console.log spy
     expect(consoleLogSpy).toHaveBeenCalledWith(
       `Calling tool: EXECUTE_COMMAND with input:`,
       toolInput
     );
-    consoleLogSpy.mockRestore(); // Restore console.log
+    consoleLogSpy.mockRestore();
   });
 
   it("should handle multiple tool requests in one turn", async () => {
@@ -433,7 +403,6 @@ describe("Coder Model", () => {
     const toolInput2 = { path: "file.txt" };
     const toolOutput2 = "file content";
     const finalOutputText = "Got dir and file content.";
-    // Fix message structure
     const initialMessages = [
       { role: "user" as const, content: [{ text: "get dir and read file" }] },
     ];
@@ -516,7 +485,6 @@ describe("Coder Model", () => {
     const toolInput = { some: "data" };
     const unknownToolName = "UNKNOWN_TOOL";
     const finalOutputText = "Couldn't find that tool.";
-    // Fix message structure
     const initialMessages = [
       { role: "user" as const, content: [{ text: "call unknown tool" }] },
     ];
@@ -583,7 +551,6 @@ describe("Coder Model", () => {
     const toolInput = { command: "bad-command", requires_approval: false };
     const errorMsg = "Command failed";
     const finalOutputText = "The command failed.";
-    // Fix message structure
     const initialMessages = [
       { role: "user" as const, content: [{ text: "run bad command" }] },
     ];
@@ -618,7 +585,6 @@ describe("Coder Model", () => {
       usage: { totalTokens: 20 },
     });
 
-    // Mock the handler to throw an error
     const executionError = new Error(errorMsg);
     mockExecuteCommandToolMethod.mockRejectedValueOnce(executionError);
 

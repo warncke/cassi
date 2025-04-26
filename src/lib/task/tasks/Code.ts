@@ -93,7 +93,6 @@ export class Code extends Task {
     console.log("[Code Task] Starting cleanupTask");
     if (this.worktreeDir) {
       await this.invoke("git", "remWorkTree", [], [this.worktreeDir]);
-      // await this.invoke("fs", "deleteDirectory", [], [this.worktreeDir]);
     }
     console.log("[Code Task] Finished cleanupTask");
   }

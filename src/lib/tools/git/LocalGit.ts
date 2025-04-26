@@ -40,7 +40,6 @@ export class LocalGit {
    * @returns A promise that resolves when the worktree is added.
    */
   async addWorktree(directory: string, branchName: string) {
-    // Use -b to create a new branch for the worktree
     return this.git.raw([
       "worktree",
       "add",

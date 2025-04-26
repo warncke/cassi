@@ -9,14 +9,13 @@ import { gemini20Flash } from "@genkit-ai/googleai";
 
 vi.mock("../../cassi/Cassi.js");
 vi.mock("../../model/Models.js");
-// Provide a mock implementation for Coder that captures the prompt
 vi.mock("./Coder.js", () => {
   const MockCoder = vi.fn().mockImplementation((cassi, parentTask, prompt) => {
     return {
       cassi: cassi,
       parentTask: parentTask,
-      prompt: prompt, // Store the prompt
-      run: vi.fn().mockResolvedValue(undefined), // Mock run method
+      prompt: prompt,
+      run: vi.fn().mockResolvedValue(undefined),
     };
   });
   return { Coder: MockCoder };
@@ -59,7 +58,6 @@ describe("Code Task", () => {
       repository: {
         repositoryDir: "/mock/repo/dir",
       },
-      // Correctly structure the mock to include the nested 'model' property
       model: {
         newInstance: mockNewModel,
       },
@@ -68,7 +66,6 @@ describe("Code Task", () => {
     mockParentTask = new Task(mockCassi, null);
     codeTask = new Code(mockCassi, mockParentTask, "Generate some code.");
 
-    // Spy on the invoke method directly, casting to any to bypass type issues
     invokeSpy = vi
       .spyOn(codeTask as any, "invoke")
       .mockResolvedValue(undefined);
@@ -95,7 +92,6 @@ describe("Code Task", () => {
   });
 
   it("should evaluate prompt, create worktree, install deps, and add Coder subtask when modifiesFiles is true", async () => {
-    // Remove duplicate keys in mockResponse
     const mockResponse = JSON.stringify({
       summary: "Test Summary",
       modifiesFiles: true,
@@ -106,12 +102,10 @@ describe("Code Task", () => {
     await codeTask.initTask();
 
     expect(mockNewModel).toHaveBeenCalledTimes(1);
-    // Expect newInstance to be called via newModel
     expect(mockNewModel).toHaveBeenCalledTimes(1);
-    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask); // newModel passes the task instance
+    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask);
 
     expect(mockGenerate).toHaveBeenCalledTimes(1);
-    // Use the mocked model name
     expect(mockGenerate).toHaveBeenCalledWith({
       model: "mockedGemini20Flash",
       prompt: codeTask.prompt,
@@ -140,23 +134,19 @@ describe("Code Task", () => {
     );
 
     expect(codeTask.addSubtask).toHaveBeenCalledTimes(1);
-    // Check that the mock Coder constructor was called
     const MockCoder = vi.mocked(Coder);
     expect(MockCoder).toHaveBeenCalledTimes(1);
-    // Ensure the correct instance was passed to addSubtask
     expect(codeTask.addSubtask).toHaveBeenCalledWith(
       MockCoder.mock.instances[0]
     );
 
-    // Assert directly on the prompt argument passed to the mock constructor
-    const capturedPrompt = MockCoder.mock.calls[0][2]; // Get the 3rd argument (prompt)
+    const capturedPrompt = MockCoder.mock.calls[0][2];
     expect(capturedPrompt).toContain("Generate some code.");
     expect(capturedPrompt).toContain("Summary: Test Summary");
     expect(capturedPrompt).toContain("Steps:\n- Step 1");
   });
 
   it("should log message and not invoke tools or add subtask when modifiesFiles is false", async () => {
-    // Correctly define mockResponse within the test case
     const mockResponse = JSON.stringify({
       summary: "No Modify Summary",
       modifiesFiles: false,
@@ -166,9 +156,8 @@ describe("Code Task", () => {
 
     await codeTask.initTask();
 
-    // Expect newInstance to be called via newModel
     expect(mockNewModel).toHaveBeenCalledTimes(1);
-    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask); // newModel passes the task instance
+    expect(mockNewModel).toHaveBeenCalledWith("EvaluateCodePrompt", codeTask);
     expect(mockGenerate).toHaveBeenCalledTimes(1);
     expect(codeTask.evaluation).toEqual(JSON.parse(mockResponse));
     expect(invokeSpy).not.toHaveBeenCalled();

@@ -4,30 +4,27 @@ import path from "path";
 
 describe("CommandLineTest E2E", () => {
   let cassiProcess: ChildProcessWithoutNullStreams;
-  const projectRoot = path.resolve(__dirname, "../../.."); // Adjust if needed
-  const compiledCassiAbsolutePath = path.join(projectRoot, "dist/bin/cassi.js"); // Absolute path
+  const projectRoot = path.resolve(__dirname, "../../..");
+  const compiledCassiAbsolutePath = path.join(projectRoot, "dist/bin/cassi.js");
   const relativeCompiledCassiPath = path.relative(
     projectRoot,
     compiledCassiAbsolutePath
-  ); // Should be dist/bin/cassi.js
+  );
 
   beforeAll(() => {
-    // Setup tasks if needed before all tests run
   });
 
   afterAll(() => {
-    // Cleanup tasks after all tests run
     if (cassiProcess && !cassiProcess.killed) {
       cassiProcess.kill();
     }
   });
 
-  // Helper function to send input and wait for output
   const interact = (
     process: ChildProcessWithoutNullStreams,
     input: string,
     expectedOutput: string | RegExp,
-    timeout = 5000 // 5 seconds timeout
+    timeout = 5000
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       let output = "";
@@ -43,7 +40,7 @@ describe("CommandLineTest E2E", () => {
 
       const onData = (data: Buffer) => {
         const dataStr = data.toString();
-        console.log(`STDOUT: ${dataStr}`); // Log stdout
+        console.log(`STDOUT: ${dataStr}`);
         output += dataStr;
         let match = false;
         if (expectedOutput instanceof RegExp) {
@@ -62,9 +59,8 @@ describe("CommandLineTest E2E", () => {
 
       const onErrorData = (data: Buffer) => {
         const dataStr = data.toString();
-        console.error(`STDERR: ${dataStr}`); // Log stderr
+        console.error(`STDERR: ${dataStr}`);
         output += dataStr;
-        // Keep listening on stderr, but check if the expected output arrived via stdout/stderr mix
         let match = false;
         if (expectedOutput instanceof RegExp) {
           match = expectedOutput.test(output);
@@ -80,28 +76,25 @@ describe("CommandLineTest E2E", () => {
       };
 
       process.stdout.on("data", onData);
-      process.stderr.on("data", onErrorData); // Capture errors too
+      process.stderr.on("data", onErrorData);
 
-      // Only write to stdin if input is provided
       if (input !== "") {
-        console.log(`STDIN: ${input}`); // Log stdin
+        console.log(`STDIN: ${input}`);
         process.stdin.write(input + "\n");
       } else {
-        // If input is empty, we might just be waiting for initial output
         console.log(`Waiting for initial output without sending input.`);
       }
     });
   };
 
   it("should start the cassi CLI and respond to basic interaction", async () => {
-    // Spawn the CLI using the npm script
     cassiProcess = spawn(
-      "npm", // Use npm executable
-      ["run", "start:cli"], // Arguments to run the script
+      "npm",
+      ["run", "start:cli"],
       {
-        cwd: projectRoot, // Run in project root
-        env: { ...process.env, NODE_ENV: "test", CI: "true" }, // Inherit env, set test specifics
-        shell: true, // Use shell to handle npm execution correctly on different OS
+        cwd: projectRoot,
+        env: { ...process.env, NODE_ENV: "test", CI: "true" },
+        shell: true,
       }
     );
 
@@ -109,7 +102,7 @@ describe("CommandLineTest E2E", () => {
 
     cassiProcess.on("error", (err) => {
       console.error("Failed to start subprocess.", err);
-      throw err; // Fail the test if the process errors on spawn
+      throw err;
     });
 
     cassiProcess.on("close", (code, signal) => {
@@ -118,72 +111,58 @@ describe("CommandLineTest E2E", () => {
       );
     });
 
-    // Example interaction: Wait for initial prompt (adjust regex/string as needed)
-    // This assumes cassi asks for the working directory first.
-    // You'll need to adjust the expected prompt based on cassi's actual behavior.
     try {
-      // Wait for the CWD confirmation prompt
       const initialOutput = await interact(
         cassiProcess,
-        "", // Send no input, just wait for the prompt
-        /Is this the correct repository directory?.*\(y\/N\)/i // Updated Regex
+        "",
+        /Is this the correct repository directory?.*\(y\/N\)/i
       );
       fullOutput += initialOutput;
       expect(initialOutput).toMatch(
-        /Is this the correct repository directory?.*\(y\/N\)/i // Updated Regex
+        /Is this the correct repository directory?.*\(y\/N\)/i
       );
 
-      // Send 'y' to confirm the CWD
-      // Send 'y' to confirm the CWD
       const afterCwdConfirmOutput = await interact(
         cassiProcess,
         "y",
-        /Current branch is '.*'. Continue\? \(y\/N\)/i // Expect the InitializeGit prompt
+        /Current branch is '.*'. Continue\? \(y\/N\)/i
       );
       fullOutput += afterCwdConfirmOutput;
       expect(afterCwdConfirmOutput).toMatch(
         /Current branch is '.*'. Continue\? \(y\/N\)/i
       );
 
-      // Send 'y' to confirm the branch in InitializeGit
-      // Expect the main task prompt now
       const afterBranchConfirmOutput = await interact(
         cassiProcess,
         "y",
-        /Enter your next request:/i // Expect the main input prompt
+        /Enter your next request:/i
       );
       fullOutput += afterBranchConfirmOutput;
       expect(afterBranchConfirmOutput).toMatch(/Enter your next request:/i);
 
-      // Send the specific task request
       const taskRequest = "add a pauseTask method to the Task class";
-      // Wait for the next prompt, assuming the task completes and loops back
       const taskResponseOutput = await interact(
         cassiProcess,
         taskRequest,
-        /Enter your next request:/i // Expect the prompt again after processing
+        /Enter your next request:/i
       );
       fullOutput += taskResponseOutput;
       console.log(
         "Response after adding pauseTask request:",
         taskResponseOutput
       );
-      // Add specific expectations for the taskResponseOutput if needed
 
-      // Add more interactions and expectations here...
     } catch (error) {
       console.error("Test interaction failed:", error);
-      console.log("Full output received:\n", fullOutput); // Log output on failure
-      // Ensure process is killed even if interactions fail before re-throwing
+      console.log("Full output received:\n", fullOutput);
       if (cassiProcess && !cassiProcess.killed) {
         cassiProcess.kill();
       }
-      throw error; // Re-throw to fail the test
+      throw error;
     } finally {
-      // Final cleanup check
       if (cassiProcess && !cassiProcess.killed) {
         cassiProcess.kill();
       }
     }
-  }, 15000); // Increase timeout for the test itself
+  }, 15000);
 });

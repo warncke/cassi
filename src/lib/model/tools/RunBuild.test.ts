@@ -82,21 +82,21 @@ describe("RunBuild Tool", () => {
   });
 
   it("should return an error if build command is not found", async () => {
-    mockConfig.configData!.commands!.build = undefined; // Simulate missing build command
+    mockConfig.configData!.commands!.build = undefined;
     const result = await RunBuild.toolMethod(mockModel, {});
     expect(result).toBe("Error: Build command not found in configuration.");
     expect(mockTask.invoke).not.toHaveBeenCalled();
   });
 
   it("should return an error if commands configuration is not found", async () => {
-    mockConfig.configData!.commands = undefined; // Simulate missing commands object
+    mockConfig.configData!.commands = undefined;
     const result = await RunBuild.toolMethod(mockModel, {});
     expect(result).toBe("Error: Commands configuration not found.");
     expect(mockTask.invoke).not.toHaveBeenCalled();
   });
 
   it("should return an error if configData is not found", async () => {
-    mockConfig.configData = null; // Simulate missing configData
+    mockConfig.configData = null;
     const result = await RunBuild.toolMethod(mockModel, {});
     expect(result).toBe("Error: Configuration data not found.");
     expect(mockTask.invoke).not.toHaveBeenCalled();

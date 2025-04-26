@@ -56,19 +56,15 @@ describe("LocalFS", () => {
       await localFs.createFile(deeperFile, "deep content");
       await localFs.createFile(topLevelFile, "top content");
 
-      // Pass the recursive option directly
       const contents = await localFs.listDirectory(subDir, {
         recursive: true,
       });
 
-      // Check if both top-level and nested files/dirs are included
-      // Note: fs.readdir with recursive might return paths relative to subDir
       expect(contents).toContain("top.txt");
-      expect(contents).toContain(path.join("deep", "deeper.txt")); // Adjust based on actual fs.readdir output format
-      expect(contents).toContain("deep"); // Directory itself might also be listed
+      expect(contents).toContain(path.join("deep", "deeper.txt"));
+      expect(contents).toContain("deep");
 
-      // Cleanup
-      await localFs.deleteDirectory(subDir); // Deletes deepDir and files within
+      await localFs.deleteDirectory(subDir);
     });
 
     test("should list directory contents non-recursively by default", async () => {
@@ -80,18 +76,17 @@ describe("LocalFS", () => {
       await localFs.createFile(deeperFile, "deep content");
       await localFs.createFile(topLevelFile, "top content");
 
-      const contents = await localFs.listDirectory(subDir); // No options
+      const contents = await localFs.listDirectory(subDir);
 
       expect(contents).toContain("top.txt");
       expect(contents).toContain("deep");
       expect(contents).not.toContain(path.join("deep", "deeper.txt"));
 
-      // Cleanup
       await localFs.deleteDirectory(subDir);
     });
 
     test("should delete a directory", async () => {
-      await localFs.createDirectory(subDir); // Ensure dir exists before deleting
+      await localFs.createDirectory(subDir);
       await localFs.deleteDirectory(subDir);
 
       await expect(fs.stat(subDir)).rejects.toThrow();
@@ -270,7 +265,7 @@ describe("LocalFS", () => {
     test("should use glob options (cwd)", async () => {
       const results = await localFs.glob("*.txt", { cwd: globTestDir });
       expect(results).toHaveLength(1);
-      expect(results).toContain("file1.txt"); // Relative path when using cwd
+      expect(results).toContain("file1.txt");
     });
 
     test("should return an empty array if no files match", async () => {
@@ -284,7 +279,7 @@ describe("LocalFS", () => {
         path.join(globTestDir, "*.txt")
       );
       const results = await localFs.glob(relativePattern);
-      expect(results.length).toBeGreaterThanOrEqual(1); // Might find other .txt files
+      expect(results.length).toBeGreaterThanOrEqual(1);
       expect(results).toContain(relativePattern.replace("*.txt", "file1.txt"));
     });
   });

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
 import { GenerateOptions, ToolResponsePart, ToolRequestPart } from "genkit";
-import { ToolDefinition } from "../../tool/Tool.js"; // Import local ToolDefinition
+import { ToolDefinition } from "../../tool/Tool.js";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
@@ -27,7 +27,6 @@ export class Coder extends Models {
       ListFiles.modelToolArgs(this),
     ];
 
-    // Assuming modelToolArgs returns [LocalToolDefinition, handler]
     this.tools = toolDefinitions.map(
       (args: [ToolDefinition, (input: any) => Promise<any>]) => {
         const [localToolDefinition, handler] = args;
@@ -40,7 +39,6 @@ export class Coder extends Models {
           );
         }
         this.toolHandlers.set(localToolDefinition.name, handler);
-        // Pass the localToolDefinition and handler directly to defineTool
         return this.ai.defineTool(localToolDefinition, handler);
       }
     );
@@ -186,7 +184,7 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
 `,
       tools: this.tools,
       returnToolRequests: true,
-      messages: initialMessages, // Include initial messages if provided
+      messages: initialMessages,
       ...restOptions,
     };
 
@@ -195,7 +193,7 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
 
     while (true) {
       llmResponse = await this.ai.generate(generateOptions);
-      finalUsage = llmResponse.usage; // Capture usage from the last call
+      finalUsage = llmResponse.usage;
 
       const toolRequests = llmResponse.toolRequests ?? [];
       if (toolRequests.length < 1) {
@@ -209,7 +207,6 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
             console.error(
               `Tool handler not found for: ${part.toolRequest.name}`
             );
-            // Return an error response to the model
             return {
               toolResponse: {
                 name: part.toolRequest.name,
@@ -249,9 +246,8 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
         })
       );
 
-      // Add the tool responses to the history for the next turn
       generateOptions.messages = llmResponse.messages;
-      generateOptions.prompt = toolResponses; // Provide tool responses as the next prompt
+      generateOptions.prompt = toolResponses;
       console.log("GENERATE PROMPT", generateOptions);
     }
 

@@ -17,7 +17,7 @@ export default class LocalFS {
     options?:
       | {
           encoding?: BufferEncoding | null | undefined;
-          withFileTypes?: false | undefined; // Explicitly false for string[] return
+          withFileTypes?: false | undefined;
           recursive?: boolean | undefined;
         }
       | BufferEncoding
@@ -25,10 +25,8 @@ export default class LocalFS {
       | undefined
   ): Promise<string[]> {
     try {
-      // Assuming options will not have withFileTypes: true for now
       const entries = await fs.readdir(dirPath, options);
-      // If options could include withFileTypes: true, the return type and handling would need adjustment.
-      return entries as string[]; // Ensure return type matches signature
+      return entries as string[];
     } catch (error: any) {
       throw error;
     }
