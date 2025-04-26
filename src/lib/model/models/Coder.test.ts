@@ -6,7 +6,7 @@ import { genkit } from "genkit";
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
-import { PatchFile } from "../tools/PatchFile.js";
+import { ReplaceInFile } from "../tools/ReplaceInFile.js";
 import { RunBuild } from "../tools/RunBuild.js";
 import { ListFiles } from "../tools/ListFiles.js";
 
@@ -15,7 +15,7 @@ vi.mock("../../task/Task.js");
 let executeCommandModelToolArgsSpy: any;
 let readFileModelToolArgsSpy: any;
 let writeFileModelToolArgsSpy: any;
-let patchFileModelToolArgsSpy: any;
+let replaceInFileModelToolArgsSpy: any;
 let runBuildModelToolArgsSpy: any;
 let listFilesModelToolArgsSpy: any;
 
@@ -58,10 +58,10 @@ describe("Coder Model", () => {
     description: "mockWriteFileDesc",
     parameters: {},
   };
-  const mockPatchFileToolMethod = vi.fn();
-  const mockPatchFileToolDefinition = {
-    name: "mockPatchFileDef",
-    description: "mockPatchFileDesc",
+  const mockReplaceInFileToolMethod = vi.fn();
+  const mockReplaceInFileToolDefinition = {
+    name: "mockReplaceInFileDef",
+    description: "mockReplaceInFileDesc",
     parameters: {},
   };
   const mockRunBuildToolMethod = vi.fn();
@@ -101,10 +101,10 @@ describe("Coder Model", () => {
       mockWriteFileToolMethod,
     ]);
 
-    patchFileModelToolArgsSpy = vi.spyOn(PatchFile, "modelToolArgs");
-    patchFileModelToolArgsSpy.mockReturnValue([
-      mockPatchFileToolDefinition,
-      mockPatchFileToolMethod,
+    replaceInFileModelToolArgsSpy = vi.spyOn(ReplaceInFile, "modelToolArgs");
+    replaceInFileModelToolArgsSpy.mockReturnValue([
+      mockReplaceInFileToolDefinition,
+      mockReplaceInFileToolMethod,
     ]);
 
     runBuildModelToolArgsSpy = vi.spyOn(RunBuild, "modelToolArgs");
@@ -147,8 +147,8 @@ describe("Coder Model", () => {
     expect(readFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(writeFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(writeFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
-    expect(patchFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
-    expect(patchFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
+    expect(replaceInFileModelToolArgsSpy).toHaveBeenCalledTimes(1);
+    expect(replaceInFileModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(runBuildModelToolArgsSpy).toHaveBeenCalledTimes(1);
     expect(runBuildModelToolArgsSpy).toHaveBeenCalledWith(coderInstance);
     expect(listFilesModelToolArgsSpy).toHaveBeenCalledTimes(1);
@@ -173,8 +173,8 @@ describe("Coder Model", () => {
     );
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       4,
-      mockPatchFileToolDefinition,
-      mockPatchFileToolMethod
+      mockReplaceInFileToolDefinition,
+      mockReplaceInFileToolMethod
     );
     expect(mockDefineTool).toHaveBeenNthCalledWith(
       5,
@@ -196,12 +196,14 @@ describe("Coder Model", () => {
     expect(coderInstance.tools[1].handler).toBe(mockReadFileToolMethod);
     expect(coderInstance.tools[2].name).toBe(mockWriteFileToolDefinition.name);
     expect(coderInstance.tools[2].handler).toBe(mockWriteFileToolMethod);
-    expect(coderInstance.tools[3].name).toBe(mockPatchFileToolDefinition.name);
-    expect(coderInstance.tools[3].handler).toBe(mockPatchFileToolMethod);
+    expect(coderInstance.tools[3].name).toBe(
+      mockReplaceInFileToolDefinition.name
+    );
+    expect(coderInstance.tools[3].handler).toBe(mockReplaceInFileToolMethod);
     expect(coderInstance.tools[4].name).toBe(mockRunBuildToolDefinition.name);
     expect(coderInstance.tools[4].handler).toBe(mockRunBuildToolMethod);
     expect(coderInstance.tools[5].name).toBe(mockListFilesToolDefinition.name); // Added check for ListFiles
-    expect(coderInstance.tools[5].handler).toBe(mockListFilesToolMethod); // Added check for ListFiles handler
+    expect(coderInstance.tools[5].handler).toBe(mockListFilesToolMethod);
   });
 
   it("should call ai.generate with correct parameters in generate method", async () => {
@@ -327,16 +329,18 @@ describe("Coder Model", () => {
     expect(mockWriteFileToolMethod).toHaveBeenCalledWith(writeFileInput);
     expect(coderInstance.tools[2].handler).toBe(mockWriteFileToolMethod);
 
-    const patchFileHandler = mockDefineTool.mock.calls[3][1];
-    expect(patchFileHandler).toBe(mockPatchFileToolMethod);
+    const replaceInFileHandler = mockDefineTool.mock.calls[3][1];
+    expect(replaceInFileHandler).toBe(mockReplaceInFileToolMethod);
 
-    const patchFileInput = {
+    const replaceInFileInput = {
       path: "existing.txt",
-      patch: "--- a/file\n+++ b/file\n@@ -1 +1 @@\n-old\n+new",
+      diff: "<<<<<<< SEARCH\nold\n=======\nnew\n>>>>>>> REPLACE",
     };
-    await patchFileHandler(patchFileInput);
-    expect(mockPatchFileToolMethod).toHaveBeenCalledWith(patchFileInput);
-    expect(coderInstance.tools[3].handler).toBe(mockPatchFileToolMethod);
+    await replaceInFileHandler(replaceInFileInput);
+    expect(mockReplaceInFileToolMethod).toHaveBeenCalledWith(
+      replaceInFileInput
+    );
+    expect(coderInstance.tools[3].handler).toBe(mockReplaceInFileToolMethod);
 
     const runBuildHandler = mockDefineTool.mock.calls[4][1];
     expect(runBuildHandler).toBe(mockRunBuildToolMethod);
