@@ -7,18 +7,15 @@ export class Worktree {
   readonly task: Task;
   readonly worktreeDir: string;
 
-  constructor(repository: Repository, task: Task) {
+  constructor(repository: Repository, task: Task, worktreeDir?: string) {
     if (!task.taskId) {
       throw new Error("Task ID cannot be null when creating a Worktree.");
     }
     this.repository = repository;
     this.task = task;
-    this.worktreeDir = path.join(
-      repository.repositoryDir,
-      ".cassi",
-      "worktrees",
-      task.taskId
-    );
+    this.worktreeDir =
+      worktreeDir ??
+      path.join(repository.repositoryDir, ".cassi", "worktrees", task.taskId);
   }
 
   async init(): Promise<void> {

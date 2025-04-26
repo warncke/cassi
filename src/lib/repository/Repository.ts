@@ -26,6 +26,13 @@ export class Repository {
     return worktree;
   }
 
+  addWorktree(worktree: Worktree): void {
+    if (!worktree.task.taskId) {
+      throw new Error("Task ID cannot be null when adding a Worktree.");
+    }
+    this.worktrees.set(worktree.task.taskId, worktree);
+  }
+
   remWorktree(taskId: string): void {
     this.worktrees.delete(taskId);
   }

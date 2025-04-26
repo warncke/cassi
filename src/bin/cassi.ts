@@ -3,10 +3,8 @@
 import { Command } from "commander";
 import { Cassi } from "../lib/cassi/Cassi.js";
 import { User } from "../lib/user/User.js";
-import { InitializeRepository } from "../lib/task/tasks/InitializeRepository.js";
 import Input from "../lib/prompt/prompts/Input.js";
 import { Prompt } from "../lib/prompt/Prompt.js";
-import { Code } from "../lib/task/tasks/Code.js";
 
 const program = new Command();
 
@@ -36,7 +34,7 @@ async function run() {
   const user = new User(initFn, promptFn);
   const cassi = new Cassi(user, options.configFile, options.repositoryDir);
   await cassi.init();
-  await cassi.newTask(new InitializeRepository(cassi));
+  await cassi.newTask("InitializeRepository");
 
   while (true) {
     await cassi.runTasks();
@@ -44,7 +42,15 @@ async function run() {
     const promptSequence = new Prompt([inputPrompt]);
     await cassi.user.prompt(promptSequence);
     if (inputPrompt.response) {
-      await cassi.newTask(new Code(cassi, null, inputPrompt.response));
+      const codeTask = cassi.newTask("Code");
+      if (
+        "setRequest" in codeTask &&
+        typeof codeTask.setRequest === "function"
+      ) {
+        codeTask.setRequest(inputPrompt.response);
+      } else {
+        console.error("Code task does not have a setRequest method.");
+      }
     } else {
       console.log("No input received, exiting.");
       break;

@@ -3,6 +3,7 @@ import { Repository } from "../repository/Repository.js";
 import { User } from "../user/User.js";
 import { Tool } from "../tool/Tool.js";
 import { Task } from "../task/Task.js";
+import { Tasks } from "../task/Tasks.js";
 import { Model } from "../model/Model.js";
 
 export class Cassi {
@@ -11,6 +12,7 @@ export class Cassi {
   user: User;
   tool: Tool;
   model: Model;
+  task: Tasks;
   tasks: Task[] = [];
 
   constructor(user: User, configFile: string, repositoryDir: string) {
@@ -19,6 +21,7 @@ export class Cassi {
     this.repository = new Repository(repositoryDir, user);
     this.tool = new Tool(this.user, this.config);
     this.model = new Model();
+    this.task = new Tasks();
   }
 
   async init() {
@@ -27,10 +30,13 @@ export class Cassi {
     await this.tool.init();
     await this.model.init();
     await this.repository.init();
+    await this.task.init();
   }
 
-  newTask(task: Task) {
-    this.tasks.push(task);
+  newTask(taskName: string, parentTask?: Task): Task {
+    const newTask = this.task.newTask(taskName, this, parentTask);
+    this.tasks.push(newTask);
+    return newTask;
   }
 
   async runTasks() {

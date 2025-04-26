@@ -10,6 +10,7 @@
     "test": "vitest run --dir src --exclude test/e2e/**",
     "test:e2e": "vitest run src/test/e2e",
     "start:cli": "tsc && node dist/bin/cassi.js",
+    "start:task": "tsc && node dist/bin/run-task",
     "watch": "tsc --watch",
     "remove-comments": "node --loader ts-node/esm src/bin/remove-comments.ts"
   },

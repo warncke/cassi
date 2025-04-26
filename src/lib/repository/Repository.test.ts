@@ -122,4 +122,33 @@ describe("Repository", () => {
     expect(() => repository.remWorktree(taskId)).not.toThrow();
     expect(repository.worktrees.has(taskId)).toBe(false); // Still false
   });
+
+  describe("addWorktree", () => {
+    test("should add a valid worktree to the map", () => {
+      const mockCassi = {} as unknown as Cassi;
+      const mockTask = new Task(mockCassi);
+      mockTask.taskId = "valid-task-id";
+      const mockWorktree = new Worktree(repository, mockTask);
+
+      repository.addWorktree(mockWorktree);
+
+      expect(repository.worktrees.has("valid-task-id")).toBe(true);
+      expect(repository.worktrees.get("valid-task-id")).toBe(mockWorktree);
+    });
+
+    test("should throw an error if the worktree task has a null taskId", () => {
+      const mockCassi = {} as unknown as Cassi;
+      const mockTask = new Task(mockCassi);
+      mockTask.taskId = "temp-valid-id"; // Start with a valid ID for constructor
+      const mockWorktree = new Worktree(repository, mockTask);
+
+      // Now set the taskId to null *after* Worktree creation
+      mockWorktree.task.taskId = null;
+
+      expect(() => repository.addWorktree(mockWorktree)).toThrow(
+        "Task ID cannot be null when adding a Worktree."
+      );
+      expect(repository.worktrees.size).toBe(0); // Ensure nothing was added
+    });
+  });
 });

@@ -22,7 +22,23 @@ describe("Worktree", () => {
     expect(worktree.worktreeDir).toBe(
       path.join(repositoryDir, ".cassi", "worktrees", taskId)
     );
-    // The Worktree constructor no longer sets task.worktreeDir
+  });
+
+  it("should construct with an explicit worktreeDir if provided", () => {
+    const repositoryDir = "/path/to/repo";
+    const taskId = "test-task-id";
+    const explicitWorktreeDir = "/path/to/explicit/worktree";
+    const mockUser = {} as User;
+    const mockRepository = { repositoryDir } as Repository;
+    const mockTask = { taskId } as Task;
+
+    const worktree = new Worktree(
+      mockRepository,
+      mockTask,
+      explicitWorktreeDir
+    );
+
+    expect(worktree.worktreeDir).toBe(explicitWorktreeDir);
   });
 
   it("should throw an error during construction if taskId is null", () => {

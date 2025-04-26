@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Command } from "commander";
 import { Cassi } from "../lib/cassi/Cassi.js";
 import { User } from "../lib/user/User.js";
-import { InitializeRepository } from "../lib/task/tasks/InitializeRepository.js";
 import Input from "../lib/prompt/prompts/Input.js";
 import { Prompt } from "../lib/prompt/Prompt.js";
-import { Code } from "../lib/task/tasks/Code.js";
 import { CLIPromptHandler } from "../lib/cli-prompt-handler/CLIPromptHandler.js";
 
 vi.mock("commander", () => {
@@ -21,8 +19,7 @@ vi.mock("commander", () => {
 
 vi.mock("../lib/cassi/Cassi.js");
 vi.mock("../lib/user/User.js");
-vi.mock("../lib/task/tasks/InitializeRepository.js");
-vi.mock("../lib/task/tasks/Code.js");
+// No longer need to mock specific task classes directly here
 vi.mock("../lib/prompt/prompts/Input.js");
 vi.mock("../lib/prompt/Prompt.js");
 vi.mock("../lib/cli-prompt-handler/CLIPromptHandler.js");
@@ -79,15 +76,19 @@ describe("cassi bin script", () => {
 
     mockCassiInstance = {
       init: vi.fn().mockResolvedValue(undefined),
-      newTask: vi.fn().mockResolvedValue(undefined),
+      // Mock newTask to return an object with a mock setRequest if needed
+      newTask: vi.fn().mockImplementation((taskName: string) => {
+        if (taskName === "Code") {
+          return { setRequest: vi.fn() };
+        }
+        return {}; // Return empty object for other tasks like InitializeRepository
+      }),
       runTasks: vi.fn().mockResolvedValue(undefined),
       user: mockUserInstance,
       configFile: "cassi.json",
       repositoryDir: ".",
     };
     (Cassi as any).mockImplementation(() => mockCassiInstance);
-
-    (Code as any).mockClear();
   });
 
   afterEach(() => {
@@ -99,7 +100,6 @@ describe("cassi bin script", () => {
   it("should initialize, run tasks, prompt twice, create Code task, and break loop", async () => {
     await import("../bin/cassi.js");
 
-
     expect(User).toHaveBeenCalledTimes(1);
     expect(Cassi).toHaveBeenCalledTimes(1);
     expect(mockCassiInstance.init).toHaveBeenCalledTimes(1);
@@ -107,14 +107,13 @@ describe("cassi bin script", () => {
     expect(mockCassiInstance.newTask).toHaveBeenCalledTimes(2);
     expect(mockCassiInstance.newTask).toHaveBeenNthCalledWith(
       1,
-      expect.any(InitializeRepository)
+      "InitializeRepository"
     );
-    expect(mockCassiInstance.newTask).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Code)
-    );
-    expect(Code).toHaveBeenCalledTimes(1);
-    expect(Code).toHaveBeenCalledWith(mockCassiInstance, null, "test request");
+    expect(mockCassiInstance.newTask).toHaveBeenNthCalledWith(2, "Code");
+
+    // Check if the setRequest method on the mocked Code task was called
+    const mockCodeTask = mockCassiInstance.newTask.mock.results[1].value;
+    expect(mockCodeTask.setRequest).toHaveBeenCalledWith("test request");
 
     expect(mockCassiInstance.runTasks).toHaveBeenCalledTimes(2);
     expect(mockUserInstance.prompt).toHaveBeenCalledTimes(2);
@@ -141,16 +140,15 @@ describe("cassi bin script", () => {
     expect(mockCassiInstance.newTask).toHaveBeenCalledTimes(1);
     expect(mockCassiInstance.newTask).toHaveBeenNthCalledWith(
       1,
-      expect.any(InitializeRepository)
+      "InitializeRepository"
     );
     expect(mockCassiInstance.runTasks).toHaveBeenCalledTimes(1);
     expect(mockUserInstance.prompt).toHaveBeenCalledTimes(1);
     expect(Input).toHaveBeenCalledTimes(1);
     expect(Prompt).toHaveBeenCalledTimes(1);
     expect(sharedMockInputInstance.response).toBe(null);
-    expect(consoleLogSpy).toHaveBeenCalledTimes(1);
+    expect(consoleLogSpy).toHaveBeenCalledTimes(1); // cassi starting + No input...
     expect(consoleLogSpy).toHaveBeenCalledWith("No input received, exiting.");
-    expect(Code).not.toHaveBeenCalled();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
 });
