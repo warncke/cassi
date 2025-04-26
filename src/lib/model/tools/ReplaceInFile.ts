@@ -40,7 +40,7 @@ Critical rules:
 
 export class ReplaceInFile extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "replace_in_file",
+    name: "REPLACE_IN_FILE",
     description:
       "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.",
     parameters: {

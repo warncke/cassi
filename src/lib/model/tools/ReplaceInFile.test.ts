@@ -82,7 +82,7 @@ describe("ReplaceInFile", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ReplaceInFile.toolDefinition).toBeDefined();
-    expect(ReplaceInFile.toolDefinition.name).toBe("replace_in_file");
+    expect(ReplaceInFile.toolDefinition.name).toBe("REPLACE_IN_FILE");
     expect(ReplaceInFile.toolDefinition.description).toBeDefined();
     expect(ReplaceInFile.toolDefinition.parameters).toBeDefined();
     expect(ReplaceInFile.toolDefinition.parameters.type).toBe("object");
