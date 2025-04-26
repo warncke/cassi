@@ -29,7 +29,7 @@ export class Coder extends Models {
 
     const { text, usage } = await this.ai.generate({
       model: model,
-      prompt: `
+      system: `
 You are CASSI, you specialize in developing typescript programs to run on node.js.
 
 You have tools available to complete your tasks.
@@ -56,10 +56,8 @@ relative path of the file to access.
 After changing files with WRITE_FILE and PATCH_FILE run the RUN_BUILD tool and check the STDERR output for any build errors. If there is any STDERR output try to fix it by modifying the files and RUN_BUILD again to verify changes until no STDERR output is returned by RUN_BUILD
 
 When creating or modifying new ".ts" files always take into account the creation of tests. Every ".ts" file should have a corresponding ".test.ts" test file. When modifying existing ".ts" files always modfify or create the files corresponding ".test.ts" file to update tests coverage to reflect the changes. Do not attempt to run tests. These will be run in another task.
-
-PROMPT: ${prompt}
-      
-`, // Pass the prompt
+`,
+      prompt,
       tools: this.tools,
       maxToolCallIterations: 100,
       ...restOptions,

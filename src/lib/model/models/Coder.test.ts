@@ -220,8 +220,9 @@ describe("Coder Model", () => {
     expect(mockGenerate).toHaveBeenCalledWith({
       model: model,
       prompt: expect.stringContaining(prompt as string),
+      system: expect.any(String), // Add expectation for system prompt
       tools: coderInstance.tools,
-      maxToolCallIterations: 100, // Add expectation for the new option
+      maxToolCallIterations: 100,
       ...restOptions,
     });
   });
