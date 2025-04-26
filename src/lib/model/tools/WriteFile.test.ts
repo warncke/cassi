@@ -99,7 +99,7 @@ describe("WriteFile", () => {
     expect(typeof toolMethod).toBe("function");
   });
 
-  it("toolMethod should invoke fs.writeFile via task.invoke and return success message", async () => {
+  it("toolMethod should invoke fs.writeFile via task.invoke and return the file content", async () => {
     const input = { path: "some/new/file.txt", content: "Hello World" };
     const toolArgs = WriteFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -114,6 +114,6 @@ describe("WriteFile", () => {
       ["/mock/cwd/some/new/file.txt", "Hello World"]
     );
 
-    expect(result).toBe(`File written successfully to ${input.path}`);
+    expect(result).toBe(input.content);
   });
 });

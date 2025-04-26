@@ -1,7 +1,7 @@
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Coder as CoderModel } from "../../model/models/Coder.js";
-import { gemini15Flash } from "@genkit-ai/googleai";
+import { gemini25ProPreview0325 } from "@genkit-ai/googleai";
 
 export class Coder extends Task {
   public prompt: string;
@@ -16,7 +16,7 @@ export class Coder extends Task {
     const modelInstance = this.newModel("Coder") as CoderModel;
 
     const generateOptions = {
-      model: gemini15Flash,
+      model: gemini25ProPreview0325,
       prompt: this.prompt,
     };
 

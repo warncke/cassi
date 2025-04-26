@@ -229,7 +229,7 @@ Critical rules:
         [],
         [fullPath, modifiedContent]
       );
-      return `Successfully applied ${replacementsMade} replacement(s) to ${input.path}.\n\nFinal file content:\n\`\`\`\n${modifiedContent}\n\`\`\``;
+      return modifiedContent;
     } catch (writeError: any) {
       return `Error writing modified content to ${input.path}: ${writeError.message}`;
     }

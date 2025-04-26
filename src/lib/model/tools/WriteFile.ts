@@ -47,6 +47,6 @@ export class WriteFile extends ModelTool {
     const fullPath = path.join(model.task.getCwd(), input.path);
     await model.task.invoke("fs", "writeFile", [], [fullPath, input.content]);
 
-    return `File written successfully to ${input.path}`;
+    return input.content;
   }
 }

@@ -130,10 +130,7 @@ Hello universe!
       [],
       [fullTestPath, finalContent]
     );
-    expect(result).toContain(
-      `Successfully applied 1 replacement(s) to ${testFilePath}`
-    );
-    expect(result).toContain(finalContent);
+    expect(result).toBe(finalContent);
   });
 
   it("toolMethod should successfully replace content with multiple blocks", async () => {
@@ -189,10 +186,7 @@ Third Line
       [],
       [fullTestPath, finalContent]
     );
-    expect(result).toContain(
-      `Successfully applied 2 replacement(s) to ${testFilePath}`
-    );
-    expect(result).toContain(finalContent);
+    expect(result).toBe(finalContent);
   });
 
   it.skip("toolMethod should handle deletion using an empty REPLACE block", async () => {
@@ -241,10 +235,7 @@ Line 2 to delete
       [fullTestPath, finalContent]
     );
 
-    expect(result).toContain(
-      `Successfully applied 1 replacement(s) to ${testFilePath}`
-    );
-    expect(result).toContain(finalContent);
+    expect(result).toBe(finalContent);
   });
 
   it("toolMethod should return error if file not found", async () => {
@@ -603,9 +594,6 @@ Third Line
       [],
       [fullTestPath, finalContent]
     );
-    expect(result).toContain(
-      `Successfully applied 2 replacement(s) to ${testFilePath}`
-    );
-    expect(result).toContain(finalContent);
+    expect(result).toBe(finalContent);
   });
 });

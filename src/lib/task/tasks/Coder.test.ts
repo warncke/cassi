@@ -3,7 +3,7 @@ import { Coder } from "./Coder.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Task } from "../Task.js";
 import { User } from "../../user/User.js";
-import { gemini15Flash } from "@genkit-ai/googleai";
+import { gemini25ProPreview0325 } from "@genkit-ai/googleai";
 
 vi.mock("../../cassi/Cassi");
 vi.mock("../../user/User");
@@ -56,7 +56,7 @@ describe("Coder Task", () => {
 
     expect(mockGenerate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: gemini15Flash,
+        model: gemini25ProPreview0325,
         prompt: testPrompt,
       })
     );
