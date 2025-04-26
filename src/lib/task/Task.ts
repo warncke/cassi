@@ -1,4 +1,6 @@
 import process from "node:process";
+import crypto from "crypto";
+import { kebabCase } from "change-case";
 import { Cassi } from "../cassi/Cassi.js";
 import { Model } from "../model/Model.js";
 import { Models } from "../model/Models.js";
@@ -11,16 +13,26 @@ export class Task {
   public startedAt: Date | null = null;
   public finishedAt: Date | null = null;
   public error: Error | null = null;
+  public taskId: string | null = null;
 
   constructor(cassi: Cassi, parentTask: Task | null = null) {
     this.cassi = cassi;
     this.parentTask = parentTask;
   }
 
-  async initTask(): Promise<void> {
-  }
+  async initTask(): Promise<void> {}
 
-  async cleanupTask(): Promise<void> {
+  async cleanupTask(): Promise<void> {}
+
+  setTaskID(summary: string): void {
+    const repoSlug = kebabCase(summary);
+    const hashInput = `${repoSlug}${Date.now()}`;
+    const hash = crypto.createHash("sha256").update(hashInput).digest("base64");
+    const alphanumericHash = hash.replace(/[^a-zA-Z0-9]/g, "");
+    const id = alphanumericHash.substring(0, 8);
+    this.taskId = `${id}-${repoSlug}`;
+    console.log(`Generated ID for file modification task: ${id}`);
+    console.log(`Task ID set to: ${this.taskId}`);
   }
 
   async run(): Promise<void> {

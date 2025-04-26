@@ -1,7 +1,5 @@
 import path from "path";
-import crypto from "crypto";
 import { Task } from "../Task.js";
-import { kebabCase } from "change-case";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
 import { Coder } from "./Coder.js";
@@ -20,15 +18,11 @@ export class Code extends Task {
   }
 
   private async initFileTask(): Promise<void> {
-    const repoSlug = kebabCase(this.evaluation.summary);
+    this.setTaskID(this.evaluation.summary);
 
-    const hashInput = `${repoSlug}${Date.now()}`;
-    const hash = crypto.createHash("sha256").update(hashInput).digest("base64");
-
-    const alphanumericHash = hash.replace(/[^a-zA-Z0-9]/g, "");
-    const id = alphanumericHash.substring(0, 8);
-
-    this.taskId = `${id}-${repoSlug}`;
+    if (!this.taskId) {
+      throw new Error("Task ID was not set");
+    }
 
     this.worktreeDir = path.join(
       this.cassi.repository.repositoryDir,
@@ -37,8 +31,6 @@ export class Code extends Task {
       this.taskId
     );
 
-    console.log(`Generated ID for file modification task: ${id}`);
-    console.log(`Task ID set to: ${this.taskId}`);
     console.log(`Worktree directory set to: ${this.worktreeDir}`);
 
     await this.invoke(

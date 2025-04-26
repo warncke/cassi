@@ -103,6 +103,10 @@ describe("Task", () => {
     expect(task.error).toBeNull();
   });
 
+  it("should have null taskId by default", () => {
+    expect(task.taskId).toBeNull();
+  });
+
   it("should have null parentTask by default", () => {
     expect(task.parentTask).toBeNull();
   });
@@ -413,8 +417,7 @@ describe("Task", () => {
     const mockWorktreeDir = "/path/to/worktree";
     const mockProcessCwd = "/current/process/dir";
 
-    beforeEach(() => {
-    });
+    beforeEach(() => {});
 
     it("should return task.worktreeDir if set", () => {
       task = new Task(mockCassi);
@@ -465,6 +468,76 @@ describe("Task", () => {
       expect(grandParentGetCwdSpy).toHaveBeenCalled();
 
       grandParentGetCwdSpy.mockRestore();
+    });
+  });
+
+  describe("setTaskID", () => {
+    let dateNowSpy: any;
+    const mockTimestamp = 1678886400000;
+
+    beforeEach(() => {
+      dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(mockTimestamp);
+    });
+
+    afterEach(() => {
+      dateNowSpy.mockRestore();
+    });
+
+    it("should generate a taskId based on the summary and current timestamp", () => {
+      const summary = "Implement Feature X";
+      const expectedSlug = "implement-feature-x";
+      const expectedHashInput = `${expectedSlug}${mockTimestamp}`;
+
+      task.setTaskID(summary);
+
+      expect(task.taskId).toBeDefined();
+      expect(task.taskId).toMatch(/^[a-zA-Z0-9]{8}-implement-feature-x$/);
+    });
+
+    it("should handle summaries with different characters", () => {
+      const summary = "Fix Bug #123 with $pecial Chars!";
+      const expectedSlug = "fix-bug-123-with-pecial-chars";
+      const expectedHashInput = `${expectedSlug}${mockTimestamp}`;
+
+      task.setTaskID(summary);
+
+      expect(task.taskId).toBeDefined();
+      expect(task.taskId).toMatch(
+        /^[a-zA-Z0-9]{8}-fix-bug-123-with-pecial-chars$/
+      );
+    });
+
+    it("should generate different IDs for different summaries at the same time", () => {
+      const summary1 = "Summary One";
+      const summary2 = "Summary Two";
+
+      const task1 = new Task(mockCassi);
+      const task2 = new Task(mockCassi);
+
+      task1.setTaskID(summary1);
+      task2.setTaskID(summary2);
+
+      expect(task1.taskId).not.toBe(task2.taskId);
+      expect(task1.taskId).toMatch(/^[a-zA-Z0-9]{8}-summary-one$/);
+      expect(task2.taskId).toMatch(/^[a-zA-Z0-9]{8}-summary-two$/);
+    });
+
+    it("should generate different IDs for the same summary at different times", () => {
+      const summary = "Same Summary";
+
+      const task1 = new Task(mockCassi);
+      task1.setTaskID(summary);
+      const taskId1 = task1.taskId;
+
+      dateNowSpy.mockReturnValue(mockTimestamp + 1000);
+
+      const task2 = new Task(mockCassi);
+      task2.setTaskID(summary);
+      const taskId2 = task2.taskId;
+
+      expect(taskId1).not.toBe(taskId2);
+      expect(taskId1).toMatch(/^[a-zA-Z0-9]{8}-same-summary$/);
+      expect(taskId2).toMatch(/^[a-zA-Z0-9]{8}-same-summary$/);
     });
   });
 });
