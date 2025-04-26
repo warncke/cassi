@@ -13,11 +13,14 @@ const program = new Command();
 program
   .option("-r, --repository-dir <path>", "repository directory", ".")
   .option("-w, --worktree-dir <path>", "worktree directory")
-  .option("-c, --config-file <file>", "config file", "cassi.json");
+  .option("-c, --config-file <file>", "config file", "cassi.json")
+  .argument("<taskName>", "name of the task to run")
+  .argument("[taskArgs...]", "arguments for the task");
 
 program.parse(process.argv);
 
 const options = program.opts();
+const [taskName, ...taskArgs] = program.args;
 
 async function run() {
   if (!options.worktreeDir) {
@@ -71,6 +74,10 @@ async function run() {
   console.log(
     `Cassi initialized for worktree: ${absoluteWorktreeDir} (Task ID: ${taskId})`
   );
+
+  const newTask = cassi.task.newTask(taskName, task, ...taskArgs);
+  task.addSubtask(newTask); // Add the new task as a subtask
+  await task.run(); // Run the main task (which will run the subtask)
 }
 
 run().catch((error) => {

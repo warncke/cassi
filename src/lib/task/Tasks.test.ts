@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from "vitest";
 import path from "path";
+import { pathToFileURL } from "url";
 import { Tasks } from "./Tasks.js";
 import { Task } from "./Task.js";
 import fs from "fs/promises";
@@ -114,8 +115,9 @@ describe("Tasks", () => {
       await tasks.init();
 
       expect(tasks.availableTasks.size).toBe(0);
+      const errorTaskFileURL = pathToFileURL(errorTaskPath).toString();
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        `Error loading task from ${errorTaskPath}:`,
+        `Error loading task from ${errorTaskFileURL}:`,
         expect.objectContaining({ cause: importError })
       );
 
