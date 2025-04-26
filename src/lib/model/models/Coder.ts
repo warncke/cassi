@@ -29,8 +29,10 @@ export class Coder extends Models {
 
     const { text, usage } = await this.ai.generate({
       model: model,
-      system: `
+      prompt: `
 You are CASSI, you specialize in developing typescript programs to run on node.js.
+
+You need to execute the task given in PROMPT: ${prompt}
 
 You have tools available to complete your tasks.
 
@@ -151,8 +153,8 @@ You have access to two tools for working with files: **WRITE_FILE** and **REPLAC
 
 By thoughtfully selecting between WRITE_FILE and REPLACE_IN_FILE, you can make your file editing process smoother, safer, and more efficient.
 
+Follow your instructions to perform the task given by PROMPT: ${prompt}
 `,
-      prompt,
       tools: this.tools,
       maxToolCallIterations: 100,
       ...restOptions,
