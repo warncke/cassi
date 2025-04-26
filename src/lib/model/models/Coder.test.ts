@@ -378,11 +378,6 @@ describe("Coder Model", () => {
     ]);
     expect(secondCallArgs.prompt).toBeUndefined();
     expect(result).toBe(""); // Expect empty string now
-
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      `Calling tool: EXECUTE_COMMAND with input:`,
-      toolInput
-    );
   });
 
   it("should handle multiple tool requests in one turn and return empty string", async () => {

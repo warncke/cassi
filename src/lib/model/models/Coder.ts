@@ -192,11 +192,6 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
     let finalUsage;
 
     while (true) {
-      console.log(
-        "GENERATE",
-        JSON.stringify(generateOptions.messages),
-        generateOptions.prompt
-      );
       llmResponse = await this.ai.generate(generateOptions);
       finalUsage = llmResponse.usage;
 
@@ -221,10 +216,6 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
             };
           }
           try {
-            console.log(
-              `Calling tool: ${part.toolRequest.name} with input:`,
-              part.toolRequest.input
-            );
             const output = await handler(part.toolRequest.input);
             return {
               toolResponse: {
