@@ -34,12 +34,6 @@ export class ReadFile extends ModelTool {
     model: Models,
     input: z.infer<typeof readFileInputSchema>
   ): Promise<string> {
-    console.log(
-      "ReadFile toolMethod cwd:",
-      model.task.getCwd(),
-      "input:",
-      input
-    );
     const fullPath = path.join(model.task.getCwd(), input.path);
     try {
       const content = await model.task.invoke("fs", "readFile", [], [fullPath]);

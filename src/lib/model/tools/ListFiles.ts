@@ -28,15 +28,6 @@ export class ListFiles extends ModelTool {
       ignore: ["node_modules/**", ".cassi/**", "dist/**"],
     };
 
-    console.log(
-      "ListFiles toolMethod cwd:",
-      cwd,
-      "pattern:",
-      pattern,
-      "options:",
-      options
-    );
-
     try {
       const files = (await model.task.invoke(
         "fs",

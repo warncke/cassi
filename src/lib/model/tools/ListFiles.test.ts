@@ -314,30 +314,6 @@ describe("ListFiles", () => {
     );
   });
 
-  it("toolMethod should log cwd, pattern, and options", async () => {
-    const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1];
-
-    await toolMethod();
-
-    const expectedPattern = "**/*.{ts,json}";
-    const expectedOptions: GlobOptions = {
-      cwd: "/mock/cwd",
-      nodir: true,
-      ignore: ["node_modules/**", ".cassi/**", "dist/**"],
-    };
-    expect(consoleLogSpy).toHaveBeenCalledTimes(1);
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ListFiles toolMethod cwd:",
-      "/mock/cwd",
-      "pattern:",
-      expectedPattern,
-      "options:",
-      expectedOptions
-    );
-  });
-
-
   it("toolMethod should pass the correct ignore option to fs.glob", async () => {
     const toolArgs = ListFiles.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];

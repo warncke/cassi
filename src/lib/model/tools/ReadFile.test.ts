@@ -178,20 +178,4 @@ describe("ReadFile", () => {
 
     expect(result).toBe("File does not exist");
   });
-
-  it("toolMethod should log cwd and input", async () => {
-    const input = { path: "debug/log.txt" };
-    const toolArgs = ReadFile.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1];
-
-    await toolMethod(input);
-
-    expect(consoleLogSpy).toHaveBeenCalledTimes(1);
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReadFile toolMethod cwd:",
-      "/mock/cwd",
-      "input:",
-      input
-    );
-  });
 });
