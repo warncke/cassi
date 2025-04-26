@@ -1,4 +1,3 @@
-import * as fs from "fs/promises";
 import path from "path";
 import { Task } from "../task/Task.js";
 import { Repository } from "./Repository.js";
@@ -20,10 +19,48 @@ export class Worktree {
       "worktrees",
       task.taskId
     );
-    task.worktreeDir = this.worktreeDir;
   }
 
   async init(): Promise<void> {
-    await fs.mkdir(this.worktreeDir, { recursive: true });
+    if (!this.task.taskId) {
+      throw new Error("Task ID cannot be null when initializing a Worktree.");
+    }
+
+    console.log(`Worktree directory set to: ${this.worktreeDir}`);
+
+    await this.task.invoke(
+      "git",
+      "addWorktree",
+      [this.repository.repositoryDir],
+      [this.worktreeDir, this.task.taskId]
+    );
+    console.log(
+      `Added worktree at ${this.worktreeDir} for branch ${this.task.taskId}`
+    );
+
+    await this.task.invoke(
+      "console",
+      "exec",
+      [this.task.getCwd()],
+      ["npm install"]
+    );
+    console.log(
+      `Created branch ${
+        this.task.taskId
+      } and installed dependencies in ${this.task.getCwd()}`
+    );
+  }
+
+  async delete(): Promise<void> {
+    console.log(`[Worktree] Deleting worktree at ${this.worktreeDir}`);
+    try {
+      await this.repository.remWorktree(this.worktreeDir);
+    } catch (e) {
+      console.warn(
+        `[Worktree] Failed to remove worktree directory ${this.worktreeDir}:`,
+        e
+      );
+    }
+    console.log(`[Worktree] Finished deleting worktree at ${this.worktreeDir}`);
   }
 }

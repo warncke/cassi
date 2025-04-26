@@ -4,12 +4,13 @@ import { kebabCase } from "change-case";
 import { Cassi } from "../cassi/Cassi.js";
 import { Model } from "../model/Model.js";
 import { Models } from "../model/Models.js";
+import { Worktree } from "../repository/Worktree.js";
 
 export class Task {
   public cassi: Cassi;
   public parentTask: Task | null = null;
   public subTasks: Task[] = [];
-  public worktreeDir?: string;
+  public worktree?: Worktree;
   public startedAt: Date | null = null;
   public finishedAt: Date | null = null;
   public error: Error | null = null;
@@ -24,7 +25,11 @@ export class Task {
 
   async cleanupTask(): Promise<void> {}
 
-  setTaskID(summary: string): void {
+  async initWorktree(): Promise<void> {
+    this.worktree = await this.cassi.repository.getWorktree(this);
+  }
+
+  setTaskId(summary: string): void {
     const repoSlug = kebabCase(summary);
     const hashInput = `${repoSlug}${Date.now()}`;
     const hash = crypto.createHash("sha256").update(hashInput).digest("base64");
@@ -110,13 +115,25 @@ export class Task {
     this.subTasks.push(subtask);
   }
 
-  getCwd(): string {
-    if (this.worktreeDir) {
-      return this.worktreeDir;
+  worktreeDir(): string {
+    if (this.worktree?.worktreeDir) {
+      return this.worktree.worktreeDir;
     }
     if (this.parentTask) {
-      return this.parentTask.getCwd();
+      try {
+        return this.parentTask.worktreeDir();
+      } catch (e) {}
     }
-    return process.cwd();
+    throw new Error(
+      "Worktree directory not found for this task or any parent task."
+    );
+  }
+
+  getCwd(): string {
+    try {
+      return this.worktreeDir();
+    } catch (e) {
+      return process.cwd();
+    }
   }
 }

@@ -1,4 +1,3 @@
-import path from "path";
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
@@ -10,7 +9,6 @@ export class Code extends Task {
   public prompt: string;
   public evaluation: any;
   public taskId: string | null = null;
-  public worktreeDir: string | undefined = undefined;
 
   constructor(cassi: Cassi, parentTask: Task | null, prompt: string) {
     super(cassi, parentTask);
@@ -18,37 +16,13 @@ export class Code extends Task {
   }
 
   private async initFileTask(): Promise<void> {
-    this.setTaskID(this.evaluation.summary);
+    this.setTaskId(this.evaluation.summary);
 
     if (!this.taskId) {
       throw new Error("Task ID was not set");
     }
 
-    this.worktreeDir = path.join(
-      this.cassi.repository.repositoryDir,
-      ".cassi",
-      "worktrees",
-      this.taskId
-    );
-
-    console.log(`Worktree directory set to: ${this.worktreeDir}`);
-
-    await this.invoke(
-      "git",
-      "addWorktree",
-      [this.cassi.repository.repositoryDir],
-      [this.worktreeDir, this.taskId]
-    );
-    console.log(
-      `Added worktree at ${this.worktreeDir} for branch ${this.taskId}`
-    );
-
-    await this.invoke("console", "exec", [this.getCwd()], ["npm install"]);
-    console.log(
-      `Created branch ${
-        this.taskId
-      } and installed dependencies in ${this.getCwd()}`
-    );
+    await this.initWorktree();
 
     const formattedSteps = this.evaluation.steps
       .map((step: string) => `- ${step}`)
@@ -85,8 +59,14 @@ export class Code extends Task {
 
   public async cleanupTask(): Promise<void> {
     console.log("[Code Task] Starting cleanupTask");
-    if (this.worktreeDir) {
-      await this.invoke("git", "remWorkTree", [], [this.worktreeDir]);
+    if (this.worktree) {
+      try {
+        await this.worktree.delete();
+      } catch (e) {
+        console.warn("[Code Task] Error during worktree cleanup:", e);
+      }
+    } else {
+      console.log("[Code Task] No worktree found for cleanup.");
     }
     console.log("[Code Task] Finished cleanupTask");
   }

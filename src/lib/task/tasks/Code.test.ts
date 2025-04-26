@@ -53,10 +53,16 @@ describe("Code Task", () => {
     mockEvaluateModel = { generate: mockGenerate };
 
     mockNewModel = vi.fn().mockReturnValue(mockEvaluateModel);
+    const mockGetWorktree = vi.fn().mockImplementation(async (task) => {
+      // Simulate setting the worktreeDir on the task, as the real method does
+      task.worktreeDir = `/mock/repo/dir/.cassi/worktrees/${task.taskId}`;
+      return { worktreeDir: task.worktreeDir }; // Return a mock Worktree object
+    });
 
     mockCassi = {
       repository: {
         repositoryDir: "/mock/repo/dir",
+        getWorktree: mockGetWorktree, // Add the mock function here
       },
       model: {
         newInstance: mockNewModel,
@@ -70,10 +76,17 @@ describe("Code Task", () => {
       .spyOn(codeTask as any, "invoke")
       .mockResolvedValue(undefined);
     vi.spyOn(codeTask, "addSubtask");
-    vi.spyOn(codeTask, "getCwd").mockImplementation(
-      () => codeTask.worktreeDir || "/mock/worktree/dir"
-    );
+    // getCwd will call the actual implementation which now relies on worktreeDir()
+    // Mock worktreeDir separately for tests that need it
+    vi.spyOn(codeTask, "worktreeDir").mockImplementation(() => {
+      if (codeTask.worktree?.worktreeDir) {
+        return codeTask.worktree.worktreeDir;
+      }
+      throw new Error("Mock worktreeDir not set");
+    });
+    // No longer need to mock remWorktree here as it's not called by cleanupTask
     vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -88,7 +101,8 @@ describe("Code Task", () => {
     expect(codeTask.parentTask).toBe(mockParentTask);
     expect(codeTask.prompt).toBe("Generate some code.");
     expect(codeTask.taskId).toBeNull();
-    expect(codeTask.worktreeDir).toBeUndefined();
+    // worktreeDir property is removed, check worktree object instead if needed
+    expect(codeTask.worktree).toBeUndefined();
   });
 
   it("should evaluate prompt, create worktree, install deps, and add Coder subtask when modifiesFiles is true", async () => {
@@ -113,27 +127,31 @@ describe("Code Task", () => {
 
     expect(codeTask.evaluation).toEqual(JSON.parse(mockResponse));
     expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-test-summary$/);
-    expect(codeTask.worktreeDir).toMatch(
+    // Check that the worktree object was created and has the correct dir
+    expect(codeTask.worktree).toBeDefined();
+    expect(codeTask.worktree?.worktreeDir).toMatch(
       /^\/mock\/repo\/dir\/\.cassi\/worktrees\/[a-zA-Z0-9]{8}-test-summary$/
     );
 
-    expect(invokeSpy).toHaveBeenCalledTimes(2);
+    // Verify getWorktree was called
+    expect(mockCassi.repository.getWorktree).toHaveBeenCalledTimes(1);
+    expect(mockCassi.repository.getWorktree).toHaveBeenCalledWith(codeTask);
 
-    expect(invokeSpy).toHaveBeenCalledWith(
+    // invokeSpy should not be called for worktree setup anymore
+    expect(invokeSpy).not.toHaveBeenCalledWith(
       "git",
       "addWorktree",
-      [mockCassi.repository.repositoryDir],
-      [codeTask.worktreeDir, codeTask.taskId]
+      expect.anything(),
+      expect.anything()
     );
-
-    expect(invokeSpy).toHaveBeenCalledWith(
+    expect(invokeSpy).not.toHaveBeenCalledWith(
       "console",
       "exec",
-      [codeTask.worktreeDir],
+      expect.anything(),
       ["npm install"]
     );
 
-    expect(codeTask.addSubtask).toHaveBeenCalledTimes(2);
+    expect(codeTask.addSubtask).toHaveBeenCalledTimes(2); // Coder and Tester
     const MockCoder = vi.mocked(Coder);
     expect(MockCoder).toHaveBeenCalledTimes(1);
     expect(codeTask.addSubtask).toHaveBeenCalledWith(
@@ -168,25 +186,59 @@ describe("Code Task", () => {
   });
 
   describe("cleanupTask", () => {
-    it("should call git remWorkTree if worktreeDir is set", async () => {
-      const mockWorktreeDir = "/mock/repo/dir/.cassi/worktrees/mock-task-id";
-      codeTask.worktreeDir = mockWorktreeDir;
+    let mockWorktree: { delete: ReturnType<typeof vi.fn> };
 
+    beforeEach(() => {
+      // Setup a mock worktree object for the task
+      mockWorktree = {
+        delete: vi.fn().mockResolvedValue(undefined),
+      };
+      codeTask.worktree = mockWorktree as any; // Assign mock worktree
+      // No need to set taskId specifically for cleanup tests anymore
+    });
+
+    it("should call worktree.delete() if worktree exists", async () => {
       await codeTask.cleanupTask();
 
-      expect(invokeSpy).toHaveBeenCalledTimes(1);
-      expect(invokeSpy).toHaveBeenCalledWith(
-        "git",
-        "remWorkTree",
-        [],
-        [mockWorktreeDir]
+      expect(mockWorktree.delete).toHaveBeenCalledTimes(1);
+      // remWorktree is no longer called here
+      expect(console.warn).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith(
+        "[Code Task] Starting cleanupTask"
+      );
+      expect(console.log).toHaveBeenCalledWith(
+        "[Code Task] Finished cleanupTask"
       );
     });
 
-    it("should not call invoke if worktreeDir is not set", async () => {
-      codeTask.worktreeDir = undefined;
+    // Removed test for taskId being null as it's no longer relevant
+
+    it("should log warning if worktree.delete() throws", async () => {
+      const deleteError = new Error("Failed to delete worktree");
+      mockWorktree.delete.mockRejectedValue(deleteError);
+
       await codeTask.cleanupTask();
-      expect(invokeSpy).not.toHaveBeenCalled();
+
+      expect(mockWorktree.delete).toHaveBeenCalledTimes(1);
+      // remWorktree is no longer called here
+      expect(console.warn).toHaveBeenCalledTimes(1);
+      expect(console.warn).toHaveBeenCalledWith(
+        "[Code Task] Error during worktree cleanup:",
+        deleteError
+      );
+    });
+
+    it("should log message and not call delete if worktree does not exist", async () => {
+      codeTask.worktree = undefined; // Ensure worktree is not set
+
+      await codeTask.cleanupTask();
+
+      expect(mockWorktree.delete).not.toHaveBeenCalled(); // The specific mock instance's delete
+      // remWorktree is no longer called here
+      expect(console.warn).not.toHaveBeenCalled();
+      expect(console.log).toHaveBeenCalledWith(
+        "[Code Task] No worktree found for cleanup."
+      );
     });
   });
 });

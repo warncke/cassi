@@ -25,4 +25,8 @@ export class Repository {
     await worktree.init();
     return worktree;
   }
+
+  remWorktree(taskId: string): void {
+    this.worktrees.delete(taskId);
+  }
 }

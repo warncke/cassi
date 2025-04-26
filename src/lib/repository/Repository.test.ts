@@ -41,12 +41,21 @@ describe("Repository", () => {
   });
 
   test("getWorktree() should create and return a new Worktree", async () => {
+    const mockInvoke = vi.fn().mockResolvedValue("");
+    const mockGetCwd = vi
+      .fn()
+      .mockReturnValue(
+        path.join(testDir, ".cassi", "worktrees", "test-task-id")
+      );
     const mockCassi = {
-      tool: { invoke: vi.fn() },
+      tool: { invoke: mockInvoke }, // Use the mock function here
       model: { newInstance: vi.fn() },
     } as unknown as Cassi;
     const mockTask = new Task(mockCassi);
     mockTask.taskId = "test-task-id";
+    // Mock the methods directly on the task instance
+    mockTask.invoke = mockInvoke;
+    mockTask.getCwd = mockGetCwd;
 
     await repository.init();
     const worktree = await repository.getWorktree(mockTask);
@@ -58,8 +67,22 @@ describe("Repository", () => {
       path.join(testDir, ".cassi", "worktrees", "test-task-id")
     );
 
-    const worktreeDirStats = await fs.stat(worktree.worktreeDir);
-    expect(worktreeDirStats.isDirectory()).toBe(true);
+    // Verify that worktree.init (which calls task.invoke) was called
+    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    expect(mockInvoke).toHaveBeenNthCalledWith(
+      1,
+      "git",
+      "addWorktree",
+      [testDir], // repositoryDir
+      [worktree.worktreeDir, mockTask.taskId]
+    );
+    expect(mockInvoke).toHaveBeenNthCalledWith(
+      2,
+      "console",
+      "exec",
+      [mockTask.getCwd()],
+      ["npm install"]
+    );
 
     expect(repository.worktrees.get("test-task-id")).toBe(worktree);
   });
@@ -77,5 +100,26 @@ describe("Repository", () => {
     await expect(repository.getWorktree(mockTask)).rejects.toThrow(
       "Task ID cannot be null when creating a Worktree."
     );
+  });
+
+  test("remWorktree() should remove the worktree from the map", async () => {
+    const taskId = "task-to-remove";
+    const mockWorktree = {} as Worktree; // Minimal mock needed
+
+    // Manually add a worktree to the map for testing removal
+    repository.worktrees.set(taskId, mockWorktree);
+    expect(repository.worktrees.has(taskId)).toBe(true);
+
+    repository.remWorktree(taskId);
+
+    expect(repository.worktrees.has(taskId)).toBe(false);
+  });
+
+  test("remWorktree() should not throw if the taskId does not exist", () => {
+    const taskId = "non-existent-task";
+    expect(repository.worktrees.has(taskId)).toBe(false);
+
+    expect(() => repository.remWorktree(taskId)).not.toThrow();
+    expect(repository.worktrees.has(taskId)).toBe(false); // Still false
   });
 });
