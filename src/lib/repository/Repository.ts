@@ -12,7 +12,7 @@ export class Repository {
   }
 
   async init(): Promise<void> {
-    const workspacesDir = path.join(this.repositoryDir, ".cassi", "workspaces");
-    await fs.mkdir(workspacesDir, { recursive: true });
+    const worktreesDir = path.join(this.repositoryDir, ".cassi", "worktrees");
+    await fs.mkdir(worktreesDir, { recursive: true });
   }
 }

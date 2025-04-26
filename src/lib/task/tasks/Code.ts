@@ -33,7 +33,7 @@ export class Code extends Task {
     this.worktreeDir = path.join(
       this.cassi.repository.repositoryDir,
       ".cassi",
-      "workspaces",
+      "worktrees",
       this.taskId
     );
 

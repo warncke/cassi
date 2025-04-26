@@ -26,14 +26,13 @@ describe("Repository", () => {
     expect(repository).toBeInstanceOf(Repository);
   });
 
-  test("init() should create .cassi/workspaces directory", async () => {
+  test("init() should create .cassi/worktrees directory", async () => {
     await repository.init();
-    const workspacesDir = path.join(testDir, ".cassi", "workspaces");
+    const worktreesDir = path.join(testDir, ".cassi", "worktrees");
     let stats;
     try {
-      stats = await fs.stat(workspacesDir);
-    } catch (error) {
-    }
+      stats = await fs.stat(worktreesDir);
+    } catch (error) {}
     expect(stats).toBeDefined();
     expect(stats?.isDirectory()).toBe(true);
   });

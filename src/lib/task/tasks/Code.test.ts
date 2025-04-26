@@ -114,7 +114,7 @@ describe("Code Task", () => {
     expect(codeTask.evaluation).toEqual(JSON.parse(mockResponse));
     expect(codeTask.taskId).toMatch(/^[a-zA-Z0-9]{8}-test-summary$/);
     expect(codeTask.worktreeDir).toMatch(
-      /^\/mock\/repo\/dir\/\.cassi\/workspaces\/[a-zA-Z0-9]{8}-test-summary$/
+      /^\/mock\/repo\/dir\/\.cassi\/worktrees\/[a-zA-Z0-9]{8}-test-summary$/
     );
 
     expect(invokeSpy).toHaveBeenCalledTimes(2);
@@ -169,7 +169,7 @@ describe("Code Task", () => {
 
   describe("cleanupTask", () => {
     it("should call git remWorkTree if worktreeDir is set", async () => {
-      const mockWorktreeDir = "/mock/repo/dir/.cassi/workspaces/mock-task-id";
+      const mockWorktreeDir = "/mock/repo/dir/.cassi/worktrees/mock-task-id";
       codeTask.worktreeDir = mockWorktreeDir;
 
       await codeTask.cleanupTask();
