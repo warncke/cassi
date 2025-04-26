@@ -16,7 +16,6 @@ export interface ToolDefinition {
   };
 }
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -37,13 +36,10 @@ export class Tool {
     Record<string, Record<string, new (...args: any[]) => any>>
   > {
     if (Tool.availableTools !== null) {
-      console.log("Tools already initialized, returning cached list.");
       return Tool.availableTools;
     }
-    console.log("Initializing tools for the first time...");
     Tool.availableTools = {};
 
-    console.log("Initializing tools...");
     const toolsRootPath = path.resolve(__dirname, "../tools");
     try {
       const toolTypeDirs = await fs.readdir(toolsRootPath);
@@ -53,7 +49,6 @@ export class Tool {
         const stat = await fs.stat(toolTypePath);
 
         if (stat.isDirectory()) {
-          console.log(`Found tool type directory: ${toolType}`);
           const toolFiles = await fs.readdir(toolTypePath);
           const toolJsFiles = toolFiles.filter((file) => file.endsWith(".js"));
 
@@ -63,10 +58,6 @@ export class Tool {
             const toolFilePath = path.join(toolTypePath, toolFileName);
 
             const relativeToolPath = path.relative(__dirname, toolFilePath);
-
-            console.log(
-              `Attempting to load tool: ${toolType} from ${relativeToolPath}`
-            );
 
             let importPath = "";
             try {
@@ -88,9 +79,6 @@ export class Tool {
                 }
                 const toolBaseName = path.basename(toolFileName, ".js");
                 Tool.availableTools[toolType][toolBaseName] = ToolClass;
-                console.log(
-                  `Successfully loaded tool class: ${toolType} (${toolBaseName})`
-                );
               } else {
                 console.warn(
                   `Could not find a valid class export in ${importPath}. Looked for default export or named export "${className}".`
@@ -103,19 +91,12 @@ export class Tool {
               );
             }
           } else {
-            console.log(
-              `No suitable .js files found in tool directory: ${toolTypePath}`
-            );
           }
         }
       }
     } catch (error) {
       console.error("Error during tool initialization:", error);
     }
-    console.log(
-      "Tool initialization complete. Available tools:",
-      JSON.stringify(Tool.availableTools ?? {}, null, 2)
-    );
     return Tool.availableTools ?? {};
   }
 
@@ -192,13 +173,6 @@ export class Tool {
    * @returns A promise that resolves to true if the invocation is allowed, false otherwise.
    */
   async allow(invocation: Invocation): Promise<boolean> {
-    console.log(
-      `Checking allow for invocation: Tool=${invocation.toolName}, Method=${
-        invocation.method
-      }, Args=${JSON.stringify(invocation.methodArgs)}, Task=${
-        invocation.task.constructor.name
-      }`
-    );
     return true;
   }
 }

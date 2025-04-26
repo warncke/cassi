@@ -108,10 +108,6 @@ Hello universe!
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
-    );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
       "readFile",
@@ -164,10 +160,6 @@ Third Line
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
-    );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
       "readFile",
@@ -206,11 +198,6 @@ Line 2 to delete
     const toolMethod = toolArgs[1];
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
-
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
-    );
 
     // Assert calls in order
     expect(mockTask.invoke).toHaveBeenNthCalledWith(
@@ -572,10 +559,6 @@ Third Line
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "ReplaceInFile toolMethod called with:",
-      { path: input.path, diff: input.diff }
-    );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
       "readFile",

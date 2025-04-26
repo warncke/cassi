@@ -86,10 +86,6 @@ Critical rules:
     model: Models,
     input: z.infer<typeof replaceInFileInputSchema>
   ): Promise<string> {
-    console.log("ReplaceInFile toolMethod called with:", {
-      path: input.path,
-      diff: input.diff,
-    });
     const fullPath = path.join(model.task.getCwd(), input.path);
     const diffBlocks = input.diff.split(
       /(<<<<<<< SEARCH\n[\s\S]*?\n=======[\s\S]*?\n>>>>>>> REPLACE)/g

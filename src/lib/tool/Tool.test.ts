@@ -60,9 +60,7 @@ describe("Tool", () => {
     } as unknown as Mocked<LocalFS>;
 
     vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
-
   });
-
 
   it("should initialize correctly, loading tools and ignoring test files", async () => {
     const toolsRootPath = path.resolve(__dirname, "../tools");
@@ -96,44 +94,23 @@ describe("Tool", () => {
       }
     );
 
-
     vi.mocked(LocalFS).mockClear();
     vi.mocked(LocalFS).mockImplementation(() => mockLocalFSInstance);
 
     Tool["availableTools"] = null;
 
-    const consoleSpy = vi.spyOn(console, "log");
-
     await toolInstance.init();
-
-    expect(consoleSpy).toHaveBeenCalledWith("Initializing tools...");
-    expect(consoleSpy).toHaveBeenCalledWith("Found tool type directory: fs");
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "Attempting to load tool: fs from ../tools/fs/index.js"
-      )
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Successfully loaded tool class: fs (index)"
-    );
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Tool initialization complete. Available tools:",
-      expect.any(String)
-    );
 
     expect(LocalFS).not.toHaveBeenCalled();
     expect(Tool["availableTools"]).toHaveProperty("fs");
     expect(Tool["availableTools"]!["fs"]).toHaveProperty("index");
     expect(Tool["availableTools"]!["fs"]["index"]).toBe(LocalFS);
-
-    consoleSpy.mockRestore();
   });
 
   describe("invoke", () => {
     let mockTask: Task;
 
-    const mockCassiForTask = {
-    } as Cassi;
+    const mockCassiForTask = {} as Cassi;
 
     beforeEach(() => {
       mockTask = new Task(mockCassiForTask);
@@ -194,7 +171,6 @@ describe("Tool", () => {
         mockMethodArgs
       );
 
-
       expect(methodSpy).toHaveBeenCalledTimes(1);
       expect(methodSpy).toHaveBeenCalledWith(...mockMethodArgs);
 
@@ -207,12 +183,10 @@ describe("Tool", () => {
         mockToolArgs[1]
       );
 
-
       expect(result).toBe(mockResult);
     });
 
     it("should throw an error if tool type is not found", async () => {
-
       vi.mocked(LocalFS).mockClear();
 
       await expect(
@@ -224,7 +198,6 @@ describe("Tool", () => {
     });
 
     it("should throw an error if method is not found on the tool", async () => {
-
       vi.mocked(LocalFS).mockClear();
 
       await expect(
@@ -236,13 +209,11 @@ describe("Tool", () => {
     });
 
     it("should pass arguments correctly to the invoked method", async () => {
-
       const filePath = "path/to/file.txt";
       const content = "some data";
       mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
 
       vi.mocked(LocalFS).mockClear();
-
 
       mockLocalFSInstance.writeFile.mockResolvedValue(undefined);
 
@@ -261,6 +232,33 @@ describe("Tool", () => {
       expect(mockLocalFSInstance.writeFile).toHaveBeenCalledTimes(1);
       expect(LocalFS).toHaveBeenCalledTimes(1);
       expect(LocalFS).toHaveBeenCalledWith();
+    });
+  });
+
+  describe("allow", () => {
+    let mockTask: Task;
+    let mockInvocation: Invocation;
+
+    beforeEach(() => {
+      const mockCassiForTask = {} as Cassi;
+      mockTask = new Task(mockCassiForTask);
+      const mockToolInstance = {};
+      const mockMethod = vi.fn();
+      mockInvocation = new Invocation(
+        mockTask,
+        "testTool",
+        "testImpl",
+        "testMethod",
+        mockMethod,
+        mockToolInstance,
+        [],
+        []
+      );
+    });
+
+    it("should return true for any invocation", async () => {
+      const result = await toolInstance.allow(mockInvocation);
+      expect(result).toBe(true);
     });
   });
 });
