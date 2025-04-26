@@ -67,9 +67,9 @@ async function run() {
   task.taskId = taskId;
 
   const worktree = new Worktree(cassi.repository, task, absoluteWorktreeDir);
+  await worktree.initRepositoryBranch();
   task.worktree = worktree;
-
-  await cassi.repository.addWorktree(worktree);
+  cassi.repository.addWorktree(worktree);
 
   console.log(
     `Cassi initialized for worktree: ${absoluteWorktreeDir} (Task ID: ${taskId})`

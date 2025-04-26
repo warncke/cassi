@@ -41,7 +41,16 @@ describe("Repository", () => {
   });
 
   test("getWorktree() should create and return a new Worktree", async () => {
-    const mockInvoke = vi.fn().mockResolvedValue("");
+    const mockInvoke = vi
+      .fn()
+      // Mock the sequence of calls within worktree.init()
+      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
+      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+      .mockResolvedValueOnce({
+        current: "main", // Add the 'current' property
+        stdout: "On branch main\nYour branch is up to date...",
+        stderr: "",
+      }); // git status
     const mockGetCwd = vi
       .fn()
       .mockReturnValue(
@@ -68,7 +77,7 @@ describe("Repository", () => {
     );
 
     // Verify that worktree.init (which calls task.invoke) was called
-    expect(mockInvoke).toHaveBeenCalledTimes(2);
+    expect(mockInvoke).toHaveBeenCalledTimes(3); // Now expects 3 calls
     expect(mockInvoke).toHaveBeenNthCalledWith(
       1,
       "git",
@@ -83,8 +92,17 @@ describe("Repository", () => {
       [mockTask.getCwd()],
       ["npm install"]
     );
+    // Add check for the 3rd call (git status)
+    expect(mockInvoke).toHaveBeenNthCalledWith(
+      3,
+      "git",
+      "status",
+      [testDir], // repositoryDir
+      []
+    );
 
     expect(repository.worktrees.get("test-task-id")).toBe(worktree);
+    expect(worktree.repositoryBranch).toBe("main"); // Check if branch was set
   });
 
   test("getWorktree() should throw if task.taskId is null", async () => {

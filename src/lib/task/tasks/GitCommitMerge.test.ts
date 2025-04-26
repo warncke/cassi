@@ -17,8 +17,10 @@ describe("GitCommitMerge", () => {
   let mockNewModel: ReturnType<typeof vi.fn>;
   let mockCommitMessageModel: Partial<CommitMessage>;
   let mockGenerate: ReturnType<typeof vi.fn>;
+  let mockGetTaskIdShort: ReturnType<typeof vi.fn>;
 
   const mockCwd = "/mock/cwd";
+  const mockTaskIdShort = "abc1234";
   const mockCleanStatus: StatusResult = {
     isClean: () => true,
   } as StatusResult;
@@ -45,6 +47,8 @@ describe("GitCommitMerge", () => {
     task.newModel = mockNewModel.mockReturnValue(
       mockCommitMessageModel as CommitMessage
     );
+    mockGetTaskIdShort = vi.fn().mockReturnValue(mockTaskIdShort);
+    task.getTaskIdShort = mockGetTaskIdShort;
   });
 
   it("should log 'No changes to commit' and return if status is clean", async () => {
@@ -71,12 +75,32 @@ describe("GitCommitMerge", () => {
 
   it("should call git diff, generate commit message, and log result if status is not clean", async () => {
     mockInvoke.mockImplementation(
-      async (tool: string, method: string, args?: any[]) => {
-        if (tool === "git" && method === "status" && args?.[0] === mockCwd) {
+      async (
+        tool: string,
+        method: string,
+        argArray1?: any[],
+        argArray2?: any[]
+      ) => {
+        // Handle status call
+        if (
+          tool === "git" &&
+          method === "status" &&
+          argArray1?.[0] === mockCwd
+        ) {
           return mockDirtyStatus;
         }
-        if (tool === "git" && method === "diff" && args?.[0] === mockCwd) {
+        // Handle diff call
+        if (tool === "git" && method === "diff" && argArray1?.[0] === mockCwd) {
           return mockDiffResult;
+        }
+        // Handle commitAll call
+        if (
+          tool === "git" &&
+          method === "commitAll" &&
+          argArray1?.[0] === mockCwd &&
+          argArray2?.[0] === `${mockTaskIdShort}: ${mockGeneratedMessage}`
+        ) {
+          return; // commitAll doesn't return anything significant
         }
         throw new Error(`Unexpected invoke call: ${tool}.${method}`);
       }
@@ -96,10 +120,17 @@ describe("GitCommitMerge", () => {
     );
     expect(consoleLogSpy).toHaveBeenCalledWith(
       "Generated Commit Message:",
-      mockGeneratedMessage
+      `${mockTaskIdShort}: ${mockGeneratedMessage}`
     );
     expect(consoleLogSpy).not.toHaveBeenCalledWith("No changes to commit");
-    expect(task.getCwd).toHaveBeenCalledTimes(2); // Once for status, once for diff
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "commitAll",
+      [mockCwd],
+      [`${mockTaskIdShort}: ${mockGeneratedMessage}`]
+    );
+    expect(task.getCwd).toHaveBeenCalledTimes(3); // status, diff, commitAll
+    expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
   });
 
   it("should be an instance of Task", () => {

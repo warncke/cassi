@@ -22,6 +22,8 @@ describe("LocalGit", () => {
     branch: vi.fn(),
     raw: vi.fn(),
     diff: vi.fn(),
+    add: vi.fn(),
+    commit: vi.fn(),
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
@@ -214,6 +216,60 @@ describe("LocalGit", () => {
       await expect(localGit.diff(target)).rejects.toThrow(mockError);
       expect(mockGitInstance.diff).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.diff).toHaveBeenCalledWith([target]);
+    });
+  });
+
+  describe("commitAll", () => {
+    it("should call git.add with './*' and then git.commit with the message", async () => {
+      const commitMessage = "Test commit message";
+      const mockCommitResult = {
+        commit: "abcdef123",
+        author: null,
+        branch: "",
+        summary: { changes: 0, deletions: 0, insertions: 0 },
+        root: false,
+      };
+
+      const addMock = vi.mocked(mockGitInstance.add).mockResolvedValue(""); // Fix: add resolves with string
+      const commitMock = vi
+        .mocked(mockGitInstance.commit)
+        .mockResolvedValue(mockCommitResult);
+
+      const result = await localGit.commitAll(commitMessage);
+
+      expect(addMock).toHaveBeenCalledTimes(1);
+      expect(addMock).toHaveBeenCalledWith("./*");
+      expect(commitMock).toHaveBeenCalledTimes(1);
+      expect(commitMock).toHaveBeenCalledWith(commitMessage);
+      expect(result).toEqual(mockCommitResult);
+    });
+
+    it("should handle errors from git.add", async () => {
+      const commitMessage = "Test commit message";
+      const mockError = new Error("Git add failed");
+      vi.mocked(mockGitInstance.add).mockRejectedValue(mockError);
+
+      await expect(localGit.commitAll(commitMessage)).rejects.toThrow(
+        mockError
+      );
+      expect(mockGitInstance.add).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.add).toHaveBeenCalledWith("./*");
+      expect(mockGitInstance.commit).not.toHaveBeenCalled();
+    });
+
+    it("should handle errors from git.commit", async () => {
+      const commitMessage = "Test commit message";
+      const mockError = new Error("Git commit failed");
+      vi.mocked(mockGitInstance.add).mockResolvedValue(""); // Fix: add resolves with string
+      vi.mocked(mockGitInstance.commit).mockRejectedValue(mockError);
+
+      await expect(localGit.commitAll(commitMessage)).rejects.toThrow(
+        mockError
+      );
+      expect(mockGitInstance.add).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.add).toHaveBeenCalledWith("./*");
+      expect(mockGitInstance.commit).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.commit).toHaveBeenCalledWith(commitMessage);
     });
   });
 });

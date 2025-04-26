@@ -60,24 +60,43 @@ describe("Worktree", () => {
     const taskId = "init-test-task";
     const worktreeDir = path.join(repositoryDir, ".cassi", "worktrees", taskId);
     const cwd = "/test/repo/.cassi/worktrees/init-test-task";
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
       const mockUser = {} as User;
       mockRepository = { repositoryDir } as Repository;
       mockTask = {
         taskId: taskId,
-        invoke: vi.fn().mockResolvedValue(""),
+        invoke: vi.fn().mockResolvedValue({ stdout: "", stderr: "" }), // Default mock
         getCwd: vi.fn().mockReturnValue(cwd),
-        // worktreeDir property removed from Task
       } as unknown as Task;
 
       worktree = new Worktree(mockRepository, mockTask);
+
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      // Mock specific invocations
+      (mockTask.invoke as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+        .mockResolvedValueOnce({
+          current: "main", // Provide the 'current' property
+          stdout: "On branch main\nYour branch is up to date...",
+          stderr: "",
+        }); // git status
     });
 
-    it("should call invoke with correct arguments for git addWorktree and npm install", async () => {
+    afterEach(() => {
+      consoleLogSpy.mockRestore();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it("should call invoke with correct arguments for git addWorktree, npm install, and git status", async () => {
       await worktree.init();
 
-      expect(mockTask.invoke).toHaveBeenCalledTimes(2);
+      expect(mockTask.invoke).toHaveBeenCalledTimes(3);
       expect(mockTask.invoke).toHaveBeenNthCalledWith(
         1,
         "git",
@@ -91,6 +110,42 @@ describe("Worktree", () => {
         "exec",
         [cwd],
         ["npm install"]
+      );
+      expect(mockTask.invoke).toHaveBeenNthCalledWith(
+        3,
+        "git",
+        "status",
+        [repositoryDir],
+        []
+      );
+    });
+
+    it("should set the repositoryBranch property based on git status output", async () => {
+      await worktree.init();
+      expect(worktree.repositoryBranch).toBe("main");
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "Repository branch set to: main"
+      );
+    });
+
+    it("should throw an error if git status result is missing the 'current' property", async () => {
+      // Reset mocks for this specific case
+      vi.resetAllMocks();
+      // Restore console spies as resetAllMocks clears them
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      mockTask.invoke = vi
+        .fn()
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
+        .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+        .mockResolvedValueOnce({
+          stdout: "Missing current property",
+          stderr: "",
+        }); // git status (missing 'current')
+
+      await expect(worktree.init()).rejects.toThrow(
+        "Could not determine repository branch from git status result."
       );
     });
 
@@ -116,6 +171,85 @@ describe("Worktree", () => {
 
       await expect(tempWorktree.init()).rejects.toThrow(
         "Task ID cannot be null when initializing a Worktree."
+      );
+    });
+  });
+
+  describe("initRepositoryBranch", () => {
+    let mockRepository: Repository;
+    let mockTask: Task;
+    let worktree: Worktree;
+    const repositoryDir = "/test/repo";
+    const taskId = "init-branch-test-task";
+    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+    let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      const mockUser = {} as User;
+      mockRepository = { repositoryDir } as Repository;
+      mockTask = {
+        taskId: taskId,
+        invoke: vi.fn(),
+        getCwd: vi.fn(),
+      } as unknown as Task;
+
+      worktree = new Worktree(mockRepository, mockTask);
+
+      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+      consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks(); // Use restoreAllMocks for cleaner state between tests
+    });
+
+    it("should call invoke with correct arguments for git status", async () => {
+      (mockTask.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        current: "feature-branch",
+        stdout: "On branch feature-branch...",
+        stderr: "",
+      });
+
+      await worktree.initRepositoryBranch();
+
+      expect(mockTask.invoke).toHaveBeenCalledTimes(1);
+      expect(mockTask.invoke).toHaveBeenCalledWith(
+        "git",
+        "status",
+        [repositoryDir],
+        []
+      );
+    });
+
+    it("should set the repositoryBranch property based on git status output", async () => {
+      const expectedBranch = "feature-branch";
+      (mockTask.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        current: expectedBranch,
+        stdout: `On branch ${expectedBranch}...`,
+        stderr: "",
+      });
+
+      await worktree.initRepositoryBranch();
+
+      expect(worktree.repositoryBranch).toBe(expectedBranch);
+    });
+
+    it("should throw an error if git status result is null", async () => {
+      (mockTask.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+
+      await expect(worktree.initRepositoryBranch()).rejects.toThrow(
+        "Could not determine repository branch from git status result."
+      );
+    });
+
+    it("should throw an error if git status result is missing the 'current' property", async () => {
+      (mockTask.invoke as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        stdout: "Missing current property",
+        stderr: "",
+      }); // Missing 'current'
+
+      await expect(worktree.initRepositoryBranch()).rejects.toThrow(
+        "Could not determine repository branch from git status result."
       );
     });
   });

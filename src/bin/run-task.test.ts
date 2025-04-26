@@ -72,7 +72,10 @@ const mockTask = vi.fn().mockImplementation(() => mockTaskInstance);
 vi.mocked(Task).mockImplementation(mockTask);
 
 const { Worktree } = await import("../lib/repository/Worktree.js");
-const mockWorktreeInstance = {};
+const mockInitRepositoryBranch = vi.fn(); // Mock for initRepositoryBranch
+const mockWorktreeInstance = {
+  initRepositoryBranch: mockInitRepositoryBranch,
+};
 const mockWorktree = vi.fn().mockImplementation(() => mockWorktreeInstance);
 vi.mocked(Worktree).mockImplementation(mockWorktree);
 
@@ -109,6 +112,7 @@ describe("run-task script", () => {
     mockAddSubtask.mockClear(); // Reset addSubtask mock
     mockTaskRun.mockClear(); // Reset task.run mock
     mockWorktree.mockClear().mockImplementation(() => mockWorktreeInstance);
+    mockInitRepositoryBranch.mockClear(); // Reset initRepositoryBranch mock
     mockExistsSync.mockClear();
 
     // Reset spies
@@ -207,6 +211,24 @@ describe("run-task script", () => {
     expect(consoleLogSpy).toHaveBeenCalledWith(
       `Cassi initialized for worktree: ${worktreeDir} (Task ID: ${taskId})`
     );
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(processExitSpy).not.toHaveBeenCalled();
+  });
+
+  it("should call initRepositoryBranch on the worktree", async () => {
+    const worktreeDir = "/valid/absolute/path";
+    mockOpts.mockReturnValue({
+      repositoryDir: "/repo/dir",
+      worktreeDir: worktreeDir,
+      configFile: "cassi.json",
+    });
+    mockExistsSync.mockReturnValue(true);
+    mockArgs.mockReturnValue(["SomeTask"]); // Need a task name
+
+    await runRunTask();
+
+    expect(mockAddWorktree).toHaveBeenCalledWith(mockWorktreeInstance);
+    expect(mockInitRepositoryBranch).toHaveBeenCalledOnce(); // Verify the call
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     expect(processExitSpy).not.toHaveBeenCalled();
   });

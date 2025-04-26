@@ -603,7 +603,8 @@ describe("Task", () => {
         task: task,
         worktreeDir: "/mock/worktree/dir",
         init: vi.fn().mockResolvedValue(undefined),
-        delete: vi.fn(), // Add mock delete method
+        delete: vi.fn(),
+        repositoryBranch: "main", // Add missing property
         name: "mock-worktree",
       } as Worktree;
       getWorktreeSpy = vi

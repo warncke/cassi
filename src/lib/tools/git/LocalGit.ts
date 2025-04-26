@@ -68,4 +68,9 @@ export class LocalGit {
     const options = target ? [target] : [];
     return this.git.diff(options);
   }
+
+  async commitAll(commitMessage: string) {
+    await this.git.add("./*");
+    return this.git.commit(commitMessage);
+  }
 }

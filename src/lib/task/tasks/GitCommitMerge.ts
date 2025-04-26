@@ -24,12 +24,11 @@ export class GitCommitMerge extends Task {
       prompt: diff,
     };
 
-    const commitMessageResult = await commitMessageModel.generate(
-      generateOptions
-    );
+    const text = await commitMessageModel.generate(generateOptions);
 
-    console.log("Generated Commit Message:", commitMessageResult);
+    const commitMessage = this.getTaskIdShort() + ": " + text;
+    console.log("Generated Commit Message:", commitMessage);
 
-    // TODO: Add git add and git commit steps using the generated message
+    await this.invoke("git", "commitAll", [this.getCwd()], [commitMessage]);
   }
 }

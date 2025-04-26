@@ -6,6 +6,7 @@ export class Worktree {
   readonly repository: Repository;
   readonly task: Task;
   readonly worktreeDir: string;
+  public repositoryBranch!: string;
 
   constructor(repository: Repository, task: Task, worktreeDir?: string) {
     if (!task.taskId) {
@@ -46,6 +47,25 @@ export class Worktree {
         this.task.taskId
       } and installed dependencies in ${this.task.getCwd()}`
     );
+
+    await this.initRepositoryBranch();
+  }
+
+  public async initRepositoryBranch(): Promise<void> {
+    const statusResult = await this.task.invoke(
+      "git",
+      "status",
+      [this.repository.repositoryDir],
+      []
+    );
+
+    if (!statusResult || !statusResult.current) {
+      throw new Error(
+        "Could not determine repository branch from git status result."
+      );
+    }
+    this.repositoryBranch = statusResult.current;
+    console.log(`Repository branch set to: ${this.repositoryBranch}`);
   }
 
   async delete(): Promise<void> {
