@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
+import { GenerateOptions, ToolResponsePart, ToolRequestPart } from "genkit";
+import { ToolDefinition } from "../../tool/Tool.js"; // Import local ToolDefinition
 import { ExecuteCommand } from "../tools/ExecuteCommand.js";
 import { ReadFile } from "../tools/ReadFile.js";
 import { WriteFile } from "../tools/WriteFile.js";
@@ -10,24 +12,49 @@ import { ListFiles } from "../tools/ListFiles.js";
 
 export class Coder extends Models {
   public tools: any[];
+  private toolHandlers: Map<string, (input: any) => Promise<any>>;
 
   constructor(plugin: any, task: Task) {
     super(plugin, task);
+    this.toolHandlers = new Map();
 
-    this.tools = [
-      this.ai.defineTool(...ExecuteCommand.modelToolArgs(this)),
-      this.ai.defineTool(...ReadFile.modelToolArgs(this)),
-      this.ai.defineTool(...WriteFile.modelToolArgs(this)),
-      this.ai.defineTool(...ReplaceInFile.modelToolArgs(this)),
-      this.ai.defineTool(...RunBuild.modelToolArgs(this)),
-      this.ai.defineTool(...ListFiles.modelToolArgs(this)),
+    const toolDefinitions = [
+      ExecuteCommand.modelToolArgs(this),
+      ReadFile.modelToolArgs(this),
+      WriteFile.modelToolArgs(this),
+      ReplaceInFile.modelToolArgs(this),
+      RunBuild.modelToolArgs(this),
+      ListFiles.modelToolArgs(this),
     ];
+
+    // Assuming modelToolArgs returns [LocalToolDefinition, handler]
+    this.tools = toolDefinitions.map(
+      (args: [ToolDefinition, (input: any) => Promise<any>]) => {
+        const [localToolDefinition, handler] = args;
+        if (
+          typeof localToolDefinition.name !== "string" ||
+          typeof handler !== "function"
+        ) {
+          throw new Error(
+            `Invalid tool definition: ${localToolDefinition.name}`
+          );
+        }
+        this.toolHandlers.set(localToolDefinition.name, handler);
+        // Pass the localToolDefinition and handler directly to defineTool
+        return this.ai.defineTool(localToolDefinition, handler);
+      }
+    );
   }
 
   async generate(options: GenerateModelOptions): Promise<string> {
-    const { model, prompt, ...restOptions } = options;
+    const {
+      model,
+      prompt,
+      messages: initialMessages,
+      ...restOptions
+    } = options;
 
-    const { text, usage } = await this.ai.generate({
+    const generateOptions: GenerateOptions = {
       model: model,
       prompt: `
 You are CASSI, you specialize in developing typescript programs to run on node.js.
@@ -158,16 +185,85 @@ By thoughtfully selecting between WRITE_FILE and REPLACE_IN_FILE, you can make y
 Follow your instructions to perform the task given by PROMPT: ${prompt}
 `,
       tools: this.tools,
-      maxToolCallIterations: 100,
+      returnToolRequests: true,
+      messages: initialMessages, // Include initial messages if provided
       ...restOptions,
-    });
+    };
 
-    if (usage) {
-      console.log("AI Usage:", usage);
+    let llmResponse;
+    let finalUsage;
+
+    while (true) {
+      llmResponse = await this.ai.generate(generateOptions);
+      finalUsage = llmResponse.usage; // Capture usage from the last call
+
+      const toolRequests = llmResponse.toolRequests ?? [];
+      if (toolRequests.length < 1) {
+        break;
+      }
+
+      const toolResponses: ToolResponsePart[] = await Promise.all(
+        toolRequests.map(async (part: ToolRequestPart) => {
+          const handler = this.toolHandlers.get(part.toolRequest.name);
+          if (!handler) {
+            console.error(
+              `Tool handler not found for: ${part.toolRequest.name}`
+            );
+            // Return an error response to the model
+            return {
+              toolResponse: {
+                name: part.toolRequest.name,
+                ref: part.toolRequest.ref,
+                output: { error: `Tool not found: ${part.toolRequest.name}` },
+              },
+            };
+          }
+          try {
+            console.log(
+              `Calling tool: ${part.toolRequest.name} with input:`,
+              part.toolRequest.input
+            );
+            const output = await handler(part.toolRequest.input);
+            return {
+              toolResponse: {
+                name: part.toolRequest.name,
+                ref: part.toolRequest.ref,
+                output: output,
+              },
+            };
+          } catch (error: any) {
+            console.error(
+              `Error executing tool ${part.toolRequest.name}:`,
+              error
+            );
+            return {
+              toolResponse: {
+                name: part.toolRequest.name,
+                ref: part.toolRequest.ref,
+                output: {
+                  error: `Tool execution failed: ${error.message || error}`,
+                },
+              },
+            };
+          }
+        })
+      );
+
+      // Add the tool responses to the history for the next turn
+      generateOptions.messages = llmResponse.messages;
+      generateOptions.prompt = toolResponses; // Provide tool responses as the next prompt
+      console.log("GENERATE PROMPT", generateOptions);
     }
 
+    if (finalUsage) {
+      console.log("AI Usage:", finalUsage);
+    }
+
+    const text = llmResponse?.text?.();
     if (!text) {
-      console.warn("AI response did not contain text content.");
+      console.warn(
+        "AI response did not contain text content in the final turn."
+      );
       return "";
     }
     return text;
