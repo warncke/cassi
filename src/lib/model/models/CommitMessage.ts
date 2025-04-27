@@ -20,7 +20,7 @@ export class CommitMessage extends Models {
 ${prompt}
 </GIT_DIFF>
 
-Create a summary git commit message with a maximum 80 character description and a maximum of 5 bullet points to describe the GIT_DIFF as succinctly as possible, highlighting key changes in the commit. Do not include any "prefix:" like "feat:" or "bug:" on summary. Add bullet points with "*" and a single space after the "*" before the text for the bullet point.
+Create a summary git commit message with a maximum 80 character description and a maximum of 3 bullet points to describe the GIT_DIFF as succinctly as possible, highlighting key changes in the commit. Do not include any "prefix:" like "feat:" or "bug:" on summary. Add bullet points with "*" and a single space after the "*" before the text for the bullet point.
 `,
       ...restOptions,
     });
