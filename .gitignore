@@ -3,3 +3,4 @@ node_modules
 dist
 .cassi
 cassi.json
+.genkit
