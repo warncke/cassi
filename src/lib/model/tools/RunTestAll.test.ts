@@ -59,7 +59,7 @@ describe("RunTestAll Tool", () => {
       ["/test/dir"],
       ["npm run test -- --reporter=dot --silent"]
     );
-    expect(result).toBe("");
+    expect(result).toBe("OK");
   });
 
   it("should return stderr if present", async () => {
@@ -127,6 +127,6 @@ describe("RunTestAll Tool", () => {
       ["/test/dir"],
       ["npm run test -- --reporter=dot --silent"]
     );
-    expect(result).toBe("");
+    expect(result).toBe("OK");
   });
 });

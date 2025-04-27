@@ -87,7 +87,6 @@ Critical rules:
     input: z.infer<typeof replaceInFileInputSchema>
   ): Promise<string> {
     const fullPath = path.join(model.task.getCwd(), input.path);
-    console.log("REPLACE IN FILE", input.diff);
     const diffBlocks = input.diff.split(
       /(<<<<<<< SEARCH\n[\s\S]*?\n=======[\s\S]*?\n>>>>>>> REPLACE)/g
     );

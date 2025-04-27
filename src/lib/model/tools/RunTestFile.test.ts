@@ -69,7 +69,7 @@ describe("RunTestFile Tool", () => {
       ["/test/dir"],
       [expectedCommand]
     );
-    expect(result).toBe(mockExecResult.stderr);
+    expect(result).toBe("OK");
   });
 
   it("should return stderr if present", async () => {

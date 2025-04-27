@@ -59,7 +59,7 @@ export class RunTestFile extends ModelTool {
         [fullTestCommand]
       );
 
-      return result.stderr;
+      return result.stderr || "OK";
     } catch (error: any) {
       return `Error executing test command "${fullTestCommand}": ${
         error.message || error
