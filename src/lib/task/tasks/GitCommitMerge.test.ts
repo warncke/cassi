@@ -237,13 +237,9 @@ describe("GitCommitMerge", () => {
           `Unexpected invoke call when commit denied: ${tool}.${method}`
         );
       }
+
     );
 
-
-    await task.initTask();
-
-    // Verify prompt was called
-    expect(mockUserPrompt).toHaveBeenCalledTimes(1);
 
     // Verify commit, rebase, merge were NOT called
     expect(mockInvoke).not.toHaveBeenCalledWith("git", "commitAll", expect.anything(), expect.anything());
@@ -252,6 +248,9 @@ describe("GitCommitMerge", () => {
 
     // Verify the specific error is thrown
     await expect(task.initTask()).rejects.toThrow(promptError);
+
+    // Verify prompt was called (now after the initTask rejection)
+    expect(mockUserPrompt).toHaveBeenCalledTimes(1);
 
     // Verify log message for cancellation is NOT called (error thrown instead)
     expect(consoleLogSpy).not.toHaveBeenCalledWith("Commit cancelled by user.");
