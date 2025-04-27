@@ -87,6 +87,7 @@ Critical rules:
     input: z.infer<typeof replaceInFileInputSchema>
   ): Promise<string> {
     const fullPath = path.join(model.task.getCwd(), input.path);
+    console.log("REPLACE IN FILE", input.diff);
     const diffBlocks = input.diff.split(
       /(<<<<<<< SEARCH\n[\s\S]*?\n=======[\s\S]*?\n>>>>>>> REPLACE)/g
     );
@@ -95,15 +96,14 @@ Critical rules:
     try {
       fileContent = await model.task.invoke("fs", "readFile", [], [fullPath]);
       if (fileContent === null) {
-        return `Error: File not found at path ${input.path}`;
+        return `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`;
       }
     } catch (error: any) {
-      return `Error reading file ${input.path}: ${error.message}`;
+      return `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`;
     }
 
     let modifiedContent = fileContent as string;
     let replacementsMade = 0;
-    const errors: string[] = [];
     let blockIndex = 0;
 
     for (const block of diffBlocks) {
@@ -112,21 +112,11 @@ Critical rules:
       blockIndex++;
 
       const match = block.match(
-        /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE$/
+        /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n?>>>>>>> REPLACE$/ // Make final newline optional
       );
 
       if (!match) {
-        if (
-          block.includes("<<<<<<< SEARCH") ||
-          block.includes("=======") ||
-          block.includes(">>>>>>> REPLACE")
-        ) {
-          errors.push(
-            `Block ${blockIndex}: Invalid SEARCH/REPLACE block format. Ensure it starts with '<<<<<<< SEARCH' and ends with '>>>>>>> REPLACE' with '=======' in between.`
-          );
-        } else {
-        }
-        continue;
+        return `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`;
       }
 
       const searchContent = match[1];
@@ -135,44 +125,7 @@ Critical rules:
       const index = modifiedContent.indexOf(searchContent);
 
       if (index === -1) {
-        const contextLines = 5;
-        const searchLines = searchContent.split("\n");
-        const fileLines = modifiedContent.split("\n");
-        let bestMatchLine = -1;
-        let maxMatchingChars = -1;
-
-        for (let i = 0; i < fileLines.length; i++) {
-          let currentMatchChars = 0;
-          for (
-            let j = 0;
-            j < searchLines.length && i + j < fileLines.length;
-            j++
-          ) {
-            if (fileLines[i + j].trim() === searchLines[j].trim()) {
-              currentMatchChars += searchLines[j].length;
-            } else {
-              break;
-            }
-          }
-          if (currentMatchChars > maxMatchingChars) {
-            maxMatchingChars = currentMatchChars;
-            bestMatchLine = i;
-          }
-        }
-
-        let fileContext = "";
-        if (bestMatchLine !== -1) {
-          const start = Math.max(0, bestMatchLine - contextLines);
-          const end = Math.min(fileLines.length, bestMatchLine + contextLines);
-          fileContext = `\nDid you mean to match near line ${
-            bestMatchLine + 1
-          }?\n...\n${fileLines.slice(start, end).join("\n")}\n...`;
-        }
-
-        errors.push(
-          `Block ${blockIndex}: SEARCH content not found in the current state of the file. Content to search for:\n---\n${searchContent}\n---${fileContext}`
-        );
-        break;
+        return `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`;
       }
 
       modifiedContent =
@@ -182,40 +135,8 @@ Critical rules:
       replacementsMade++;
     }
 
-    if (errors.length > 0) {
-      return `Errors encountered during replacement in ${
-        input.path
-      }:\n- ${errors.join("\n- ")}\nNo changes were written.`;
-    }
-
-    const validBlocksProvided = diffBlocks.some((block) =>
-      block.match(
-        /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n>>>>>>> REPLACE$/
-      )
-    );
-
-    if (!validBlocksProvided && input.diff.trim()) {
-      return `Error: The provided 'diff' content for ${input.path} does not contain any valid SEARCH/REPLACE blocks. No changes were made.`;
-    }
-
-    if (replacementsMade === 0 && validBlocksProvided) {
-      return `No replacements were applied to ${input.path}. Ensure SEARCH content exists in the file.`;
-    }
-
     if (modifiedContent === fileContent) {
-      return `No effective changes resulted from the replacements in ${input.path}. File content remains identical.`;
-    }
-
-    const dirPath = path.dirname(fullPath);
-    try {
-      await model.task.invoke(
-        "fs",
-        "mkdir",
-        [],
-        [dirPath, { recursive: true }]
-      );
-    } catch (mkdirError: any) {
-      return `Error creating directory ${dirPath}: ${mkdirError.message}`;
+      return `Warning: No effective changes resulted from the replacements in ${input.path}. File content remains identical.`;
     }
 
     try {
@@ -227,7 +148,7 @@ Critical rules:
       );
       return modifiedContent;
     } catch (writeError: any) {
-      return `Error writing modified content to ${input.path}: ${writeError.message}`;
+      return `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`;
     }
   }
 }

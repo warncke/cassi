@@ -43,7 +43,7 @@ export class RunTestAll extends ModelTool {
         [testCommand + " -- --reporter=dot --silent"]
       );
 
-      return result.stdout + "\n" + result.stderr;
+      return result.stderr;
     } catch (error: any) {
       return `Error executing test command "${testCommand}": ${
         error.message || error

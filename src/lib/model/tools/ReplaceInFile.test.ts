@@ -46,13 +46,13 @@ describe("ReplaceInFile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
-    vi.mocked(mockTask.invoke).mockReset(); // Reset the invoke mock
-    consoleLogSpy = vi.spyOn(console, "log");
+    vi.mocked(mockTask.invoke).mockReset();
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {}); // Spy and ignore
+    vi.spyOn(console, "error").mockImplementation(() => {}); // Spy and ignore errors too
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    consoleLogSpy.mockRestore();
   });
 
   it("should have correct toolDefinition", () => {
@@ -116,12 +116,6 @@ Hello universe!
     );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
-    );
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
       "writeFile",
       [],
       [fullTestPath, finalContent]
@@ -168,12 +162,6 @@ Third Line
     );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
-    );
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
       "writeFile",
       [],
       [fullTestPath, finalContent]
@@ -181,18 +169,29 @@ Third Line
     expect(result).toBe(finalContent);
   });
 
-  it.skip("toolMethod should handle deletion using an empty REPLACE block", async () => {
+  it("toolMethod should handle deletion using an empty REPLACE block", async () => {
     const initialContent = "Line 1\nLine 2 to delete\nLine 3";
     const finalContent = "Line 1\n\nLine 3"; // Note: Deletion results in empty line if newline was present
     const diff = `<<<<<<< SEARCH
 Line 2 to delete
 =======
 >>>>>>> REPLACE`;
-    // Use mockImplementationOnce for specific call sequence
-    mockTask.invoke
-      .mockImplementationOnce(async () => initialContent) // readFile
-      .mockImplementationOnce(async () => undefined) // mkdir
-      .mockImplementationOnce(async () => undefined); // writeFile
+    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
+      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
+        return initialContent;
+      }
+      if (tool === "fs" && method === "mkdir") {
+        return undefined; // Simulate successful mkdir
+      }
+      if (tool === "fs" && method === "writeFile" && args[0] === fullTestPath) {
+        return undefined; // Simulate successful writeFile
+      }
+      throw new Error(
+        `Unexpected invoke call: ${tool}.${method} with args ${JSON.stringify(
+          args
+        )}`
+      );
+    });
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -208,14 +207,7 @@ Line 2 to delete
       [fullTestPath]
     );
     expect(mockTask.invoke).toHaveBeenNthCalledWith(
-      2, // Second call
-      "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
-    );
-    expect(mockTask.invoke).toHaveBeenNthCalledWith(
-      3, // Third call
+      2, // Second call (was 3)
       "fs",
       "writeFile",
       [],
@@ -250,7 +242,9 @@ Line 2 to delete
       [],
       expect.anything()
     );
-    expect(result).toBe(`Error: File not found at path ${testFilePath}`);
+    expect(result).toBe(
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
+    );
   });
 
   it("toolMethod should return error on other read errors", async () => {
@@ -279,48 +273,8 @@ Line 2 to delete
       [],
       expect.anything()
     );
-    expect(result).toBe(`Error reading file ${testFilePath}: ${error.message}`);
-  });
-
-  it("toolMethod should return error on mkdir error", async () => {
-    const initialContent = "Content to replace";
-    const diff = `<<<<<<< SEARCH\nContent to replace\n=======\nNew Content\n>>>>>>> REPLACE`;
-    const error = new Error("Mkdir failed");
-    mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
-      if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
-        return initialContent;
-      }
-      if (tool === "fs" && method === "mkdir") {
-        throw error; // Simulate mkdir error
-      }
-      throw new Error(`Unexpected invoke call: ${tool}.${method}`);
-    });
-
-    const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1];
-    const input = { path: testFilePath, diff };
-    const result = await toolMethod(input);
-
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
-      "readFile",
-      [],
-      [fullTestPath]
-    );
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
-    );
-    expect(mockTask.invoke).not.toHaveBeenCalledWith(
-      "fs",
-      "writeFile",
-      [],
-      expect.anything()
-    );
     expect(result).toBe(
-      `Error creating directory ${testDir}: ${error.message}`
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
     );
   });
 
@@ -354,18 +308,12 @@ Line 2 to delete
     );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
-    );
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
       "writeFile",
       [],
       [fullTestPath, "New Content"]
     );
     expect(result).toBe(
-      `Error writing modified content to ${testFilePath}: ${error.message}`
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
     );
   });
 
@@ -395,13 +343,9 @@ Replacement
       [],
       expect.anything()
     );
-    expect(result).toContain(
-      `Block 1: SEARCH content not found in the current state of the file.`
+    expect(result).toBe(
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
     );
-    expect(result).toContain(
-      `Content to search for:\n---\nContent not present\n---`
-    );
-    expect(result).toContain("No changes were written.");
   });
 
   it("toolMethod should return error if SEARCH content not found in second block", async () => {
@@ -434,13 +378,9 @@ Fourth Line
       [],
       expect.anything()
     );
-    expect(result).toContain(
-      `Block 2: SEARCH content not found in the current state of the file.`
+    expect(result).toBe(
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
     );
-    expect(result).toContain(
-      `Content to search for:\n---\nLine 4 not present\n---`
-    );
-    expect(result).toContain("No changes were written.");
   });
 
   it("toolMethod should return message if no effective changes were made", async () => {
@@ -469,7 +409,7 @@ Hello world!
       expect.anything()
     );
     expect(result).toBe(
-      `No effective changes resulted from the replacements in ${testFilePath}. File content remains identical.`
+      `Warning: No effective changes resulted from the replacements in ${testFilePath}. File content remains identical.`
     );
   });
 
@@ -494,33 +434,8 @@ Hello world!
       [],
       expect.anything()
     );
-    expect(result).toContain("Invalid SEARCH/REPLACE block format");
-    expect(result).toContain("No changes were written.");
-  });
-
-  it("toolMethod should return error if diff contains no valid blocks", async () => {
-    const initialContent = "Some content";
-    const diff = ` just some random text, not a diff block `;
-    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
-
-    const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
-    const toolMethod = toolArgs[1];
-    const result = await toolMethod({ path: testFilePath, diff });
-
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
-      "readFile",
-      [],
-      [fullTestPath]
-    );
-    expect(mockTask.invoke).not.toHaveBeenCalledWith(
-      "fs",
-      "writeFile",
-      [],
-      expect.anything()
-    );
     expect(result).toBe(
-      `Error: The provided 'diff' content for ${testFilePath} does not contain any valid SEARCH/REPLACE blocks. No changes were made.`
+      `ERROR: REPLACE_IN_FILE failed. use WRITE_FILE with the full file contents instead`
     );
   });
 
@@ -564,12 +479,6 @@ Third Line
       "readFile",
       [],
       [fullTestPath]
-    );
-    expect(mockTask.invoke).toHaveBeenCalledWith(
-      "fs",
-      "mkdir",
-      [],
-      [testDir, { recursive: true }]
     );
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "fs",

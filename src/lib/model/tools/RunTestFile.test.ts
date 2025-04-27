@@ -69,7 +69,7 @@ describe("RunTestFile Tool", () => {
       ["/test/dir"],
       [expectedCommand]
     );
-    expect(result).toBe(`${mockExecResult.stdout}\n${mockExecResult.stderr}`);
+    expect(result).toBe(mockExecResult.stderr);
   });
 
   it("should return stderr if present", async () => {
@@ -87,7 +87,7 @@ describe("RunTestFile Tool", () => {
       ["/test/dir"],
       [expectedCommand]
     );
-    expect(result).toBe(`${mockExecResult.stdout}\n${mockExecResult.stderr}`);
+    expect(result).toBe(mockExecResult.stderr);
   });
 
   it("should return an error if test command is not found", async () => {

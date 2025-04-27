@@ -65,7 +65,12 @@ Use the READ_FILE command to get the contents of files.
 
 Determine all of the file changes that need to be made.
 
-For each file that needs to be changed call the REPLACE_IN_FILE tool with path and diff arguments. The path must be the file to apply the diff to. The diff argument must be in the exact format: <<<<<<< SEARCH[exact content to find]=======[new content to replace with]>>>>>>> REPLACE
+For each file that needs to be changed call the REPLACE_IN_FILE tool with path and diff arguments. The path must be the file to apply the diff to. The diff argument must be in the exact format:
+<<<<<<< SEARCH
+ [exact content to find]
+ =======
+ [new content to replace with]
+ >>>>>>> REPLACE
 
 You can also use the WRITE_FILE tool to create or replace the contents of any file but REPLACE_IN_FILE should always be used for updating existing files unless REPLACE_IN_FILE fails. If REPLACE_IN_FILE fails retry writing the entire file using WRITE_FILE.
 

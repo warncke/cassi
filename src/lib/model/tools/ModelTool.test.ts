@@ -7,7 +7,6 @@ import { Task } from "../../task/Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { genkit } from "genkit";
 
-
 vi.mock("genkit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("genkit")>();
   return {
@@ -84,7 +83,6 @@ const mockTask = new MockTask(mockCassi);
 describe("ModelTool", () => {
   const mockModelInstance = new MockModelInstance(mockTask);
 
-
   beforeEach(() => {
     vi.clearAllMocks();
     (genkit as any).mockImplementation(() => ({
@@ -131,11 +129,34 @@ describe("ModelTool", () => {
         parameters: { type: "object", properties: {} },
       };
     }
-    const toolArgs = IncompleteModelTool.modelToolArgs(
-      mockModelInstance
-    );
+    const toolArgs = IncompleteModelTool.modelToolArgs(mockModelInstance);
     await expect(toolArgs[1]()).rejects.toThrow(
       "toolMethod must be implemented by subclasses"
     );
+  });
+
+  it("should log tool calls and completion", async () => {
+    const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const toolArgs = ConcreteModelTool.modelToolArgs(mockModelInstance);
+    const toolMethod = toolArgs[1];
+    const testParam = "logging test";
+
+    await toolMethod(testParam);
+
+    const expectedArgsSize = JSON.stringify([testParam]).length;
+    expect(consoleLogSpy).toHaveBeenCalledTimes(2);
+    expect(consoleLogSpy).toHaveBeenNthCalledWith(
+      1,
+      `Calling tool: ${ConcreteModelTool.toolDefinition.name}, Model: ${mockModelInstance.constructor.name}, Args count: 1, Args size: ${expectedArgsSize}`
+    );
+    const expectedResponse = `Called with model ${mockModelInstance.constructor.name} and param1: ${testParam}`;
+    const expectedResponseLength = expectedResponse.length;
+    expect(consoleLogSpy).toHaveBeenNthCalledWith(
+      2,
+      `Tool ${ConcreteModelTool.toolDefinition.name} finished. Response length: ${expectedResponseLength}`
+    );
+
+    consoleLogSpy.mockRestore();
   });
 });

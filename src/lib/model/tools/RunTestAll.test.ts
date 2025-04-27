@@ -59,7 +59,7 @@ describe("RunTestAll Tool", () => {
       ["/test/dir"],
       ["npm run test -- --reporter=dot --silent"]
     );
-    expect(result).toBe("Tests passed\n");
+    expect(result).toBe("");
   });
 
   it("should return stderr if present", async () => {
@@ -74,7 +74,7 @@ describe("RunTestAll Tool", () => {
       ["/test/dir"],
       ["npm run test -- --reporter=dot --silent"]
     );
-    expect(result).toBe("\nTest warnings");
+    expect(result).toBe("Test warnings");
   });
 
   it("should return an error if test command is not found", async () => {
@@ -127,6 +127,6 @@ describe("RunTestAll Tool", () => {
       ["/test/dir"],
       ["npm run test -- --reporter=dot --silent"]
     );
-    expect(result).toBe("TAP version 13...\n");
+    expect(result).toBe("");
   });
 });
