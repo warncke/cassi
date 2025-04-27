@@ -45,5 +45,7 @@ export class GitCommitMerge extends Task {
         }`
       );
     }
+
+    await this.invoke("git", "merge", [], [this.getTaskId()]);
   }
 }

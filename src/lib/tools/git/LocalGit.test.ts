@@ -25,6 +25,7 @@ describe("LocalGit", () => {
     add: vi.fn(),
     commit: vi.fn(),
     rebase: vi.fn(),
+    merge: vi.fn(),
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
@@ -306,6 +307,65 @@ describe("LocalGit", () => {
       await expect(localGit.rebase(...options)).rejects.toThrow(mockError);
       expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.rebase).toHaveBeenCalledWith(options);
+    });
+  });
+
+  describe("merge", () => {
+    it("should call git.merge with an empty array when no options are provided", async () => {
+      const mockMergeResult = {
+        merges: [],
+        result: "Successful",
+        files: [],
+        insertions: {},
+        deletions: {},
+        summary: { changes: 0, insertions: 0, deletions: 0 },
+        remoteMessages: { all: [] },
+        created: [],
+        deleted: [],
+        conflicts: [],
+        failed: false,
+      };
+      vi.mocked(mockGitInstance.merge).mockResolvedValue(mockMergeResult);
+
+      const result = await localGit.merge();
+
+      expect(mockGitInstance.merge).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.merge).toHaveBeenCalledWith([]);
+      expect(result).toEqual(mockMergeResult);
+    });
+
+    it("should call git.merge with the provided options array", async () => {
+      const options = ["--no-ff", "feature-branch"];
+      const mockMergeResult = {
+        merges: ["feature-branch"],
+        result: "Successful",
+        files: ["file1.txt"],
+        insertions: { "file1.txt": 10 },
+        deletions: { "file1.txt": 2 },
+        summary: { changes: 1, insertions: 10, deletions: 2 },
+        remoteMessages: { all: [] },
+        created: [],
+        deleted: [],
+        conflicts: [],
+        failed: false,
+      };
+      vi.mocked(mockGitInstance.merge).mockResolvedValue(mockMergeResult);
+
+      const result = await localGit.merge(...options);
+
+      expect(mockGitInstance.merge).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.merge).toHaveBeenCalledWith(options);
+      expect(result).toEqual(mockMergeResult);
+    });
+
+    it("should handle errors from git.merge", async () => {
+      const options = ["conflicting-branch"];
+      const mockError = new Error("Git merge failed due to conflict");
+      vi.mocked(mockGitInstance.merge).mockRejectedValue(mockError);
+
+      await expect(localGit.merge(...options)).rejects.toThrow(mockError);
+      expect(mockGitInstance.merge).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.merge).toHaveBeenCalledWith(options);
     });
   });
 });

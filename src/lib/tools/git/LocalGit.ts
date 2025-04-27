@@ -79,6 +79,10 @@ export class LocalGit {
     return this.git.rebase(options);
   }
 
+  async merge(...options: string[]) {
+    return this.git.merge(options);
+  }
+
   async commitAll(commitMessage: string) {
     await this.git.add("./*");
     return this.git.commit(commitMessage);
