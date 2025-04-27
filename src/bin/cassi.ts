@@ -42,15 +42,7 @@ async function run() {
     const promptSequence = new Prompt([inputPrompt]);
     await cassi.user.prompt(promptSequence);
     if (inputPrompt.response) {
-      const codeTask = cassi.newTask("Code");
-      if (
-        "setRequest" in codeTask &&
-        typeof codeTask.setRequest === "function"
-      ) {
-        codeTask.setRequest(inputPrompt.response);
-      } else {
-        console.error("Code task does not have a setRequest method.");
-      }
+      cassi.newTask("Code", undefined, inputPrompt.response);
     } else {
       console.log("No input received, exiting.");
       break;

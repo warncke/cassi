@@ -49,7 +49,7 @@ export class RunTestFile extends ModelTool {
     }
 
     const testFilePath = input.path;
-    const fullTestCommand = `${testCommand} -- --reporter=tap ${testFilePath}`;
+    const fullTestCommand = `${testCommand} -- --reporter=dot --silent ${testFilePath}`;
 
     try {
       const result = await model.task.invoke(

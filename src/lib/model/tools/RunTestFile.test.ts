@@ -62,7 +62,7 @@ describe("RunTestFile Tool", () => {
       path: testFilePath,
     });
 
-    const expectedCommand = `npm run test -- --reporter=tap ${testFilePath}`;
+    const expectedCommand = `npm run test -- --reporter=dot --silent ${testFilePath}`;
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
@@ -80,7 +80,7 @@ describe("RunTestFile Tool", () => {
       path: testFilePath,
     });
 
-    const expectedCommand = `npm run test -- --reporter=tap ${testFilePath}`;
+    const expectedCommand = `npm run test -- --reporter=dot --silent ${testFilePath}`;
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",
@@ -125,7 +125,7 @@ describe("RunTestFile Tool", () => {
       path: testFilePath,
     });
 
-    const expectedCommand = `npm run test -- --reporter=tap ${testFilePath}`;
+    const expectedCommand = `npm run test -- --reporter=dot --silent ${testFilePath}`;
     expect(mockTask.invoke).toHaveBeenCalledWith(
       "console",
       "exec",

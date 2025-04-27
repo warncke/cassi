@@ -40,7 +40,7 @@ export class RunTestAll extends ModelTool {
         "console",
         "exec",
         [model.task.getCwd()],
-        [testCommand + " -- --reporter=tap"]
+        [testCommand + " -- --reporter=dot --silent"]
       );
 
       return result.stdout + "\n" + result.stderr;

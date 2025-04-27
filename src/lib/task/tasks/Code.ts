@@ -1,6 +1,7 @@
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
+import { GenerateModelOptions } from "../../model/Models.js"; // Import added
 import { Coder } from "./Coder.js";
 import { Tester } from "./Tester.js";
 import { gemini20Flash } from "@genkit-ai/googleai";
@@ -38,7 +39,8 @@ export class Code extends Task {
       "EvaluateCodePrompt"
     ) as EvaluateCodePrompt;
 
-    const generateOptions = {
+    const generateOptions: GenerateModelOptions = {
+      // Explicit type added
       model: gemini20Flash,
       prompt: this.prompt,
     };

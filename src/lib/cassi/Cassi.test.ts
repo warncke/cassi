@@ -69,6 +69,26 @@ describe("Cassi", () => {
     expect(returnedTask).toBe(mockTaskInstance);
   });
 
+  test("newTask should pass additional arguments to task.newTask", async () => {
+    const mockTaskInstance = new MockTask(cassi);
+    const newTaskSpy = vi
+      .spyOn(cassi.task, "newTask")
+      .mockReturnValue(mockTaskInstance);
+    const arg1 = "arg1";
+    const arg2 = { key: "value" };
+
+    cassi.newTask("MockTaskWithArgs", undefined, arg1, arg2);
+
+    expect(newTaskSpy).toHaveBeenCalledWith(
+      "MockTaskWithArgs",
+      undefined,
+      arg1,
+      arg2
+    );
+    expect(cassi.tasks).toContain(mockTaskInstance);
+    newTaskSpy.mockRestore();
+  });
+
   describe("runTasks", () => {
     beforeEach(() => {
       // Ensure tasks array is clear before each test in this block

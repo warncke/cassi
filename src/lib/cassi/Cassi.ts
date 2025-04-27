@@ -33,8 +33,8 @@ export class Cassi {
     await this.task.init();
   }
 
-  newTask(taskName: string, parentTask?: Task): Task {
-    const newTask = this.task.newTask(taskName, parentTask);
+  newTask(taskName: string, parentTask?: Task, ...args: any[]): Task {
+    const newTask = this.task.newTask(taskName, parentTask, ...args);
     this.tasks.push(newTask);
     return newTask;
   }

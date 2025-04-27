@@ -57,7 +57,7 @@ describe("RunTestAll Tool", () => {
       "console",
       "exec",
       ["/test/dir"],
-      ["npm run test -- --reporter=tap"]
+      ["npm run test -- --reporter=dot --silent"]
     );
     expect(result).toBe("Tests passed\n");
   });
@@ -72,7 +72,7 @@ describe("RunTestAll Tool", () => {
       "console",
       "exec",
       ["/test/dir"],
-      ["npm run test -- --reporter=tap"]
+      ["npm run test -- --reporter=dot --silent"]
     );
     expect(result).toBe("\nTest warnings");
   });
@@ -108,7 +108,7 @@ describe("RunTestAll Tool", () => {
       "console",
       "exec",
       ["/test/dir"],
-      ["npm run test -- --reporter=tap"]
+      ["npm run test -- --reporter=dot --silent"]
     );
     expect(result).toBe(
       `Error executing test command "npm run test": ${errorMessage}`
@@ -125,7 +125,7 @@ describe("RunTestAll Tool", () => {
       "console",
       "exec",
       ["/test/dir"],
-      ["npm run test -- --reporter=tap"]
+      ["npm run test -- --reporter=dot --silent"]
     );
     expect(result).toBe("TAP version 13...\n");
   });
