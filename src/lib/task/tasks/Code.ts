@@ -4,6 +4,8 @@ import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
 import { GenerateModelOptions } from "../../model/Models.js"; // Import added
 import { Coder } from "./Coder.js";
 import { Tester } from "./Tester.js";
+import { RequirePassingTests } from "./RequirePassingTests.js";
+import { GitCommitMerge } from "./GitCommitMerge.js";
 import { gemini20Flash } from "@genkit-ai/googleai";
 
 export class Code extends Task {
@@ -31,6 +33,8 @@ export class Code extends Task {
     const coderPrompt = `${this.prompt}\n\nSummary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`;
     this.addSubtask(new Coder(this.cassi, this, coderPrompt));
     this.addSubtask(new Tester(this.cassi, this, ""));
+    this.addSubtask(new RequirePassingTests(this.cassi, this));
+    this.addSubtask(new GitCommitMerge(this.cassi, this));
   }
 
   public async initTask(): Promise<void> {
@@ -60,16 +64,12 @@ export class Code extends Task {
   }
 
   public async cleanupTask(): Promise<void> {
-    console.log("[Code Task] Starting cleanupTask");
-    if (this.worktree) {
-      try {
-        await this.worktree.delete();
-      } catch (e) {
-        console.warn("[Code Task] Error during worktree cleanup:", e);
-      }
+    if (this.taskId) {
+      await this.cassi.repository.remWorktree(this.taskId);
     } else {
-      console.log("[Code Task] No worktree found for cleanup.");
+      console.log(
+        "[Code Task] No taskId found for cleanup, skipping worktree removal."
+      );
     }
-    console.log("[Code Task] Finished cleanupTask");
   }
 }

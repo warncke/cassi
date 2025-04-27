@@ -69,15 +69,6 @@ export class Worktree {
   }
 
   async delete(): Promise<void> {
-    console.log(`[Worktree] Deleting worktree at ${this.worktreeDir}`);
-    try {
-      await this.repository.remWorktree(this.worktreeDir);
-    } catch (e) {
-      console.warn(
-        `[Worktree] Failed to remove worktree directory ${this.worktreeDir}:`,
-        e
-      );
-    }
-    console.log(`[Worktree] Finished deleting worktree at ${this.worktreeDir}`);
+    await this.task.invoke("git", "remWorkTree", [], [this.worktreeDir]);
   }
 }

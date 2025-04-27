@@ -4,12 +4,16 @@ import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
 import { Coder } from "./Coder.js";
 import { Tester } from "./Tester.js";
+import { RequirePassingTests } from "./RequirePassingTests.js";
+import { GitCommitMerge } from "./GitCommitMerge.js";
 import { Task } from "../Task.js";
 
 vi.mock("../../cassi/Cassi.js");
 vi.mock("../../model/models/EvaluateCodePrompt.js");
 vi.mock("./Coder.js");
 vi.mock("./Tester.js");
+vi.mock("./RequirePassingTests.js");
+vi.mock("./GitCommitMerge.js");
 vi.mock("../Task.js", async () => {
   const actual = await vi.importActual("../Task.js");
   // Cast actual.Task to any to help TypeScript resolve the constructor type
@@ -47,6 +51,10 @@ describe("Code Task", () => {
       undefined as any,
       undefined as any
     ); // Adjust if Cassi constructor needs specific args
+    // Add mock repository and remWorktree
+    cassi.repository = {
+      remWorktree: vi.fn().mockResolvedValue(undefined),
+    } as any;
     parentTask = null;
     codeTask = new Code(cassi, parentTask, "test prompt");
 
@@ -87,9 +95,15 @@ describe("Code Task", () => {
     expect(initFileTaskSpy).toHaveBeenCalled();
     expect(codeTask.setTaskId).toHaveBeenCalledWith("test summary");
     expect(codeTask.initWorktree).toHaveBeenCalled();
-    expect(codeTask.addSubtask).toHaveBeenCalledTimes(2);
+    expect(codeTask.addSubtask).toHaveBeenCalledTimes(4);
     expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Coder));
     expect(codeTask.addSubtask).toHaveBeenCalledWith(expect.any(Tester));
+    expect(codeTask.addSubtask).toHaveBeenCalledWith(
+      expect.any(RequirePassingTests)
+    );
+    expect(codeTask.addSubtask).toHaveBeenCalledWith(
+      expect.any(GitCommitMerge)
+    );
   });
 
   it("should not add subtasks when modifiesFiles is false", async () => {
@@ -117,27 +131,33 @@ describe("Code Task", () => {
     );
   });
 
-  it("should call worktree delete during cleanup if worktree exists", async () => {
-    await codeTask.cleanupTask();
-    expect(codeTask.worktree?.delete).toHaveBeenCalled();
-  });
+  describe("cleanupTask", () => {
+    it("should call cassi.repository.remWorktree with taskId if taskId exists", async () => {
+      codeTask.taskId = "test-task-id";
+      await codeTask.cleanupTask();
+      expect(cassi.repository.remWorktree).toHaveBeenCalledWith("test-task-id");
+    });
 
-  it("should not throw error during cleanup if worktree does not exist", async () => {
-    codeTask.worktree = undefined;
-    await expect(codeTask.cleanupTask()).resolves.not.toThrow();
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "[Code Task] No worktree found for cleanup."
-    );
-  });
+    it("should not call cassi.repository.remWorktree if taskId is null", async () => {
+      codeTask.taskId = null;
+      await codeTask.cleanupTask();
+      expect(cassi.repository.remWorktree).not.toHaveBeenCalled();
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        "[Code Task] No taskId found for cleanup, skipping worktree removal."
+      );
+    });
 
-  it("should handle errors during worktree deletion in cleanup", async () => {
-    const deleteError = new Error("Failed to delete");
-    codeTask.worktree!.delete = vi.fn().mockRejectedValue(deleteError);
-    await codeTask.cleanupTask();
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      // Use the spy
-      "[Code Task] Error during worktree cleanup:",
-      deleteError
-    );
+    it("should propagate errors from cassi.repository.remWorktree", async () => {
+      codeTask.taskId = "test-task-id-error";
+      const remWorktreeError = new Error("Failed to remove worktree");
+      vi.spyOn(cassi.repository, "remWorktree").mockRejectedValue(
+        remWorktreeError
+      );
+
+      await expect(codeTask.cleanupTask()).rejects.toThrow(remWorktreeError);
+      expect(cassi.repository.remWorktree).toHaveBeenCalledWith(
+        "test-task-id-error"
+      );
+    });
   });
 });

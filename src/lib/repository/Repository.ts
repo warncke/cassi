@@ -33,7 +33,11 @@ export class Repository {
     this.worktrees.set(worktree.task.taskId, worktree);
   }
 
-  remWorktree(taskId: string): void {
-    this.worktrees.delete(taskId);
+  async remWorktree(taskId: string): Promise<void> {
+    const worktree = this.worktrees.get(taskId);
+    if (worktree) {
+      await worktree.delete();
+      this.worktrees.delete(taskId);
+    }
   }
 }

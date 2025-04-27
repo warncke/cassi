@@ -122,22 +122,42 @@ describe("Repository", () => {
 
   test("remWorktree() should remove the worktree from the map", async () => {
     const taskId = "task-to-remove";
-    const mockWorktree = {} as Worktree; // Minimal mock needed
+    // Add a mock delete function to the mock worktree
+    const mockWorktree = {
+      delete: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Worktree;
 
     // Manually add a worktree to the map for testing removal
     repository.worktrees.set(taskId, mockWorktree);
     expect(repository.worktrees.has(taskId)).toBe(true);
 
-    repository.remWorktree(taskId);
+    await repository.remWorktree(taskId); // Now async
 
     expect(repository.worktrees.has(taskId)).toBe(false);
   });
 
-  test("remWorktree() should not throw if the taskId does not exist", () => {
+  test("remWorktree() should call worktree.delete()", async () => {
+    const taskId = "task-to-delete";
+    const mockWorktree = {
+      delete: vi.fn().mockResolvedValue(undefined), // Mock the delete method
+    } as unknown as Worktree;
+
+    repository.worktrees.set(taskId, mockWorktree);
+    expect(repository.worktrees.has(taskId)).toBe(true);
+
+    await repository.remWorktree(taskId);
+
+    expect(mockWorktree.delete).toHaveBeenCalledTimes(1);
+    expect(repository.worktrees.has(taskId)).toBe(false); // Also verify removal
+  });
+
+  test("remWorktree() should not throw if the taskId does not exist", async () => {
+    // Add async here
     const taskId = "non-existent-task";
     expect(repository.worktrees.has(taskId)).toBe(false);
 
-    expect(() => repository.remWorktree(taskId)).not.toThrow();
+    // remWorktree is now async, so we need to await it
+    await expect(repository.remWorktree(taskId)).resolves.not.toThrow();
     expect(repository.worktrees.has(taskId)).toBe(false); // Still false
   });
 

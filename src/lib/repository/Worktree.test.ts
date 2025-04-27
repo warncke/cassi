@@ -261,73 +261,52 @@ describe("Worktree", () => {
     const repositoryDir = "/test/repo";
     const taskId = "delete-test-task";
     const worktreeDir = path.join(repositoryDir, ".cassi", "worktrees", taskId);
-    let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-    let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
       const mockUser = {} as User;
-      // Create a partial mock for Repository focusing on delete's needs
       mockRepository = {
         repositoryDir,
-        remWorktree: vi.fn(), // Initialize remWorktree as a mock function
-      } as unknown as Repository; // Assert as Repository, acknowledging it's partial
+      } as Repository;
       mockTask = {
         taskId: taskId,
+        invoke: vi.fn().mockResolvedValue({ stdout: "", stderr: "" }), // Mock invoke
         getCwd: vi.fn(),
       } as unknown as Task;
 
       worktree = new Worktree(mockRepository, mockTask);
-
-      // Spy on console methods
-      consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
-      consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     });
 
     afterEach(() => {
-      // Restore console spies
-      consoleLogSpy.mockRestore();
-      consoleWarnSpy.mockRestore();
+      vi.restoreAllMocks();
     });
 
-    it("should call repository.remWorktree with the correct worktree directory", async () => {
-      // Configure mock for this test case
-      (
-        mockRepository.remWorktree as ReturnType<typeof vi.fn>
-      ).mockResolvedValue(undefined);
-
+    it("should call task.invoke with correct arguments for git remWorkTree", async () => {
       await worktree.delete();
 
-      expect(mockRepository.remWorktree).toHaveBeenCalledTimes(1);
-      expect(mockRepository.remWorktree).toHaveBeenCalledWith(worktreeDir);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        `[Worktree] Deleting worktree at ${worktreeDir}` // Updated log message
+      expect(mockTask.invoke).toHaveBeenCalledTimes(1);
+      expect(mockTask.invoke).toHaveBeenCalledWith(
+        "git",
+        "remWorkTree",
+        [],
+        [worktreeDir]
       );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        `[Worktree] Finished deleting worktree at ${worktreeDir}` // Updated log message
-      );
-      expect(consoleWarnSpy).not.toHaveBeenCalled();
     });
 
-    it("should log a warning if repository.remWorktree throws an error", async () => {
-      const testError = new Error("Failed to remove worktree");
-      // Configure mock for this test case
-      (
-        mockRepository.remWorktree as ReturnType<typeof vi.fn>
-      ).mockRejectedValue(testError);
-
-      await worktree.delete();
-
-      expect(mockRepository.remWorktree).toHaveBeenCalledTimes(1);
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        `[Worktree] Deleting worktree at ${worktreeDir}` // Updated log message
-      );
-      expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        `[Worktree] Failed to remove worktree directory ${worktreeDir}:`, // Updated log message
+    it("should still complete if task.invoke throws an error (errors handled by invoke)", async () => {
+      const testError = new Error("Failed to remove worktree via invoke");
+      (mockTask.invoke as ReturnType<typeof vi.fn>).mockRejectedValue(
         testError
       );
-      expect(consoleLogSpy).toHaveBeenCalledWith(
-        `[Worktree] Finished deleting worktree at ${worktreeDir}` // Updated log message
+
+      // Expect the promise to reject because invoke rejects
+      await expect(worktree.delete()).rejects.toThrow(testError);
+
+      expect(mockTask.invoke).toHaveBeenCalledTimes(1);
+      expect(mockTask.invoke).toHaveBeenCalledWith(
+        "git",
+        "remWorkTree",
+        [],
+        [worktreeDir]
       );
     });
   });
