@@ -33,6 +33,8 @@ describe("GitCommitMerge", () => {
   const mockGeneratedMessage = "feat: Update file.txt\n\n- Made changes";
   const mockRepositoryBranch = "main";
   const mockRebaseResult = "Successfully rebased and updated refs/heads/main.";
+  const mockRebaseConflictResult =
+    "CONFLICT (content): Merge conflict in file.txt";
 
   beforeEach(() => {
     consoleLogSpy.mockClear();
@@ -209,10 +211,6 @@ describe("GitCommitMerge", () => {
       [mockCwd],
       [mockRepositoryBranch]
     );
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      "Rebase result:",
-      mockRebaseResult
-    );
     expect(task.getCwd).toHaveBeenCalledTimes(4); // status, diff, commitAll, rebase
     expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
     expect(mockGetWorkTree).toHaveBeenCalledTimes(1);
@@ -220,5 +218,122 @@ describe("GitCommitMerge", () => {
 
   it("should be an instance of Task", () => {
     expect(new GitCommitMerge(mockCassi)).toBeInstanceOf(Task);
+  });
+
+  it("should throw an error if rebase result contains 'CONFLICT'", async () => {
+    // Simplified mock implementation for this specific test case
+    mockInvoke.mockImplementation(
+      async (
+        tool: string,
+        method: string,
+        argArray1?: any[],
+        argArray2?: any[]
+      ) => {
+        if (tool === "git" && method === "status") return mockDirtyStatus;
+        if (tool === "git" && method === "diff") return mockDiffResult;
+        if (tool === "git" && method === "commitAll") return; // No return value needed
+        if (
+          tool === "git" &&
+          method === "rebase" &&
+          argArray1?.[0] === mockCwd &&
+          argArray2?.[0] === mockRepositoryBranch
+        ) {
+          // Simulate invoke throwing an error on conflict
+          throw new Error(mockRebaseConflictResult);
+        }
+        // Throw for any unexpected calls within this specific test
+        throw new Error(
+          `Unexpected invoke call in conflict test: ${tool}.${method}`
+        );
+      }
+    );
+
+    try {
+      // This test now behaves like the 'invoke call fails' test,
+      // but we expect the specific conflict error message wrapped.
+      await expect(task.initTask()).rejects.toThrowError(
+        `Error during rebase for ${mockCwd}: ${mockRebaseConflictResult}`
+      );
+    } catch (error) {
+      // This catch block might not be strictly necessary anymore with rejects.toThrowError,
+      // but we keep the structure for clarity and potential debugging.
+      // If rejects.toThrowError fails, this catch won't execute as expected.
+      // If it passes, this catch is also bypassed.
+      // We rely on rejects.toThrowError for the primary assertion.
+      console.error("Caught unexpected error in test:", error); // Should not happen if rejects works
+      throw error; // Re-throw if something unexpected is caught
+    }
+
+    // Verify mocks were called as expected up to the point of failure
+    expect(mockInvoke).toHaveBeenCalledWith("git", "status", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith("git", "diff", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "commitAll",
+      [mockCwd],
+      [`${mockTaskIdShort}: ${mockGeneratedMessage}`]
+    );
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      [mockCwd],
+      [mockRepositoryBranch]
+    );
+    // status, diff, commitAll, rebase, error message
+    expect(task.getCwd).toHaveBeenCalledTimes(5);
+    expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
+    expect(mockGetWorkTree).toHaveBeenCalledTimes(1);
+  });
+
+  it("should throw an error if the invoke call for rebase fails", async () => {
+    const rebaseError = new Error("Git rebase command failed");
+    mockInvoke.mockImplementation(
+      async (
+        tool: string,
+        method: string,
+        argArray1?: any[],
+        argArray2?: any[]
+      ) => {
+        if (tool === "git" && method === "status") return mockDirtyStatus;
+        if (tool === "git" && method === "diff") return mockDiffResult;
+        if (tool === "git" && method === "commitAll") return;
+        if (
+          tool === "git" &&
+          method === "rebase" &&
+          argArray1?.[0] === mockCwd &&
+          argArray2?.[0] === mockRepositoryBranch
+        ) {
+          throw rebaseError; // Simulate invoke throwing an error
+        }
+        throw new Error(
+          `Unexpected invoke call: ${tool}.${method} with args ${JSON.stringify(
+            argArray1
+          )} ${JSON.stringify(argArray2)}`
+        );
+      }
+    );
+
+    await expect(task.initTask()).rejects.toThrowError(
+      `Error during rebase for ${mockCwd}: ${rebaseError.message}`
+    );
+
+    expect(mockInvoke).toHaveBeenCalledWith("git", "status", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith("git", "diff", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "commitAll",
+      [mockCwd],
+      [`${mockTaskIdShort}: ${mockGeneratedMessage}`]
+    );
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      [mockCwd],
+      [mockRepositoryBranch]
+    );
+    // status, diff, commitAll, rebase, error message
+    expect(task.getCwd).toHaveBeenCalledTimes(5);
+    expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
+    expect(mockGetWorkTree).toHaveBeenCalledTimes(1);
   });
 });

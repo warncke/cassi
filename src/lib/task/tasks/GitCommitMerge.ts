@@ -31,12 +31,19 @@ export class GitCommitMerge extends Task {
 
     await this.invoke("git", "commitAll", [this.getCwd()], [commitMessage]);
 
-    const rebaseResult = await this.invoke(
-      "git",
-      "rebase",
-      [this.getCwd()],
-      [this.getWorkTree().repositoryBranch]
-    );
-    console.log("Rebase result:", rebaseResult);
+    try {
+      const rebaseResult = await this.invoke(
+        "git",
+        "rebase",
+        [this.getCwd()],
+        [this.getWorkTree().repositoryBranch]
+      );
+    } catch (error) {
+      throw new Error(
+        `Error during rebase for ${this.getCwd()}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
   }
 }

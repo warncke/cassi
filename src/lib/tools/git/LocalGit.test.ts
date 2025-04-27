@@ -282,7 +282,7 @@ describe("LocalGit", () => {
       const result = await localGit.rebase();
 
       expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
-      expect(mockGitInstance.rebase).toHaveBeenCalledWith(undefined);
+      expect(mockGitInstance.rebase).toHaveBeenCalledWith([]); // Expect empty array now
       expect(result).toBe(mockRebaseResult);
     });
 
@@ -291,7 +291,7 @@ describe("LocalGit", () => {
       const mockRebaseResult = "Interactive rebase successful";
       vi.mocked(mockGitInstance.rebase).mockResolvedValue(mockRebaseResult);
 
-      const result = await localGit.rebase(options);
+      const result = await localGit.rebase(...options);
 
       expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.rebase).toHaveBeenCalledWith(options);
@@ -303,7 +303,7 @@ describe("LocalGit", () => {
       const mockError = new Error("Git rebase failed");
       vi.mocked(mockGitInstance.rebase).mockRejectedValue(mockError);
 
-      await expect(localGit.rebase(options)).rejects.toThrow(mockError);
+      await expect(localGit.rebase(...options)).rejects.toThrow(mockError);
       expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.rebase).toHaveBeenCalledWith(options);
     });
