@@ -87,8 +87,9 @@ describe("CommitMessage Model", () => {
     expect(generateCallArgs.prompt).toContain(
       `<GIT_DIFF>\n${prompt}\n</GIT_DIFF>`
     );
+    // <<< THIS IS THE MODIFIED LINE (removed trailing \")
     expect(generateCallArgs.prompt).toContain(
-      "Create a summary git commit message with a maximum 80 character description and a maximum of 5 bullet points"
+      "Create a summary git commit message with a maximum 80 character description and a maximum of 3 bullet points to describe the GIT_DIFF as succinctly as possible, highlighting key changes in the commit. Do not include any \"prefix:\" like \"feat:\" or \"bug:\" on summary. Add bullet points with \"*\" and a single space after the \"*\" before the text for the bullet point."
     );
     expect(generateCallArgs.output).toBeUndefined();
     for (const key in restOptions) {
