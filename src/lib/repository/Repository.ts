@@ -20,8 +20,21 @@ export class Repository {
   }
 
   async getWorktree(task: Task): Promise<Worktree> {
-    const worktree = new Worktree(this, task);
-    this.worktrees.set(task.taskId!, worktree);
+    if (!task.taskId) {
+      throw new Error("Task ID is required to get or create a worktree.");
+    }
+
+    // Check if worktree already exists in the map
+    let worktree = this.worktrees.get(task.taskId);
+
+    // If worktree exists, return it
+    if (worktree) {
+      return worktree;
+    }
+
+    // If worktree does not exist, create a new one
+    worktree = new Worktree(this, task);
+    this.worktrees.set(task.taskId, worktree);
     await worktree.init();
     return worktree;
   }

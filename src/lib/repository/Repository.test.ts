@@ -116,8 +116,51 @@ describe("Repository", () => {
     await repository.init();
 
     await expect(repository.getWorktree(mockTask)).rejects.toThrow(
-      "Task ID cannot be null when creating a Worktree."
+      "Task ID is required to get or create a worktree." // Updated error message
     );
+  });
+
+  test("getWorktree() should return existing worktree if called again with the same taskId", async () => {
+    const mockInvoke = vi
+      .fn()
+      // Mock the sequence of calls within worktree.init()
+      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
+      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+      .mockResolvedValueOnce({
+        current: "main",
+        stdout: "On branch main\nYour branch is up to date...",
+        stderr: "",
+      }); // git status
+    const mockGetCwd = vi
+      .fn()
+      .mockReturnValue(
+        path.join(testDir, ".cassi", "worktrees", "test-task-id")
+      );
+    const mockCassi = {
+      tool: { invoke: mockInvoke },
+      model: { newInstance: vi.fn() },
+    } as unknown as Cassi;
+    const mockTask = new Task(mockCassi);
+    mockTask.taskId = "test-task-id";
+    mockTask.invoke = mockInvoke;
+    mockTask.getCwd = mockGetCwd;
+
+    await repository.init();
+
+    // First call - should create and init
+    const worktree1 = await repository.getWorktree(mockTask);
+    expect(worktree1).toBeInstanceOf(Worktree);
+    expect(mockInvoke).toHaveBeenCalledTimes(3); // Init calls
+    expect(repository.worktrees.get("test-task-id")).toBe(worktree1);
+
+    // Reset mock call count for the next assertion
+    mockInvoke.mockClear();
+
+    // Second call - should return existing worktree, no init
+    const worktree2 = await repository.getWorktree(mockTask);
+    expect(worktree2).toBe(worktree1); // Should be the same instance
+    expect(mockInvoke).not.toHaveBeenCalled(); // worktree.init should not be called again
+    expect(repository.worktrees.size).toBe(1); // Still only one worktree in the map
   });
 
   test("remWorktree() should remove the worktree from the map", async () => {
