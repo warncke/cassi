@@ -150,4 +150,16 @@ export class Task {
   getTaskIdShort(): string {
     return this.getTaskId().substring(0, 8);
   }
+
+  getWorkTree(): Worktree {
+    if (this.worktree) {
+      return this.worktree;
+    }
+    if (this.parentTask) {
+      try {
+        return this.parentTask.getWorkTree();
+      } catch (e) {}
+    }
+    throw new Error("Worktree not found for this task or any parent task.");
+  }
 }

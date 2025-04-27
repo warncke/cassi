@@ -18,6 +18,7 @@ describe("GitCommitMerge", () => {
   let mockCommitMessageModel: Partial<CommitMessage>;
   let mockGenerate: ReturnType<typeof vi.fn>;
   let mockGetTaskIdShort: ReturnType<typeof vi.fn>;
+  let mockGetWorkTree: ReturnType<typeof vi.fn>;
 
   const mockCwd = "/mock/cwd";
   const mockTaskIdShort = "abc1234";
@@ -30,6 +31,8 @@ describe("GitCommitMerge", () => {
   } as StatusResult;
   const mockDiffResult = "diff --git a/file.txt b/file.txt...";
   const mockGeneratedMessage = "feat: Update file.txt\n\n- Made changes";
+  const mockRepositoryBranch = "main";
+  const mockRebaseResult = "Successfully rebased and updated refs/heads/main.";
 
   beforeEach(() => {
     consoleLogSpy.mockClear();
@@ -49,6 +52,10 @@ describe("GitCommitMerge", () => {
     );
     mockGetTaskIdShort = vi.fn().mockReturnValue(mockTaskIdShort);
     task.getTaskIdShort = mockGetTaskIdShort;
+    mockGetWorkTree = vi.fn().mockReturnValue({
+      repositoryBranch: mockRepositoryBranch,
+    });
+    task.getWorkTree = mockGetWorkTree;
   });
 
   it("should log 'No changes to commit' and return if status is clean", async () => {
@@ -102,7 +109,20 @@ describe("GitCommitMerge", () => {
         ) {
           return; // commitAll doesn't return anything significant
         }
-        throw new Error(`Unexpected invoke call: ${tool}.${method}`);
+        // Handle rebase call (even though we don't assert on it in *this* test, it's called)
+        if (
+          tool === "git" &&
+          method === "rebase" &&
+          argArray1?.[0] === mockCwd &&
+          argArray2?.[0] === mockRepositoryBranch
+        ) {
+          return mockRebaseResult; // Return the expected result
+        }
+        throw new Error(
+          `Unexpected invoke call: ${tool}.${method} with args ${JSON.stringify(
+            argArray1
+          )} ${JSON.stringify(argArray2)}`
+        );
       }
     );
 
@@ -129,8 +149,73 @@ describe("GitCommitMerge", () => {
       [mockCwd],
       [`${mockTaskIdShort}: ${mockGeneratedMessage}`]
     );
-    expect(task.getCwd).toHaveBeenCalledTimes(3); // status, diff, commitAll
+    // Now expecting 4 calls to getCwd: status, diff, commitAll, rebase
+    expect(task.getCwd).toHaveBeenCalledTimes(4);
     expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
+    // We don't need to assert rebase wasn't called anymore, as it *is* called.
+    // We can optionally assert it *was* called if desired, but the main focus
+    // of this test is the commit message generation.
+    // Let's remove the negative assertion:
+    // expect(mockInvoke).not.toHaveBeenCalledWith(
+    //   "git",
+    //   "rebase",
+    //   expect.anything(),
+    //   expect.anything()
+    // );
+    // Add assertion for getWorkTree call
+    expect(mockGetWorkTree).toHaveBeenCalledTimes(1);
+  });
+
+  it("should call git rebase after commitAll and log the result", async () => {
+    mockInvoke.mockImplementation(
+      async (
+        tool: string,
+        method: string,
+        argArray1?: any[],
+        argArray2?: any[]
+      ) => {
+        if (tool === "git" && method === "status") return mockDirtyStatus;
+        if (tool === "git" && method === "diff") return mockDiffResult;
+        if (tool === "git" && method === "commitAll") return; // No return value
+        if (
+          tool === "git" &&
+          method === "rebase" &&
+          argArray1?.[0] === mockCwd &&
+          argArray2?.[0] === mockRepositoryBranch
+        ) {
+          return mockRebaseResult;
+        }
+        throw new Error(
+          `Unexpected invoke call: ${tool}.${method} with args ${JSON.stringify(
+            argArray1
+          )} ${JSON.stringify(argArray2)}`
+        );
+      }
+    );
+
+    await task.initTask();
+
+    expect(mockInvoke).toHaveBeenCalledWith("git", "status", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith("git", "diff", [mockCwd]);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "commitAll",
+      [mockCwd],
+      [`${mockTaskIdShort}: ${mockGeneratedMessage}`]
+    );
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      [mockCwd],
+      [mockRepositoryBranch]
+    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      "Rebase result:",
+      mockRebaseResult
+    );
+    expect(task.getCwd).toHaveBeenCalledTimes(4); // status, diff, commitAll, rebase
+    expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
+    expect(mockGetWorkTree).toHaveBeenCalledTimes(1);
   });
 
   it("should be an instance of Task", () => {

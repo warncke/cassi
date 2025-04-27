@@ -30,5 +30,13 @@ export class GitCommitMerge extends Task {
     console.log("Generated Commit Message:", commitMessage);
 
     await this.invoke("git", "commitAll", [this.getCwd()], [commitMessage]);
+
+    const rebaseResult = await this.invoke(
+      "git",
+      "rebase",
+      [this.getCwd()],
+      [this.getWorkTree().repositoryBranch]
+    );
+    console.log("Rebase result:", rebaseResult);
   }
 }

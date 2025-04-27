@@ -24,6 +24,7 @@ describe("LocalGit", () => {
     diff: vi.fn(),
     add: vi.fn(),
     commit: vi.fn(),
+    rebase: vi.fn(),
   } as unknown as SimpleGit;
 
   beforeEach(async () => {
@@ -270,6 +271,41 @@ describe("LocalGit", () => {
       expect(mockGitInstance.add).toHaveBeenCalledWith("./*");
       expect(mockGitInstance.commit).toHaveBeenCalledTimes(1);
       expect(mockGitInstance.commit).toHaveBeenCalledWith(commitMessage);
+    });
+  });
+
+  describe("rebase", () => {
+    it("should call git.rebase with undefined options when no options are provided", async () => {
+      const mockRebaseResult = "Rebase successful";
+      vi.mocked(mockGitInstance.rebase).mockResolvedValue(mockRebaseResult);
+
+      const result = await localGit.rebase();
+
+      expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.rebase).toHaveBeenCalledWith(undefined);
+      expect(result).toBe(mockRebaseResult);
+    });
+
+    it("should call git.rebase with the provided options array", async () => {
+      const options = ["--interactive", "main"];
+      const mockRebaseResult = "Interactive rebase successful";
+      vi.mocked(mockGitInstance.rebase).mockResolvedValue(mockRebaseResult);
+
+      const result = await localGit.rebase(options);
+
+      expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.rebase).toHaveBeenCalledWith(options);
+      expect(result).toBe(mockRebaseResult);
+    });
+
+    it("should handle errors from git.rebase", async () => {
+      const options = ["--abort"];
+      const mockError = new Error("Git rebase failed");
+      vi.mocked(mockGitInstance.rebase).mockRejectedValue(mockError);
+
+      await expect(localGit.rebase(options)).rejects.toThrow(mockError);
+      expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
+      expect(mockGitInstance.rebase).toHaveBeenCalledWith(options);
     });
   });
 });

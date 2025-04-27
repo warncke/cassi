@@ -69,6 +69,15 @@ export class LocalGit {
     return this.git.diff(options);
   }
 
+  /**
+   * Rebases the current branch onto another branch or commit.
+   * @param options Optional array of rebase options.
+   * @returns A promise that resolves with the rebase result.
+   */
+  async rebase(options?: string[]) {
+    return this.git.rebase(options);
+  }
+
   async commitAll(commitMessage: string) {
     await this.git.add("./*");
     return this.git.commit(commitMessage);
