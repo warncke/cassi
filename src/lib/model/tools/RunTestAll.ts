@@ -10,11 +10,7 @@ export class RunTestAll extends ModelTool {
   static toolDefinition: ToolDefinition = {
     name: "RUN_TEST_ALL",
     description: "Runs all tests for project",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    inputSchema: runTestAllInputSchema,
   };
 
   static async toolMethod(

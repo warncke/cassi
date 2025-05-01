@@ -5,15 +5,12 @@ import { User } from "../user/User.js";
 import { Config } from "../config/Config.js";
 import { Invocation } from "./Invocation.js";
 import { Task } from "../task/Task.js";
+import { z } from "zod";
 
 export interface ToolDefinition {
   name: string;
   description: string;
-  parameters: {
-    type: "object";
-    properties: Record<string, { type: string; description?: string }>;
-    required?: string[];
-  };
+  inputSchema: z.ZodObject<any>;
 }
 
 const __filename = fileURLToPath(import.meta.url);

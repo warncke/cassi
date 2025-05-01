@@ -40,11 +40,10 @@ describe("RunTestAll Tool", () => {
     expect(RunTestAll.toolDefinition.description).toBe(
       "Runs all tests for project"
     );
-    expect(RunTestAll.toolDefinition.parameters).toEqual({
-      type: "object",
-      properties: {},
-      required: [],
-    });
+    expect(RunTestAll.toolDefinition.inputSchema).toBeDefined();
+    expect(
+      Object.keys(RunTestAll.toolDefinition.inputSchema.shape).length
+    ).toBe(0);
   });
 
   it("should execute the test command successfully", async () => {

@@ -59,18 +59,13 @@ describe("ReplaceInFile", () => {
     expect(ReplaceInFile.toolDefinition).toBeDefined();
     expect(ReplaceInFile.toolDefinition.name).toBe("REPLACE_IN_FILE");
     expect(ReplaceInFile.toolDefinition.description).toBeDefined();
-    expect(ReplaceInFile.toolDefinition.parameters).toBeDefined();
-    expect(ReplaceInFile.toolDefinition.parameters.type).toBe("object");
-    expect(ReplaceInFile.toolDefinition.parameters.properties).toHaveProperty(
+    expect(ReplaceInFile.toolDefinition.inputSchema).toBeDefined();
+    expect(ReplaceInFile.toolDefinition.inputSchema.shape).toHaveProperty(
       "path"
     );
-    expect(ReplaceInFile.toolDefinition.parameters.properties).toHaveProperty(
+    expect(ReplaceInFile.toolDefinition.inputSchema.shape).toHaveProperty(
       "diff"
     );
-    expect(ReplaceInFile.toolDefinition.parameters.required).toEqual([
-      "path",
-      "diff",
-    ]);
   });
 
   it("modelToolArgs should return correct structure", () => {

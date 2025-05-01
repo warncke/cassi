@@ -159,11 +159,10 @@ describe("ListFiles", () => {
     expect(ListFiles.toolDefinition.description).toBe(
       "Lists all *.ts and *.json files within the current working directory."
     );
-    expect(ListFiles.toolDefinition.parameters).toEqual({
-      type: "object",
-      properties: {},
-      required: [],
-    });
+    expect(ListFiles.toolDefinition.inputSchema).toBeDefined();
+    expect(Object.keys(ListFiles.toolDefinition.inputSchema.shape).length).toBe(
+      0
+    );
   });
 
   it("modelToolArgs should return correct structure", () => {

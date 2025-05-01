@@ -89,11 +89,8 @@ describe("ReadFile", () => {
     expect(ReadFile.toolDefinition).toBeDefined();
     expect(ReadFile.toolDefinition.name).toBe("READ_FILE");
     expect(ReadFile.toolDefinition.description).toBeDefined();
-    expect(ReadFile.toolDefinition.parameters).toBeDefined();
-    expect(ReadFile.toolDefinition.parameters.properties).toHaveProperty(
-      "path"
-    );
-    expect(ReadFile.toolDefinition.parameters.required).toEqual(["path"]);
+    expect(ReadFile.toolDefinition.inputSchema).toBeDefined();
+    expect(ReadFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
   });
 
   it("modelToolArgs should return correct structure", () => {

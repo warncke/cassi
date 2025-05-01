@@ -41,17 +41,8 @@ describe("RunTestFile Tool", () => {
     expect(RunTestFile.toolDefinition.description).toBe(
       "Runs tests for a specific file"
     );
-    expect(RunTestFile.toolDefinition.parameters).toEqual({
-      type: "object",
-      properties: {
-        path: {
-          type: "string",
-          description:
-            "The path of the test file to run (relative to the current working directory)",
-        },
-      },
-      required: ["path"],
-    });
+    expect(RunTestFile.toolDefinition.inputSchema).toBeDefined();
+    expect(RunTestFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
   });
 
   it("should execute the test command for the specified file successfully", async () => {

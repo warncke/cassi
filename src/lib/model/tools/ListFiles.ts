@@ -11,11 +11,7 @@ export class ListFiles extends ModelTool {
     name: "LIST_FILES",
     description:
       "Lists all *.ts and *.json files within the current working directory.",
-    parameters: {
-      type: "object",
-      properties: {},
-      required: [],
-    },
+    inputSchema: ListFiles.parametersSchema,
   };
 
   static async toolMethod(model: Models): Promise<string> {

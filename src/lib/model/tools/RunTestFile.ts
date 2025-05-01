@@ -17,17 +17,7 @@ export class RunTestFile extends ModelTool {
   static toolDefinition: ToolDefinition = {
     name: "RUN_TEST_FILE",
     description: "Runs tests for a specific file",
-    parameters: {
-      type: "object",
-      properties: {
-        path: {
-          type: "string",
-          description:
-            "The path of the test file to run (relative to the current working directory)",
-        },
-      },
-      required: ["path"],
-    },
+    inputSchema: runTestFileInputSchema,
   };
 
   static async toolMethod(

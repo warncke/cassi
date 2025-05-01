@@ -76,17 +76,11 @@ describe("WriteFile", () => {
     expect(WriteFile.toolDefinition).toBeDefined();
     expect(WriteFile.toolDefinition.name).toBe("WRITE_FILE");
     expect(WriteFile.toolDefinition.description).toBeDefined();
-    expect(WriteFile.toolDefinition.parameters).toBeDefined();
-    expect(WriteFile.toolDefinition.parameters.properties).toHaveProperty(
-      "path"
-    );
-    expect(WriteFile.toolDefinition.parameters.properties).toHaveProperty(
+    expect(WriteFile.toolDefinition.inputSchema).toBeDefined();
+    expect(WriteFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
+    expect(WriteFile.toolDefinition.inputSchema.shape).toHaveProperty(
       "content"
     );
-    expect(WriteFile.toolDefinition.parameters.required).toEqual([
-      "path",
-      "content",
-    ]);
   });
 
   it("modelToolArgs should return correct structure", () => {

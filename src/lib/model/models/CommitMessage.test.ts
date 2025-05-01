@@ -88,7 +88,7 @@ describe("CommitMessage Model", () => {
       `<GIT_DIFF>\n${prompt}\n</GIT_DIFF>`
     );
     expect(generateCallArgs.prompt).toContain(
-      "Create a summary git commit message with a maximum 80 character description and a maximum of 5 bullet points"
+      "Create a summary git commit message with a maximum 80 character description and a maximum of 3 bullet points"
     );
     expect(generateCallArgs.output).toBeUndefined();
     for (const key in restOptions) {

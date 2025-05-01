@@ -40,11 +40,10 @@ describe("RunBuild Tool", () => {
     expect(RunBuild.toolDefinition.description).toBe(
       "Runs the build command specified in the cassi configuration."
     );
-    expect(RunBuild.toolDefinition.parameters).toEqual({
-      type: "object",
-      properties: {},
-      required: [],
-    });
+    expect(RunBuild.toolDefinition.inputSchema).toBeDefined();
+    expect(Object.keys(RunBuild.toolDefinition.inputSchema.shape).length).toBe(
+      0
+    );
   });
 
   it("should execute the build command successfully", async () => {

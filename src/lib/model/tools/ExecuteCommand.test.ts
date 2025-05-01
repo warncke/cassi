@@ -76,17 +76,13 @@ describe("ExecuteCommand", () => {
     expect(ExecuteCommand.toolDefinition).toBeDefined();
     expect(ExecuteCommand.toolDefinition.name).toBe("EXECUTE_COMMAND");
     expect(ExecuteCommand.toolDefinition.description).toBeDefined();
-    expect(ExecuteCommand.toolDefinition.parameters).toBeDefined();
-    expect(ExecuteCommand.toolDefinition.parameters.properties).toHaveProperty(
+    expect(ExecuteCommand.toolDefinition.inputSchema).toBeDefined();
+    expect(ExecuteCommand.toolDefinition.inputSchema.shape).toHaveProperty(
       "command"
     );
-    expect(ExecuteCommand.toolDefinition.parameters.properties).toHaveProperty(
+    expect(ExecuteCommand.toolDefinition.inputSchema.shape).toHaveProperty(
       "requires_approval"
     );
-    expect(ExecuteCommand.toolDefinition.parameters.required).toEqual([
-      "command",
-      "requires_approval",
-    ]);
   });
 
   it("modelToolArgs should return correct structure", () => {
