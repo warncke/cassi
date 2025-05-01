@@ -162,4 +162,15 @@ export class Task {
     }
     throw new Error("Worktree not found for this task or any parent task.");
   }
+
+  /**
+   * Recursively finds the root task in the task hierarchy.
+   * @returns The root Task instance.
+   */
+  getRootTask(): Task {
+    if (this.parentTask) {
+      return this.parentTask.getRootTask();
+    }
+    return this;
+  }
 }

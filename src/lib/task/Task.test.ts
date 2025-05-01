@@ -860,4 +860,40 @@ describe("Task", () => {
       parentSpy.mockRestore();
     });
   });
+
+  describe("getRootTask", () => {
+    it("should return the task itself if it has no parent", () => {
+      task.parentTask = null;
+      expect(task.getRootTask()).toBe(task);
+    });
+
+    it("should return the parent task if it exists and has no parent", () => {
+      const parentTask = new Task(mockCassi);
+      parentTask.parentTask = null;
+      task.parentTask = parentTask;
+      expect(task.getRootTask()).toBe(parentTask);
+    });
+
+    it("should return the top-level ancestor task in a multi-level hierarchy", () => {
+      const grandParentTask = new Task(mockCassi);
+      grandParentTask.parentTask = null; // The root
+
+      const parentTask = new Task(mockCassi, grandParentTask);
+
+      const childTask = new Task(mockCassi, parentTask);
+
+      const grandChildTask = new Task(mockCassi, childTask);
+
+      expect(grandChildTask.getRootTask()).toBe(grandParentTask);
+      expect(childTask.getRootTask()).toBe(grandParentTask);
+      expect(parentTask.getRootTask()).toBe(grandParentTask);
+    });
+
+    it("should return the task itself if the parent is explicitly set to null", () => {
+      const parentTask = new Task(mockCassi);
+      task.parentTask = parentTask; // Initially has a parent
+      task.parentTask = null; // Parent removed
+      expect(task.getRootTask()).toBe(task);
+    });
+  });
 });
