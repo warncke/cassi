@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { ModelTool } from "./ModelTool.js";
+import { z } from "zod"; // Add z import
 import { Model, ModelConstructor } from "../Model.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { ToolDefinition } from "../../tool/Tool.js";
@@ -62,19 +63,19 @@ class ConcreteModelTool extends ModelTool {
   static toolDefinition: ToolDefinition = {
     name: "concreteTestTool",
     description: "A concrete test tool",
-    parameters: {
-      type: "object",
-      properties: {
-        param1: { type: "string", description: "Test parameter 1" },
-      },
-      required: ["param1"],
-    },
+    inputSchema: z.object({
+      param1: z.string().describe("Test parameter 1"),
+    }),
+    outputSchema: z.string(), // The toolMethod returns a string
   };
 
-  static toolMethod = vi.fn(async (model: Models, param1: string) => {
-    const modelName = model.constructor.name;
-    return `Called with model ${modelName} and param1: ${param1}`;
-  });
+  static toolMethod = vi.fn(
+    async (model: Models, input: { param1: string }) => {
+      const { param1 } = input; // Destructure input
+      const modelName = model.constructor.name;
+      return `Called with model ${modelName} and param1: ${param1}`;
+    }
+  );
 }
 
 const mockCassi = new MockCassi() as Cassi;
@@ -107,17 +108,17 @@ describe("ModelTool", () => {
     expect(toolDefinition).toEqual(ConcreteModelTool.toolDefinition);
     expect(typeof toolMethod).toBe("function");
 
-    const testParam = "hello world";
-    const result = await toolMethod(testParam);
+    const testInput = { param1: "hello world" }; // Pass input object
+    const result = await toolMethod(testInput);
 
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledTimes(1);
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledWith(
       mockModelInstance,
-      testParam
+      testInput // Expect input object
     );
 
     expect(result).toBe(
-      `Called with model MockModelInstance and param1: ${testParam}`
+      `Called with model MockModelInstance and param1: ${testInput.param1}` // Use input object property
     );
   });
 
@@ -126,8 +127,10 @@ describe("ModelTool", () => {
       static toolDefinition: ToolDefinition = {
         name: "incomplete",
         description: "",
-        parameters: { type: "object", properties: {} },
+        inputSchema: z.object({}), // Use Zod schema
+        outputSchema: z.any(), // Use z.any() as output is undefined/error
       };
+      // No toolMethod defined, so it should throw
     }
     const toolArgs = IncompleteModelTool.modelToolArgs(mockModelInstance);
     await expect(toolArgs[1]()).rejects.toThrow(
@@ -140,17 +143,18 @@ describe("ModelTool", () => {
 
     const toolArgs = ConcreteModelTool.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const testParam = "logging test";
+    const testInput = { param1: "logging test" }; // Use input object
 
-    await toolMethod(testParam);
+    await toolMethod(testInput);
 
-    const expectedArgsSize = JSON.stringify([testParam]).length;
+    const expectedArgsSize = JSON.stringify(testInput).length; // Size of input object
     expect(consoleLogSpy).toHaveBeenCalledTimes(2);
+    // The expected size is now 27 due to {"param1":"logging test"}
     expect(consoleLogSpy).toHaveBeenNthCalledWith(
       1,
-      `Calling tool: ${ConcreteModelTool.toolDefinition.name}, Model: ${mockModelInstance.constructor.name}, Args count: 1, Args size: ${expectedArgsSize}`
+      `Calling tool: ${ConcreteModelTool.toolDefinition.name}, Model: ${mockModelInstance.constructor.name}, Args count: 1, Args size: 27`
     );
-    const expectedResponse = `Called with model ${mockModelInstance.constructor.name} and param1: ${testParam}`;
+    const expectedResponse = `Called with model ${mockModelInstance.constructor.name} and param1: ${testInput.param1}`; // Use input object property
     const expectedResponseLength = expectedResponse.length;
     expect(consoleLogSpy).toHaveBeenNthCalledWith(
       2,

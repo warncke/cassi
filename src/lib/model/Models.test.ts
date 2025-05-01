@@ -35,15 +35,15 @@ vi.mock("../task/Task.js", () => ({
   })),
 }));
 
-// Helper to create parameters structure for local ToolDefinition
+// Helper to create a Zod schema object from properties
 const createToolParameters = (
-  properties: Record<string, { type: string; description?: string }>,
+  properties: Record<string, z.ZodTypeAny>,
   required?: string[]
-) => ({
-  type: "object" as const,
-  properties,
-  required, // 'required' is part of the parameters object
-});
+): z.ZodObject<any> => {
+  // Note: Zod automatically handles required/optional based on schema definition.
+  // The 'required' array isn't directly used here but kept for potential future logic.
+  return z.object(properties);
+};
 
 class TestModel extends Models {
   // Constructor now receives the mocked AI object directly via the mocked genkit call
@@ -78,7 +78,8 @@ describe("Models", () => {
       const mockToolDef: ToolDefinition = {
         name: "testTool",
         description: "A test tool",
-        parameters: createToolParameters({}), // No required params here
+        inputSchema: createToolParameters({}), // Use the helper for an empty object schema
+        outputSchema: z.object({}), // Explicitly define output schema
       };
       const mockHandler = vi.fn().mockResolvedValue({ result: "ok" });
       const toolDefinitions: [ToolDefinition, (input: any) => Promise<any>][] =
@@ -111,13 +112,13 @@ describe("Models", () => {
       mockToolDef = {
         name: "testTool",
         description: "A test tool",
-        parameters: createToolParameters(
-          // Corrected: 'required' inside parameters
+        inputSchema: createToolParameters(
           {
-            param1: { type: "string" },
-          },
-          ["param1"]
+            param1: z.string(), // Use z.string() for the schema definition
+          }
+          // 'required' is implicitly handled by Zod; param1 is required by default
         ),
+        outputSchema: z.object({ result: z.string() }), // Define expected output schema
       };
       mockHandler = vi.fn().mockResolvedValue({ result: "tool success" });
       const toolDefinitions: [ToolDefinition, (input: any) => Promise<any>][] =
