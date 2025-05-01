@@ -4,7 +4,7 @@ import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { StatusResult } from "simple-git";
 import { CommitMessage } from "../../model/models/CommitMessage.js";
-import { Prompt } from "../../prompt/Prompt.js";
+import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
 import Confirm from "../../prompt/prompts/Confirm.js"; // Default import
 import { User } from "../../user/User.js";
 import { gemini25FlashPreview0417 } from "@genkit-ai/googleai"; // Import the requested model
@@ -191,22 +191,33 @@ describe("GitCommitMerge", () => {
     expect(task.getCwd).toHaveBeenCalledTimes(4);
     expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1);
     expect(mockGetTaskId).toHaveBeenCalledTimes(1); // For the merge call
-    expect(mockInvoke).toHaveBeenCalledWith("git", "rebase", [mockCwd], [mockRepositoryBranch]);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      [mockCwd],
+      [mockRepositoryBranch]
+    );
     // Verify prompt was called correctly
     expect(mockUserPrompt).toHaveBeenCalledTimes(1);
-    const promptArg = mockUserPrompt.mock.calls[0][0] as Prompt;
-    expect(promptArg.prompts[0]).toBeInstanceOf(Confirm); // Use .prompts
-    expect((promptArg.prompts[0] as Confirm).message).toContain(mockDiffResult);
-    expect((promptArg.prompts[0] as Confirm).message).toContain(`${mockTaskIdShort}: ${mockGeneratedMessage}`);
+    const promptArg = mockUserPrompt.mock.calls[0][0] as Prompt; // Use Prompt type
+    expect(promptArg).toBeInstanceOf(Confirm); // Check the prompt directly
+    expect((promptArg as Confirm).message).toContain(mockDiffResult); // Access message directly
+    expect((promptArg as Confirm).message).toContain(
+      `${mockTaskIdShort}: ${mockGeneratedMessage}`
+    ); // Access message directly
 
-    expect(mockInvoke).toHaveBeenCalledWith("git", "rebase", [mockCwd], [mockRepositoryBranch]);
+    expect(mockInvoke).toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      [mockCwd],
+      [mockRepositoryBranch]
+    );
     expect(mockInvoke).toHaveBeenCalledWith("git", "merge", [], [mockTaskId]);
     expect(mockGetWorkTree).toHaveBeenCalledTimes(1); // Only called once before rebase
     expect(mockGetTaskId).toHaveBeenCalledTimes(1); // Only called once before merge
     // Prompt called once
     expect(mockUserPrompt).toHaveBeenCalledTimes(1);
   });
-
 
   it("should not commit, rebase, or merge if prompt handler throws (simulating denial)", async () => {
     // Set prompt to reject (simulates denial/error)
@@ -237,14 +248,27 @@ describe("GitCommitMerge", () => {
           `Unexpected invoke call when commit denied: ${tool}.${method}`
         );
       }
-
     );
 
-
     // Verify commit, rebase, merge were NOT called
-    expect(mockInvoke).not.toHaveBeenCalledWith("git", "commitAll", expect.anything(), expect.anything());
-    expect(mockInvoke).not.toHaveBeenCalledWith("git", "rebase", expect.anything(), expect.anything());
-    expect(mockInvoke).not.toHaveBeenCalledWith("git", "merge", expect.anything(), expect.anything());
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "git",
+      "commitAll",
+      expect.anything(),
+      expect.anything()
+    );
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "git",
+      "rebase",
+      expect.anything(),
+      expect.anything()
+    );
+    expect(mockInvoke).not.toHaveBeenCalledWith(
+      "git",
+      "merge",
+      expect.anything(),
+      expect.anything()
+    );
 
     // Verify the specific error is thrown
     await expect(task.initTask()).rejects.toThrow(promptError);
@@ -255,17 +279,16 @@ describe("GitCommitMerge", () => {
     // Verify log message for cancellation is NOT called (error thrown instead)
     expect(consoleLogSpy).not.toHaveBeenCalledWith("Commit cancelled by user.");
     // Verify the commit confirmation log is not called
-    expect(consoleLogSpy).not.toHaveBeenCalledWith("Commit confirmed by user (or prompt handler allows proceeding). Committing...");
+    expect(consoleLogSpy).not.toHaveBeenCalledWith(
+      "Commit confirmed by user (or prompt handler allows proceeding). Committing..."
+    );
 
-     // status, diff
+    // status, diff
     expect(task.getCwd).toHaveBeenCalledTimes(2);
     expect(mockGetTaskIdShort).toHaveBeenCalledTimes(1); // For commit message generation
     expect(mockGetWorkTree).not.toHaveBeenCalled(); // Not needed if rebase/merge don't happen
     expect(mockGetTaskId).not.toHaveBeenCalled(); // Not needed if merge doesn't happen
-
-
   });
-
 
   // Note: Renamed previous test slightly for clarity
   it("should call git rebase after commitAll if user confirms", async () => {

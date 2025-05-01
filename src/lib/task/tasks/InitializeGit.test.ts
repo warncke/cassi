@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { InitializeGit } from "./InitializeGit.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Task } from "../Task.js";
-import { Prompt } from "../../prompt/Prompt.js";
+import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
 import Confirm from "../../prompt/prompts/Confirm.js";
 
 vi.mock("../../cassi/Cassi.js");
@@ -27,9 +27,11 @@ describe("InitializeGit Task", () => {
         repositoryDir: "/mock/repo/dir",
       },
       user: {
-        prompt: vi.fn(async (promptContainer: Prompt) => {
-          if (promptContainer.prompts[0] instanceof Confirm) {
-            promptContainer.prompts[0].response = true;
+        prompt: vi.fn(async (prompt: Prompt) => {
+          // Use Prompts type
+          if (prompt instanceof Confirm) {
+            // Check the prompt directly
+            prompt.response = true; // Set response directly
           }
         }),
       },
@@ -120,14 +122,11 @@ describe("InitializeGit Task", () => {
     await initializeGitTask.initTask();
 
     expect(promptSpy).toHaveBeenCalledOnce();
+    // Check the prompt object directly
     expect(promptSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        prompts: expect.arrayContaining([
-          expect.objectContaining({
-            message: "Current branch is 'develop'. Continue?",
-            type: "confirm",
-          }),
-        ]),
+        message: "Current branch is 'develop'. Continue?",
+        type: "confirm",
       })
     );
   });
@@ -136,9 +135,11 @@ describe("InitializeGit Task", () => {
     const mockStatus = { isClean: () => true, current: "feature/new-stuff" };
     vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
     vi.spyOn(mockCassi.user, "prompt").mockImplementation(
-      async (promptContainer: Prompt) => {
-        if (promptContainer.prompts[0] instanceof Confirm) {
-          promptContainer.prompts[0].response = false;
+      async (prompt: Prompt) => {
+        // Use Prompts type
+        if (prompt instanceof Confirm) {
+          // Check the prompt directly
+          prompt.response = false; // Set response directly
         }
       }
     );

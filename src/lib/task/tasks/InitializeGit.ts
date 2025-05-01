@@ -15,9 +15,8 @@ export class InitializeGit extends Task {
     const confirmPrompt = new Confirm(
       `Current branch is '${status.current}'. Continue?`
     );
-    const promptContainer = new Prompt([confirmPrompt]);
 
-    await this.cassi.user.prompt(promptContainer);
+    await this.cassi.user.prompt(confirmPrompt);
 
     if (!confirmPrompt.response) {
       console.log("Operation cancelled by user.");

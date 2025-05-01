@@ -1,5 +1,6 @@
 import { User } from "./User.js";
 import { Prompt } from "../prompt/Prompt.js";
+import Input from "../prompt/prompts/Input.js";
 
 import { describe, beforeEach, test, expect, vi } from "vitest";
 
@@ -35,7 +36,7 @@ describe("User", () => {
   test("prompt should call promptFn with the provided prompt", async () => {
     const customPromptFn = vi.fn(async () => {});
     user = new User(async () => {}, customPromptFn);
-    const mockPrompt = new Prompt([]);
+    const mockPrompt = new Input("Test input");
     await expect(user.prompt(mockPrompt)).resolves.toBeUndefined();
     expect(customPromptFn).toHaveBeenCalledWith(mockPrompt);
   });

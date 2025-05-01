@@ -34,8 +34,7 @@ export class RequirePassingTests extends Task {
         const confirmPrompt = new Confirm(
           `Tests not passing in ${this.getCwd()}. Fix and press y to continue`
         );
-        const promptSequence = new Prompt([confirmPrompt]);
-        await cassi.user.prompt(promptSequence);
+        await cassi.user.prompt(confirmPrompt);
 
         if (confirmPrompt.response === false) {
           throw new Error("Task aborted by user.");

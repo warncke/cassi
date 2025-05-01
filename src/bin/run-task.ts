@@ -7,6 +7,7 @@ import { Cassi } from "../lib/cassi/Cassi.js";
 import { User } from "../lib/user/User.js";
 import { Task } from "../lib/task/Task.js";
 import { Worktree } from "../lib/repository/Worktree.js";
+import { Prompt } from "../lib/prompt/Prompt.js"; // Added Prompts import
 
 const program = new Command();
 
@@ -49,13 +50,12 @@ async function run() {
     console.log("cassi starting");
   }
 
-  async function promptFn(
-    promptSequence: import("../lib/prompt/Prompt.js").Prompt
-  ) {
+  async function promptFn(prompt: Prompt) {
+    // Updated type here
     const { CLIPromptHandler } = await import(
       "../lib/cli-prompt-handler/CLIPromptHandler.js"
     );
-    const handler = new CLIPromptHandler(promptSequence);
+    const handler = new CLIPromptHandler(prompt); // Updated variable name
     await handler.handlePrompt();
   }
 

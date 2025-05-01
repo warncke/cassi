@@ -45,9 +45,11 @@
   "dependencies": {
     "@genkit-ai/core": "^1.6.2",
     "@genkit-ai/googleai": "^1.6.2",
+    "@types/express": "^5.0.1",
     "ajv": "^8.17.1",
     "change-case": "^5.4.4",
     "commander": "^13.1.0",
+    "express": "^5.1.0",
     "genkit": "^1.6.2",
     "simple-git": "^3.27.0",
     "tree-sitter": "^0.21.1",

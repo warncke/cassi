@@ -21,7 +21,7 @@ export class ConfirmCwd extends Task {
       `Is this the correct repository directory? ${potentialRepoDir}`
     );
     console.log(`[ConfirmCwd] Calling user.prompt...`);
-    await this.cassi.user.prompt(new Prompt([confirmPrompt]));
+    await this.cassi.user.prompt(confirmPrompt);
 
     if (!confirmPrompt.response) {
       console.log("User denied the repository directory.");

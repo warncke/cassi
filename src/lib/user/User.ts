@@ -2,11 +2,11 @@ import { Prompt } from "../prompt/Prompt.js";
 
 export class User {
   initFn: () => Promise<void>;
-  promptFn: (promptSequence: Prompt) => Promise<void>;
+  promptFn: (prompt: Prompt) => Promise<void>;
 
   constructor(
     initFn: () => Promise<void> = async () => {},
-    promptFn: (promptSequence: Prompt) => Promise<void> = async () => {}
+    promptFn: (prompt: Prompt) => Promise<void> = async () => {}
   ) {
     this.initFn = initFn;
     this.promptFn = promptFn;

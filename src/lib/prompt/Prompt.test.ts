@@ -1,16 +1,18 @@
 import { describe, it, expect } from "vitest";
+import { Prompt } from "./Prompt.js";
 import Input from "./prompts/Input.js";
 import Confirm from "./prompts/Confirm.js";
-import { Prompt } from "./Prompt.js";
 
 describe("Prompt", () => {
-  it("should create an instance of Prompt with Input and Confirm prompts", () => {
-    const inputs = [
-      new Input("Enter input message"),
-      new Confirm("Confirm message"),
-    ];
-    const prompt = new Prompt(inputs);
-    expect(prompt).toBeInstanceOf(Prompt);
-    expect(prompt.prompts).toEqual(inputs);
+  it("Input should extend Prompt", () => {
+    const input = new Input("Test message");
+    expect(input).toBeInstanceOf(Prompt);
+    expect(input).toBeInstanceOf(Input);
+  });
+
+  it("Confirm should extend Prompt", () => {
+    const confirm = new Confirm("Test message");
+    expect(confirm).toBeInstanceOf(Prompt);
+    expect(confirm).toBeInstanceOf(Confirm);
   });
 });

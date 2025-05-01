@@ -37,10 +37,12 @@ export class GitCommitMerge extends Task {
     );
     // Send the prompt to the user. Assume the prompt handler (e.g., CLIPromptHandler)
     // will throw an error or exit if the user denies the confirmation.
-    await this.cassi.user.prompt(new Prompt([confirmPrompt]));
+    await this.cassi.user.prompt(confirmPrompt);
 
     // If prompt didn't throw/exit, proceed with commit
-    console.log("Commit confirmed by user (or prompt handler allows proceeding). Committing...");
+    console.log(
+      "Commit confirmed by user (or prompt handler allows proceeding). Committing..."
+    );
     await this.invoke("git", "commitAll", [this.getCwd()], [commitMessage]);
 
     try {

@@ -18,9 +18,10 @@ vi.mock("commander", () => {
 });
 
 vi.mock("../lib/cassi/Cassi.js");
+
 vi.mock("../lib/user/User.js");
 vi.mock("../lib/prompt/prompts/Input.js");
-vi.mock("../lib/prompt/Prompt.js");
+// Remove mock for abstract Prompt: vi.mock("../lib/prompt/Prompt.js");
 vi.mock("../lib/cli-prompt-handler/CLIPromptHandler.js");
 
 describe("cassi bin script", () => {
@@ -31,7 +32,7 @@ describe("cassi bin script", () => {
     message: string;
     response: string | null;
   };
-  let mockPromptInstance: Prompt;
+  // Remove mockPromptInstance: let mockPromptInstance: Prompt;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let promptCallCounter = 0;
@@ -50,19 +51,19 @@ describe("cassi bin script", () => {
       return sharedMockInputInstance;
     });
 
-    (Prompt as any).mockImplementation((prompts: any[]) => {
-      mockPromptInstance = { prompts: prompts };
-      expect(prompts).toContain(sharedMockInputInstance);
-      return mockPromptInstance;
-    });
+    // Remove mock implementation for abstract Prompt
+    // (Prompt as any).mockImplementation((prompts: any[]) => { ... });
 
     (CLIPromptHandler as any).mockImplementation(() => ({
       handlePrompt: vi.fn(),
     }));
 
     mockUserInstance = {
-      prompt: vi.fn().mockImplementation(async (promptSequence: Prompt) => {
+      prompt: vi.fn().mockImplementation(async (prompt: Prompt) => {
+        // Update type to Prompts
         promptCallCounter++;
+        // Logic now depends on the single prompt passed, not a sequence
+        // Assuming the prompt passed is always the sharedMockInputInstance for these tests
         if (promptCallCounter === 1) {
           sharedMockInputInstance.response = "test request";
         } else if (promptCallCounter >= 2) {
@@ -114,7 +115,7 @@ describe("cassi bin script", () => {
     expect(Input).toHaveBeenCalledTimes(2);
     expect(Input).toHaveBeenNthCalledWith(1, "Enter your next request:");
     expect(Input).toHaveBeenNthCalledWith(2, "Enter your next request:");
-    expect(Prompt).toHaveBeenCalledTimes(2);
+    // Remove assertion for abstract Prompt: expect(Prompt).toHaveBeenCalledTimes(2);
 
     expect(sharedMockInputInstance.response).toBe(null);
     expect(consoleErrorSpy).not.toHaveBeenCalled();
@@ -139,7 +140,7 @@ describe("cassi bin script", () => {
     expect(mockCassiInstance.runTasks).toHaveBeenCalledTimes(1);
     expect(mockUserInstance.prompt).toHaveBeenCalledTimes(1);
     expect(Input).toHaveBeenCalledTimes(1);
-    expect(Prompt).toHaveBeenCalledTimes(1);
+    // Remove assertion for abstract Prompt: expect(Prompt).toHaveBeenCalledTimes(1);
     expect(sharedMockInputInstance.response).toBe(null);
     expect(consoleLogSpy).toHaveBeenCalledWith("No input received, exiting.");
     expect(consoleErrorSpy).not.toHaveBeenCalled();

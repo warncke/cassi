@@ -3,6 +3,8 @@ import { RequirePassingTests } from "./RequirePassingTests.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Config } from "../../config/Config.js";
 import { User } from "../../user/User.js";
+import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
+import Confirm from "../../prompt/prompts/Confirm.js"; // Import Confirm
 
 vi.mock("../../cassi/Cassi.js");
 vi.mock("../../config/Config.js");
@@ -69,16 +71,21 @@ describe("RequirePassingTests", () => {
       });
 
     // Mock user confirming to continue
-    (mockUser.prompt as Mock).mockImplementation(async (promptSequence) => {
-      const confirmPrompt = promptSequence.prompts[0];
-      confirmPrompt.response = true;
+    (mockUser.prompt as Mock).mockImplementation(async (prompt: Prompt) => {
+      // Use Prompts type
+      if (prompt instanceof Confirm) {
+        // Check the prompt directly
+        prompt.response = true; // Set response directly
+      }
     });
 
     await expect(task.initTask()).resolves.toBeUndefined();
     expect(task.invoke).toHaveBeenCalledTimes(2);
     expect(mockUser.prompt).toHaveBeenCalledTimes(1);
-    const promptArg = (mockUser.prompt as Mock).mock.calls[0][0];
-    expect(promptArg.prompts[0].message).toBe(
+    const promptArg = (mockUser.prompt as Mock).mock.calls[0][0] as Prompt; // Use Prompts type
+    expect(promptArg).toBeInstanceOf(Confirm); // Check the prompt directly
+    expect((promptArg as Confirm).message).toBe(
+      // Access message directly
       "Tests not passing in /fake/cwd. Fix and press y to continue"
     );
   });
@@ -91,9 +98,12 @@ describe("RequirePassingTests", () => {
     });
 
     // Mock user aborting
-    (mockUser.prompt as Mock).mockImplementation(async (promptSequence) => {
-      const confirmPrompt = promptSequence.prompts[0];
-      confirmPrompt.response = false;
+    (mockUser.prompt as Mock).mockImplementation(async (prompt: Prompt) => {
+      // Use Prompts type
+      if (prompt instanceof Confirm) {
+        // Check the prompt directly
+        prompt.response = false; // Set response directly
+      }
     });
 
     await expect(task.initTask()).rejects.toThrow("Task aborted by user.");
