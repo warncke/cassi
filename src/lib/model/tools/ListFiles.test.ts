@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { z } from "zod";
 import { ListFiles } from "./ListFiles.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -160,9 +161,10 @@ describe("ListFiles", () => {
       "Lists all *.ts and *.json files within the current working directory."
     );
     expect(ListFiles.toolDefinition.inputSchema).toBeDefined();
-    expect(Object.keys(ListFiles.toolDefinition.inputSchema.shape).length).toBe(
-      0
-    );
+    // Cast to ZodObject to access shape
+    const inputSchema = ListFiles.toolDefinition
+      .inputSchema as z.ZodObject<any>;
+    expect(Object.keys(inputSchema.shape).length).toBe(0);
   });
 
   it("modelToolArgs should return correct structure", () => {

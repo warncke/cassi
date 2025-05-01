@@ -11,6 +11,7 @@ export class RunTestAll extends ModelTool {
     name: "RUN_TEST_ALL",
     description: "Runs all tests for project",
     inputSchema: runTestAllInputSchema,
+    outputSchema: z.string(),
   };
 
   static async toolMethod(

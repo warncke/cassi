@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { z } from "zod";
 import { ReadFile } from "./ReadFile.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -90,7 +91,9 @@ describe("ReadFile", () => {
     expect(ReadFile.toolDefinition.name).toBe("READ_FILE");
     expect(ReadFile.toolDefinition.description).toBeDefined();
     expect(ReadFile.toolDefinition.inputSchema).toBeDefined();
-    expect(ReadFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
+    // Cast to ZodObject to access shape
+    const inputSchema = ReadFile.toolDefinition.inputSchema as z.ZodObject<any>;
+    expect(inputSchema.shape).toHaveProperty("path");
   });
 
   it("modelToolArgs should return correct structure", () => {

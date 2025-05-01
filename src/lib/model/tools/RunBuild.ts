@@ -11,6 +11,7 @@ export class RunBuild extends ModelTool {
     name: "RUN_BUILD",
     description: "Runs the build command specified in the cassi configuration.",
     inputSchema: runBuildInputSchema,
+    outputSchema: z.string(),
   };
 
   static async toolMethod(

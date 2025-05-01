@@ -18,6 +18,7 @@ export class RunTestFile extends ModelTool {
     name: "RUN_TEST_FILE",
     description: "Runs tests for a specific file",
     inputSchema: runTestFileInputSchema,
+    outputSchema: z.string(),
   };
 
   static async toolMethod(

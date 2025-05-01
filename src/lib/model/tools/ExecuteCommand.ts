@@ -18,6 +18,7 @@ export class ExecuteCommand extends ModelTool {
     description:
       "Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands. Tailor your command to the user's system and provide a clear explanation of what the command does. Commands will be executed in the current working directory.",
     inputSchema: executeCommandInputSchema,
+    outputSchema: z.string(),
   };
 
   static async toolMethod(

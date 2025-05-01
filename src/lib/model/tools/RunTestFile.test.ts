@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { RunTestFile } from "./RunTestFile.js";
 import { Models } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -42,7 +43,10 @@ describe("RunTestFile Tool", () => {
       "Runs tests for a specific file"
     );
     expect(RunTestFile.toolDefinition.inputSchema).toBeDefined();
-    expect(RunTestFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
+    // Cast to ZodObject to access shape
+    const inputSchema = RunTestFile.toolDefinition
+      .inputSchema as z.ZodObject<any>;
+    expect(inputSchema.shape).toHaveProperty("path");
   });
 
   it("should execute the test command for the specified file successfully", async () => {

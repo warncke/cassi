@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { RunBuild } from "./RunBuild.js";
 import { Models } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -41,9 +42,9 @@ describe("RunBuild Tool", () => {
       "Runs the build command specified in the cassi configuration."
     );
     expect(RunBuild.toolDefinition.inputSchema).toBeDefined();
-    expect(Object.keys(RunBuild.toolDefinition.inputSchema.shape).length).toBe(
-      0
-    );
+    // Cast to ZodObject to access shape
+    const inputSchema = RunBuild.toolDefinition.inputSchema as z.ZodObject<any>;
+    expect(Object.keys(inputSchema.shape).length).toBe(0);
   });
 
   it("should execute the build command successfully", async () => {

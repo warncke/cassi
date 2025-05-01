@@ -43,6 +43,7 @@ export class ReplaceInFile extends ModelTool {
     description:
       "Request to replace sections of content in an existing file using SEARCH/REPLACE blocks that define exact changes to specific parts of the file. This tool should be used when you need to make targeted changes to specific parts of a file.",
     inputSchema: replaceInFileInputSchema,
+    outputSchema: z.string(),
   };
 
   static async toolMethod(

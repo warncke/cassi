@@ -10,7 +10,8 @@ import { z } from "zod";
 export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: z.ZodObject<any>;
+  inputSchema: z.ZodType<any>;
+  outputSchema: z.ZodType<any>;
 }
 
 const __filename = fileURLToPath(import.meta.url);

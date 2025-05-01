@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { WriteFile } from "./WriteFile.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -77,10 +78,11 @@ describe("WriteFile", () => {
     expect(WriteFile.toolDefinition.name).toBe("WRITE_FILE");
     expect(WriteFile.toolDefinition.description).toBeDefined();
     expect(WriteFile.toolDefinition.inputSchema).toBeDefined();
-    expect(WriteFile.toolDefinition.inputSchema.shape).toHaveProperty("path");
-    expect(WriteFile.toolDefinition.inputSchema.shape).toHaveProperty(
-      "content"
-    );
+    // Cast to ZodObject to access shape
+    const inputSchema = WriteFile.toolDefinition
+      .inputSchema as z.ZodObject<any>;
+    expect(inputSchema.shape).toHaveProperty("path");
+    expect(inputSchema.shape).toHaveProperty("content");
   });
 
   it("modelToolArgs should return correct structure", () => {

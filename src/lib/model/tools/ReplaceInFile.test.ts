@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { z } from "zod";
 import path from "path";
 import { ReplaceInFile } from "./ReplaceInFile.js";
 import { Models, GenerateModelOptions } from "../Models.js";
@@ -60,12 +61,11 @@ describe("ReplaceInFile", () => {
     expect(ReplaceInFile.toolDefinition.name).toBe("REPLACE_IN_FILE");
     expect(ReplaceInFile.toolDefinition.description).toBeDefined();
     expect(ReplaceInFile.toolDefinition.inputSchema).toBeDefined();
-    expect(ReplaceInFile.toolDefinition.inputSchema.shape).toHaveProperty(
-      "path"
-    );
-    expect(ReplaceInFile.toolDefinition.inputSchema.shape).toHaveProperty(
-      "diff"
-    );
+    // Cast to ZodObject to access shape
+    const inputSchema = ReplaceInFile.toolDefinition
+      .inputSchema as z.ZodObject<any>;
+    expect(inputSchema.shape).toHaveProperty("path");
+    expect(inputSchema.shape).toHaveProperty("diff");
   });
 
   it("modelToolArgs should return correct structure", () => {

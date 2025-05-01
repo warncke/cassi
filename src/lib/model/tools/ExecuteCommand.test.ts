@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { z } from "zod";
 import { ExecuteCommand } from "./ExecuteCommand.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { Task } from "../../task/Task.js";
@@ -77,12 +78,11 @@ describe("ExecuteCommand", () => {
     expect(ExecuteCommand.toolDefinition.name).toBe("EXECUTE_COMMAND");
     expect(ExecuteCommand.toolDefinition.description).toBeDefined();
     expect(ExecuteCommand.toolDefinition.inputSchema).toBeDefined();
-    expect(ExecuteCommand.toolDefinition.inputSchema.shape).toHaveProperty(
-      "command"
-    );
-    expect(ExecuteCommand.toolDefinition.inputSchema.shape).toHaveProperty(
-      "requires_approval"
-    );
+    // Cast to ZodObject to access shape
+    const inputSchema = ExecuteCommand.toolDefinition
+      .inputSchema as z.ZodObject<any>;
+    expect(inputSchema.shape).toHaveProperty("command");
+    expect(inputSchema.shape).toHaveProperty("requires_approval");
   });
 
   it("modelToolArgs should return correct structure", () => {
