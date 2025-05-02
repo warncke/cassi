@@ -3,4 +3,6 @@ import Confirm from "./prompts/Confirm.js";
 
 // Removed 'export type Prompts = Input | Confirm;' as per user instruction
 
-export abstract class Prompt {}
+export abstract class Prompt {
+  public response: any;
+}

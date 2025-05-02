@@ -16,19 +16,24 @@ import { Prompt } from "../prompt/Prompt.js";
 import Input from "../prompt/prompts/Input.js";
 import Confirm from "../prompt/prompts/Confirm.js"; // Import Confirm
 
-// Keep track of the GET route handler and listen callback
+// Keep track of route handlers and listen callback
 let getRouteHandler: ((req: Request, res: Response) => void) | null = null;
+let postRouteHandler: ((req: Request, res: Response) => void) | null = null; // Added for POST
 let listenCallback: (() => void) | null = null;
 
 vi.mock("express", () => {
   const mockApp = {
-    use: vi.fn(),
+    use: vi.fn(), // Keep track of middleware usage
     get: vi.fn((path, handler) => {
       if (path === "/prompt") {
-        getRouteHandler = handler; // Capture the handler for /prompt
+        getRouteHandler = handler; // Capture the GET handler for /prompt
       }
     }),
-    post: vi.fn(),
+    post: vi.fn((path, handler) => {
+      if (path === "/prompt") {
+        postRouteHandler = handler; // Capture the POST handler for /prompt
+      }
+    }),
     listen: vi.fn((port, host, callback) => {
       listenCallback = callback; // Capture the listen callback
       // Simulate async start by calling the callback immediately for the test promise
@@ -37,8 +42,14 @@ vi.mock("express", () => {
       }
     }),
   };
+  // Mock the default export (the factory function) and static properties like .json()
+  const mockExpress = vi.fn(() => mockApp);
+  (mockExpress as any).json = vi.fn(
+    () => (req: any, res: any, next: any) => next()
+  ); // Mock express.json() middleware
+
   return {
-    default: vi.fn(() => mockApp),
+    default: mockExpress, // Use the enhanced mock function
   };
 });
 
@@ -62,6 +73,7 @@ describe("Server", () => {
   beforeEach(() => {
     // Reset captured handlers and mocks
     getRouteHandler = null;
+    postRouteHandler = null; // Reset POST handler
     listenCallback = null;
     vi.clearAllMocks();
 
@@ -115,14 +127,21 @@ describe("Server", () => {
     expect(app).not.toBeNull();
     expect(express).toHaveBeenCalledTimes(1); // Verify init calls express() once
     expect(server.prompts).toEqual([]); // Prompts should be reset
-    expect(app?.get).toHaveBeenCalledWith("/prompt", expect.any(Function)); // Check if route is registered
-    expect(getRouteHandler).toBeInstanceOf(Function); // Check if handler was captured
+    expect(app?.use).toHaveBeenCalledWith(expect.any(Function)); // Check if express.json middleware was added
+    expect(app?.get).toHaveBeenCalledWith("/prompt", expect.any(Function)); // Check if GET route is registered
+    expect(app?.post).toHaveBeenCalledWith("/prompt", expect.any(Function)); // Check if POST route is registered
+    expect(getRouteHandler).toBeInstanceOf(Function); // Check if GET handler was captured
+    expect(postRouteHandler).toBeInstanceOf(Function); // Check if POST handler was captured
     expect(app?.listen).toHaveBeenCalledWith(
       server.getPort(),
       server.getHost(),
       expect.any(Function)
     ); // Check listen was called
     // Ensure the promise resolved (implicit by await completing)
+    // Check for console log after listen callback simulation
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      `Server listening on http://${server.getHost()}:${server.getPort()}`
+    );
   });
 
   it("should wait for the server to listen before resolving init", async () => {
@@ -253,6 +272,118 @@ describe("Server", () => {
       expect(server.prompts.length).toBe(2);
       expect(server.prompts[0].prompt).toBe(firstPrompt);
       expect(server.prompts[1].prompt).toBe(secondPrompt);
+    });
+  });
+
+  // Tests for the POST /prompt route
+  describe("POST /prompt route", () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let resStatusSpy: ReturnType<typeof vi.fn>;
+    let resJsonSpy: ReturnType<typeof vi.fn>;
+    let promptPromise: Promise<any>;
+    let promptResolve: (value: any) => void;
+    let promptReject: (reason?: any) => void;
+    let testPrompt: Prompt;
+
+    beforeEach(async () => {
+      // Ensure server and app are initialized and handler is captured
+      await server.init(mockCassi);
+      if (!postRouteHandler) {
+        throw new Error("POST /prompt route handler not captured");
+      }
+
+      // Setup mock response methods
+      resJsonSpy = vi.fn();
+      resStatusSpy = vi.fn(() => ({ json: resJsonSpy })); // Chain json call
+      mockRes = {
+        status: resStatusSpy,
+        json: resJsonSpy, // Also assign directly in case status isn't called
+      };
+
+      // Setup a prompt entry for testing successful resolution/rejection
+      testPrompt = new Input("Test Input"); // Use a concrete type
+      promptPromise = new Promise((res, rej) => {
+        promptResolve = res;
+        promptReject = rej;
+      });
+      // Manually add to prompts for controlled testing
+      server.prompts = [
+        {
+          prompt: testPrompt,
+          promise: promptPromise,
+          resolve: promptResolve,
+          reject: promptReject,
+        },
+      ];
+    });
+
+    it("should return 400 if prompts array is empty", () => {
+      server.prompts = []; // Make prompts empty for this test
+      mockReq = { body: { response: "some response" } }; // Valid body
+
+      postRouteHandler!(mockReq as Request, mockRes as Response);
+
+      expect(resStatusSpy).toHaveBeenCalledWith(400);
+      expect(resJsonSpy).toHaveBeenCalledWith({ error: "No pending prompts" });
+    });
+
+    it("should return 400 and reject promise if response is missing in body", async () => {
+      mockReq = { body: {} }; // Missing response property
+      const rejectSpy = vi.spyOn(server.prompts[0], "reject");
+
+      postRouteHandler!(mockReq as Request, mockRes as Response);
+
+      expect(resStatusSpy).toHaveBeenCalledWith(400);
+      expect(resJsonSpy).toHaveBeenCalledWith({
+        error: "Missing response property in request body",
+      });
+      // The implementation only sends 400, it does not reject the promise.
+      expect(rejectSpy).not.toHaveBeenCalled();
+
+      // Check promise state (should remain pending)
+      // We can't easily assert pending state directly, but we know reject wasn't called.
+    });
+
+    it("should resolve the prompt, set response, remove from array, and return 200 on success", async () => {
+      const mockResponseValue = "User provided response";
+      mockReq = { body: { response: mockResponseValue } };
+      const resolveSpy = vi.spyOn(server.prompts[0], "resolve");
+      const initialPromptCount = server.prompts.length;
+
+      postRouteHandler!(mockReq as Request, mockRes as Response);
+
+      // Check HTTP response
+      expect(resStatusSpy).toHaveBeenCalledWith(200);
+      expect(resJsonSpy).toHaveBeenCalledWith({
+        message: "Prompt resolved successfully",
+      });
+
+      // Check prompt state
+      expect(testPrompt.response).toBe(mockResponseValue); // Verify response was set
+      expect(server.prompts.length).toBe(initialPromptCount - 1); // Verify prompt was removed
+
+      // Check promise resolution
+      expect(resolveSpy).toHaveBeenCalledTimes(1);
+      expect(resolveSpy).toHaveBeenCalledWith(); // Resolved without arguments
+
+      // Verify the promise actually resolved with undefined
+      await expect(promptPromise).resolves.toBeUndefined();
+    });
+
+    it("should handle undefined response correctly (rejects)", async () => {
+      mockReq = { body: { response: undefined } }; // Explicitly undefined
+      const rejectSpy = vi.spyOn(server.prompts[0], "reject");
+
+      postRouteHandler!(mockReq as Request, mockRes as Response);
+
+      expect(resStatusSpy).toHaveBeenCalledWith(400);
+      expect(resJsonSpy).toHaveBeenCalledWith({
+        error: "Missing response property in request body",
+      });
+      // The implementation only sends 400, it does not reject the promise.
+      expect(rejectSpy).not.toHaveBeenCalled();
+      // Check promise state (should remain pending)
     });
   });
 
