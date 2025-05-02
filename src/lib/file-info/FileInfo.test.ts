@@ -34,7 +34,6 @@ describe("FileInfo", () => {
   };
 
   beforeEach(() => {
-
     (FileInfo as any).providerRegistry?.clear();
     (FileInfo as any).providersRegistered = false;
     (FileInfo as any).globalFileInfoCache = null;
@@ -66,8 +65,7 @@ describe("FileInfo", () => {
     );
   });
 
-  afterEach(() => {
-  });
+  afterEach(() => {});
 
   it("should create repository FileInfo instance correctly", async () => {
     expect(repoFileInfo).toBeInstanceOf(FileInfo);
@@ -148,7 +146,7 @@ describe("FileInfo", () => {
     beforeEach(() => {
       vi.mocked(mockCacheInstance.getCachePath).mockImplementation(
         (type, relPath, wtDir) => {
-          const encoded = relPath.replace(/\
+          const encoded = relPath.replace(/[\\/]/g, "__"); // Replace path separators
           const filename = `${encoded}_${type}_.info`;
           return wtDir
             ? path.join("/cache/wt", filename)
@@ -335,7 +333,6 @@ describe("FileInfo", () => {
         repoFileInfo.getInfo(infoType, MOCK_RELATIVE_PATH)
       ).rejects.toThrow(/Circular dependency detected/);
     });
-
 
     it("WT: should use repo cache and promote if WT file matches repo", async () => {
       const repoStats = { mtime: 1000, size: 100, hash: "sharedHash" };

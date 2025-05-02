@@ -7,20 +7,13 @@ export interface ImportInfo {
   from: string;
 }
 
-export interface ExportInfo {
-  type: "function" | "class" | "type" | "variable" | "unknown";
-  signature?: string;
-  name?: string;
-  properties?: PropertyInfo[];
-  methods?: FunctionInfo[];
-}
-
 export interface TypeAliasInfo {
   name: string;
 }
 
 export interface VariableInfo {
   name: string;
+  type: string;
 }
 
 export interface FunctionInfo {
@@ -42,7 +35,12 @@ export interface ClassInfo {
 
 export interface InterfaceInfo {
   imports: ImportInfo[];
-  exports: ExportInfo[];
+  exports: {
+    variable: VariableInfo[];
+    type: TypeAliasInfo[];
+    class: ClassInfo[];
+    function: FunctionInfo[];
+  };
 }
 
 export class InterfaceProvider implements FileInfoProvider {
@@ -136,8 +134,15 @@ export class InterfaceProvider implements FileInfoProvider {
         signature: signature || valueNode.text,
       };
     } else {
+      const typeAnnotationNode = variableDeclarator?.children.find(
+        (child) => child.type === "type_annotation"
+      );
+      const type = typeAnnotationNode
+        ? typeAnnotationNode.text.substring(1).trim()
+        : "any";
       return {
         name: name,
+        type: type,
       };
     }
   }
@@ -211,7 +216,14 @@ export class InterfaceProvider implements FileInfoProvider {
     };
   }
 
-  private processExportStatement(node: SyntaxNode): ExportInfo | null {
+  private processExportStatement(
+    node: SyntaxNode
+  ):
+    | { type: "function"; info: FunctionInfo }
+    | { type: "class"; info: ClassInfo }
+    | { type: "type"; info: TypeAliasInfo }
+    | { type: "variable"; info: VariableInfo }
+    | null {
     const exportNode = node.child(1);
 
     if (!exportNode) {
@@ -222,50 +234,45 @@ export class InterfaceProvider implements FileInfoProvider {
       case "function_declaration": {
         const functionInfo = this.processFunctionDeclaration(exportNode);
         if (!functionInfo) return null;
-        return {
-          type: "function",
-          ...functionInfo,
-        };
+        return { type: "function", info: functionInfo };
       }
-      case "class_declaration":
-        const classDeclaration = this.processClassDeclaration(exportNode);
-        if (!classDeclaration) return null;
-        return {
-          type: "class",
-          ...classDeclaration,
-        };
-      case "type_alias_declaration":
-        const typeAliasDeclaration =
-          this.processTypeAliasDeclaration(exportNode);
-        if (!typeAliasDeclaration) return null;
-        return {
-          type: "type",
-          ...typeAliasDeclaration,
-        };
+      case "class_declaration": {
+        const classInfo = this.processClassDeclaration(exportNode);
+        if (!classInfo) return null;
+        return { type: "class", info: classInfo };
+      }
+      case "type_alias_declaration": {
+        const typeAliasInfo = this.processTypeAliasDeclaration(exportNode);
+        if (!typeAliasInfo) return null;
+        return { type: "type", info: typeAliasInfo };
+      }
       case "lexical_declaration": {
         const lexicalInfo = this.processLexicalDeclaration(exportNode);
         if (!lexicalInfo) return null;
 
         if ("signature" in lexicalInfo && lexicalInfo.signature !== undefined) {
-          return {
-            type: "function",
-            ...lexicalInfo,
-          };
+          return { type: "function", info: lexicalInfo };
+        } else if (!("signature" in lexicalInfo)) {
+          // Explicitly check it's VariableInfo
+          return { type: "variable", info: lexicalInfo };
         } else {
-          return {
-            type: "variable",
-            ...lexicalInfo,
-          };
+          // Should not happen if processLexicalDeclaration is correct, but handles the type union
+          console.warn("Unexpected lexical info structure:", lexicalInfo);
+          return null;
         }
       }
       default:
-        return { type: "unknown" };
+        console.warn(`Unknown export type: ${exportNode.type}`);
+        return null;
     }
   }
 
   private extractFromAst(tree: Tree): InterfaceInfo {
     const rootNode = tree.rootNode;
-    const info: InterfaceInfo = { imports: [], exports: [] };
+    const info: InterfaceInfo = {
+      imports: [],
+      exports: { variable: [], type: [], class: [], function: [] },
+    };
 
     if (!rootNode) {
       return info;
@@ -279,12 +286,26 @@ export class InterfaceProvider implements FileInfoProvider {
             info.imports.push(importStatement);
           }
           break;
-        case "export_statement":
-          const exportStatement = this.processExportStatement(child);
-          if (exportStatement) {
-            info.exports.push(exportStatement);
+        case "export_statement": {
+          const exportResult = this.processExportStatement(child);
+          if (exportResult) {
+            switch (exportResult.type) {
+              case "variable":
+                info.exports.variable.push(exportResult.info);
+                break;
+              case "type":
+                info.exports.type.push(exportResult.info);
+                break;
+              case "class":
+                info.exports.class.push(exportResult.info);
+                break;
+              case "function":
+                info.exports.function.push(exportResult.info);
+                break;
+            }
           }
           break;
+        }
       }
     }
 

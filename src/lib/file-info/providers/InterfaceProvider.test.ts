@@ -79,15 +79,11 @@ const mockAst = {
               createMockNode("type_identifier", "Baz"),
               createMockNode("class_body", "{ field: number; method() {} }", [
                 createMockNode("{", "{"),
-                createMockNode(
-                  "public_field_definition",
-                  "field: number;",
-                  [
-                    createMockNode("property_identifier", "field"),
-                    createMockNode("type_annotation", ": number"),
-                    createMockNode(";", ";"),
-                  ]
-                ),
+                createMockNode("public_field_definition", "field: number;", [
+                  createMockNode("property_identifier", "field"),
+                  createMockNode("type_annotation", ": number"),
+                  createMockNode(";", ";"),
+                ]),
                 createMockNode("method_definition", "method() {}", [
                   createMockNode("property_identifier", "method"),
                   createMockNode("formal_parameters", "()"),
@@ -136,19 +132,20 @@ describe("InterfaceProvider", () => {
       from: "./modB",
     });
 
-    expect(result.exports).toHaveLength(2);
-    expect(result.exports[0]).toEqual({
-      type: "function",
+    expect(result.exports.function).toHaveLength(1);
+    expect(result.exports.class).toHaveLength(1);
+    expect(result.exports.type).toHaveLength(0);
+    expect(result.exports.variable).toHaveLength(0);
+
+    expect(result.exports.function[0]).toEqual({
       name: "foo",
       signature: "function foo (param: string) : void",
     });
-    expect(result.exports[1]).toEqual({
-      type: "class",
+    expect(result.exports.class[0]).toEqual({
       name: "Baz",
       properties: [{ name: "field", type: "number", access: "public" }],
       methods: [{ name: "method", signature: "method ()" }],
     });
-
   });
 
   it("should return null if AST provider returns null", async () => {
@@ -177,7 +174,10 @@ describe("InterfaceProvider", () => {
     );
 
     expect(mockFileInfo.getInfo).toHaveBeenCalledWith("ast", relativePath);
-    expect(result).toEqual({ imports: [], exports: [] });
+    expect(result).toEqual({
+      imports: [],
+      exports: { variable: [], type: [], class: [], function: [] },
+    });
   });
 
   it("should return null and log error if AST processing throws", async () => {
@@ -239,7 +239,7 @@ describe("InterfaceProvider", () => {
 
     expect(result).toEqual({
       imports: [{ symbols: "{ x }", from: "y" }],
-      exports: [],
+      exports: { variable: [], type: [], class: [], function: [] },
     });
   });
 
@@ -272,7 +272,12 @@ describe("InterfaceProvider", () => {
 
     expect(result).toEqual({
       imports: [],
-      exports: [{ type: "function", name: "z", signature: "function z ()" }],
+      exports: {
+        variable: [],
+        type: [],
+        class: [],
+        function: [{ name: "z", signature: "function z ()" }],
+      },
     });
   });
 
@@ -318,12 +323,12 @@ describe("InterfaceProvider", () => {
 
     expect(result).toEqual({
       imports: [],
-      exports: [
-        {
-          type: "type",
-          name: "MyType",
-        },
-      ],
+      exports: {
+        variable: [],
+        type: [{ name: "MyType" }],
+        class: [],
+        function: [],
+      },
     });
   });
 
@@ -335,18 +340,30 @@ describe("InterfaceProvider", () => {
         "",
         [],
         [
-          createMockNode("export_statement", "export const myVar = 42;", [
-            createMockNode("export", "export"),
-            createMockNode("lexical_declaration", "const myVar = 42;", [
-              createMockNode("const", "const"),
-              createMockNode("variable_declarator", "myVar = 42", [
-                createMockNode("identifier", "myVar"),
-                createMockNode("=", "="),
-                createMockNode("number", "42"),
-              ]),
-              createMockNode(";", ";"),
-            ]),
-          ]),
+          createMockNode(
+            "export_statement",
+            "export const myVar: number = 42;",
+            [
+              createMockNode("export", "export"),
+              createMockNode(
+                "lexical_declaration",
+                "const myVar: number = 42;",
+                [
+                  createMockNode("const", "const"),
+                  createMockNode("variable_declarator", "myVar: number = 42", [
+                    createMockNode("identifier", "myVar"),
+                    createMockNode("type_annotation", ": number", [
+                      createMockNode(":", ":"),
+                      createMockNode("predefined_type", "number"),
+                    ]),
+                    createMockNode("=", "="),
+                    createMockNode("number", "42"),
+                  ]),
+                  createMockNode(";", ";"),
+                ]
+              ),
+            ]
+          ),
         ]
       ),
     };
@@ -359,12 +376,12 @@ describe("InterfaceProvider", () => {
 
     expect(result).toEqual({
       imports: [],
-      exports: [
-        {
-          type: "variable",
-          name: "myVar",
-        },
-      ],
+      exports: {
+        variable: [{ name: "myVar", type: "number" }],
+        type: [],
+        class: [],
+        function: [],
+      },
     });
   });
 
@@ -424,13 +441,17 @@ describe("InterfaceProvider", () => {
 
     expect(result).toEqual({
       imports: [],
-      exports: [
-        {
-          type: "function",
-          name: "myFunc",
-          signature: "(a: number) : number =>",
-        },
-      ],
+      exports: {
+        variable: [],
+        type: [],
+        class: [],
+        function: [
+          {
+            name: "myFunc",
+            signature: "(a: number) : number =>",
+          },
+        ],
+      },
     });
   });
 
@@ -503,15 +524,19 @@ describe("InterfaceProvider", () => {
       mockFileInfo
     );
 
-    expect(result?.exports).toHaveLength(1);
-    const classExport = result?.exports[0];
-    expect(classExport?.type).toBe("class");
+    expect(result?.imports).toEqual([]);
+    expect(result?.exports.variable).toEqual([]);
+    expect(result?.exports.type).toEqual([]);
+    expect(result?.exports.function).toEqual([]);
+    expect(result?.exports.class).toHaveLength(1);
+
+    const classExport = result?.exports.class[0];
     expect(classExport?.name).toBe("MyClass");
     expect(classExport?.properties).toEqual([
       { name: "pubField", type: "string", access: "public" },
       { name: "privField", type: "number", access: "private" },
       { name: "protField", type: "boolean", access: "protected" },
     ]);
+    expect(classExport?.methods).toEqual([]); // Assuming no methods in this specific mock
   });
-
 });
