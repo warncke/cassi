@@ -40,9 +40,8 @@ export class Cassi {
   }
 
   async runTasks() {
-    console.log(`[Cassi] Running tasks. Task count: ${this.tasks.length}`);
     for (const task of this.tasks) {
-      if (task.startedAt === null) {
+      if (task.startedAt === null && task.finishedAt === null) {
         console.log(`[Cassi] Running task: ${task.constructor.name}`);
         await task.run();
         if (task.error) {

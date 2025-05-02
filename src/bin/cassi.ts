@@ -60,12 +60,14 @@ async function runServer() {
   async function initFn() {}
 
   async function promptFn(prompt: Prompt) {
-    server.addPrompt(prompt);
+    await server.addPrompt(prompt);
   }
 
   const user = new User(initFn, promptFn);
   const cassi = new Cassi(user, options.configFile, options.repositoryDir);
   await cassi.init();
+  cassi.newTask("InitializeRepository");
+
   await server.init(cassi);
 }
 
