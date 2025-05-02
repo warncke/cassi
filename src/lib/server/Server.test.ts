@@ -16,8 +16,12 @@ import { Prompt } from "../prompt/Prompt.js";
 import Input from "../prompt/prompts/Input.js";
 import Confirm from "../prompt/prompts/Confirm.js";
 
-let getRouteHandler: ((req: Request, res: Response) => void) | null = null;
-let postRouteHandler: ((req: Request, res: Response) => void) | null = null;
+let getPromptRouteHandler: ((req: Request, res: Response) => void) | null =
+  null;
+let postPromptRouteHandler: ((req: Request, res: Response) => void) | null =
+  null;
+let postTaskRouteHandler: ((req: Request, res: Response) => void) | null = null;
+let getDirRouteHandler: ((req: Request, res: Response) => void) | null = null;
 let listenCallback: (() => void) | null = null;
 
 const mockCorsMiddleware = vi.fn((req: any, res: any, next: any) => next());
@@ -32,12 +36,16 @@ vi.mock("express", () => {
     use: vi.fn(),
     get: vi.fn((path, handler) => {
       if (path === "/prompt") {
-        getRouteHandler = handler;
+        getPromptRouteHandler = handler;
+      } else if (path === "/dir") {
+        getDirRouteHandler = handler;
       }
     }),
     post: vi.fn((path, handler) => {
       if (path === "/prompt") {
-        postRouteHandler = handler;
+        postPromptRouteHandler = handler;
+      } else if (path === "/task") {
+        postTaskRouteHandler = handler;
       }
     }),
     listen: vi.fn((port, host, callback) => {
@@ -75,8 +83,10 @@ describe("Server", () => {
   });
 
   beforeEach(() => {
-    getRouteHandler = null;
-    postRouteHandler = null;
+    getPromptRouteHandler = null;
+    postPromptRouteHandler = null;
+    postTaskRouteHandler = null;
+    getDirRouteHandler = null;
     listenCallback = null;
     vi.clearAllMocks();
 
@@ -126,8 +136,12 @@ describe("Server", () => {
     expect(app?.use).toHaveBeenCalledWith(expect.any(Function));
     expect(app?.get).toHaveBeenCalledWith("/prompt", expect.any(Function));
     expect(app?.post).toHaveBeenCalledWith("/prompt", expect.any(Function));
-    expect(getRouteHandler).toBeInstanceOf(Function);
-    expect(postRouteHandler).toBeInstanceOf(Function);
+    expect(app?.post).toHaveBeenCalledWith("/task", expect.any(Function));
+    expect(app?.get).toHaveBeenCalledWith("/dir", expect.any(Function));
+    expect(getPromptRouteHandler).toBeInstanceOf(Function);
+    expect(postPromptRouteHandler).toBeInstanceOf(Function);
+    expect(postTaskRouteHandler).toBeInstanceOf(Function);
+    expect(getDirRouteHandler).toBeInstanceOf(Function);
     expect(app?.listen).toHaveBeenCalledWith(
       server.getPort(),
       server.getHost(),
@@ -230,7 +244,6 @@ describe("Server", () => {
     expect(server.prompts.length).toBe(2);
     expect(server.prompts[1].prompt).toBe(confirmPrompt);
     expect(server.prompts[1].promise).toBeInstanceOf(Promise);
-
   });
 
   describe("GET /prompt route", () => {
@@ -240,7 +253,7 @@ describe("Server", () => {
 
     beforeEach(async () => {
       await server.init(mockCassi);
-      if (!getRouteHandler) {
+      if (!getPromptRouteHandler) {
         throw new Error("GET /prompt route handler not captured");
       }
       resJsonSpy = vi.fn();
@@ -252,7 +265,7 @@ describe("Server", () => {
 
     it("should return null if prompts array is empty", () => {
       server.prompts = [];
-      getRouteHandler!(mockReq as Request, mockRes as Response);
+      getPromptRouteHandler!(mockReq as Request, mockRes as Response);
       expect(resJsonSpy).toHaveBeenCalledWith(null);
     });
 
@@ -261,7 +274,7 @@ describe("Server", () => {
       const secondPrompt = new Confirm("Second?");
       server.addPrompt(firstPrompt);
       server.addPrompt(secondPrompt);
-      getRouteHandler!(mockReq as Request, mockRes as Response);
+      getPromptRouteHandler!(mockReq as Request, mockRes as Response);
       expect(resJsonSpy).toHaveBeenCalledWith(firstPrompt);
     });
 
@@ -270,7 +283,7 @@ describe("Server", () => {
       const secondPrompt = new Confirm("Second?");
       server.addPrompt(firstPrompt);
       server.addPrompt(secondPrompt);
-      getRouteHandler!(mockReq as Request, mockRes as Response);
+      getPromptRouteHandler!(mockReq as Request, mockRes as Response);
       expect(resJsonSpy).toHaveBeenCalledWith(firstPrompt);
       expect(server.prompts.length).toBe(2);
       expect(server.prompts[0].prompt).toBe(firstPrompt);
@@ -290,7 +303,7 @@ describe("Server", () => {
 
     beforeEach(async () => {
       await server.init(mockCassi);
-      if (!postRouteHandler) {
+      if (!postPromptRouteHandler) {
         throw new Error("POST /prompt route handler not captured");
       }
 
@@ -320,7 +333,7 @@ describe("Server", () => {
       server.prompts = [];
       mockReq = { body: { response: "some response" } };
 
-      postRouteHandler!(mockReq as Request, mockRes as Response);
+      postPromptRouteHandler!(mockReq as Request, mockRes as Response);
 
       expect(resStatusSpy).toHaveBeenCalledWith(400);
       expect(resJsonSpy).toHaveBeenCalledWith({ error: "No pending prompts" });
@@ -330,14 +343,13 @@ describe("Server", () => {
       mockReq = { body: {} };
       const rejectSpy = vi.spyOn(server.prompts[0], "reject");
 
-      postRouteHandler!(mockReq as Request, mockRes as Response);
+      postPromptRouteHandler!(mockReq as Request, mockRes as Response);
 
       expect(resStatusSpy).toHaveBeenCalledWith(400);
       expect(resJsonSpy).toHaveBeenCalledWith({
         error: "Missing response property in request body",
       });
       expect(rejectSpy).not.toHaveBeenCalled();
-
     });
 
     it("should resolve the prompt, set response, remove from array, and return 200 on success", async () => {
@@ -346,7 +358,7 @@ describe("Server", () => {
       const resolveSpy = vi.spyOn(server.prompts[0], "resolve");
       const initialPromptCount = server.prompts.length;
 
-      postRouteHandler!(mockReq as Request, mockRes as Response);
+      postPromptRouteHandler!(mockReq as Request, mockRes as Response);
 
       expect(resStatusSpy).toHaveBeenCalledWith(200);
       expect(resJsonSpy).toHaveBeenCalledWith({
@@ -366,13 +378,43 @@ describe("Server", () => {
       mockReq = { body: { response: undefined } };
       const rejectSpy = vi.spyOn(server.prompts[0], "reject");
 
-      postRouteHandler!(mockReq as Request, mockRes as Response);
+      postPromptRouteHandler!(mockReq as Request, mockRes as Response);
 
       expect(resStatusSpy).toHaveBeenCalledWith(400);
       expect(resJsonSpy).toHaveBeenCalledWith({
         error: "Missing response property in request body",
       });
       expect(rejectSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("GET /dir route", () => {
+    let mockReq: Partial<Request>;
+    let mockRes: Partial<Response>;
+    let resStatusSpy: ReturnType<typeof vi.fn>;
+    let resJsonSpy: ReturnType<typeof vi.fn>;
+
+    beforeEach(async () => {
+      await server.init(mockCassi);
+      if (!getDirRouteHandler) {
+        throw new Error("GET /dir route handler not captured");
+      }
+      resJsonSpy = vi.fn();
+      resStatusSpy = vi.fn(() => ({ json: resJsonSpy }));
+      mockReq = {};
+      mockRes = {
+        status: resStatusSpy,
+        json: resJsonSpy,
+      };
+    });
+
+    it("should call the getDir handler", async () => {
+      // The actual logic is tested in getDir.test.ts
+      // This test just ensures the route calls the handler
+      await getDirRouteHandler!(mockReq as Request, mockRes as Response);
+      // We expect the handler to be called, which in turn calls status/json
+      expect(resStatusSpy).toHaveBeenCalled();
+      expect(resJsonSpy).toHaveBeenCalled();
     });
   });
 

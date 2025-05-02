@@ -5,6 +5,7 @@ import { Cassi } from "../cassi/Cassi.js";
 import { getPrompt } from "./handlers/getPrompt.js";
 import { postPrompt } from "./handlers/postPrompt.js";
 import { postTask } from "./handlers/postTask.js";
+import { getDir } from "./handlers/getDir.js";
 
 interface PromptEntry {
   prompt: Prompt;
@@ -34,7 +35,8 @@ export class Server {
 
     this.app.get("/prompt", getPrompt(this));
     this.app.post("/prompt", postPrompt(this));
-    this.app.post("/task", postTask(this) as RequestHandler);
+    this.app.post("/task", postTask(this));
+    this.app.get("/dir", getDir(this));
 
     await new Promise<void>((resolve) => {
       this.app!.listen(this.port, this.host, () => {

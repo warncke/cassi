@@ -5,14 +5,12 @@ import path from "path";
 import { type Server } from "../Server.js";
 
 export const postTask = (server: Server) => {
-  return async (req: Request, res: Response) => {
+  return async (req: Request, res: Response): Promise<void> => {
     try {
       const { audioBase64 } = req.body;
 
       if (!audioBase64 || typeof audioBase64 !== "string") {
-        return res
-          .status(400)
-          .json({ error: "Missing or invalid audioBase64 field" });
+        res.status(400).json({ error: "Missing or invalid audioBase64 field" });
       }
 
       const audioBuffer = Buffer.from(audioBase64, "base64");
