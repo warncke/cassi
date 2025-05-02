@@ -123,13 +123,13 @@ describe("postTask handler", () => {
 
     expect(statusFn).toHaveBeenCalledWith(500);
     expect(jsonFn).toHaveBeenCalledWith({ error: "Internal Server Error" });
-    expect(newTaskFn).not.toHaveBeenCalled(); // Should not be called if writeFile fails
+    expect(newTaskFn).not.toHaveBeenCalled();
     expect(runTasksFn).not.toHaveBeenCalled();
   });
 
   it("should return 500 if Buffer.from throws", async () => {
     const handler = postTask(mockServer as Server);
-    const testBase64 = "invalid-base64-string"; // Use a string that might cause issues
+    const testBase64 = "invalid-base64-string";
     mockReq.body = { audioBase64: testBase64 };
 
     const bufferError = new Error("Simulated Buffer.from error");
@@ -139,7 +139,7 @@ describe("postTask handler", () => {
       .spyOn(Buffer, "from")
       .mockImplementation((value, encoding) => {
         if (value === testBase64 && encoding === "base64") {
-          bufferFromSpy.mockRestore(); // Restore immediately
+          bufferFromSpy.mockRestore();
           throw bufferError;
         }
         return originalBufferFrom(value, encoding);
@@ -153,7 +153,6 @@ describe("postTask handler", () => {
     expect(newTaskFn).not.toHaveBeenCalled();
     expect(runTasksFn).not.toHaveBeenCalled();
 
-    // Ensure restoration happened
     expect(Buffer.from).toBe(originalBufferFrom);
   });
 });

@@ -78,7 +78,6 @@ describe("WriteFile", () => {
     expect(WriteFile.toolDefinition.name).toBe("WRITE_FILE");
     expect(WriteFile.toolDefinition.description).toBeDefined();
     expect(WriteFile.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = WriteFile.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(inputSchema.shape).toHaveProperty("path");

@@ -5,7 +5,6 @@ import { Tasks } from "../task/Tasks.js";
 import { Model } from "../model/Model.js";
 import { describe, expect, test, beforeEach, vi, afterEach } from "vitest";
 
-// Mock the Task class itself for testing newTask
 class MockTask extends Task {
   constructor(cassi: Cassi, parentTask?: Task | undefined) {
     super(cassi, parentTask);
@@ -57,7 +56,6 @@ describe("Cassi", () => {
   });
 
   test("newTask should add a task to the tasks array", async () => {
-    // Mock the Tasks.newTask method to return a specific mock task instance
     const mockTaskInstance = new MockTask(cassi);
     vi.spyOn(cassi.task, "newTask").mockReturnValue(mockTaskInstance);
 
@@ -91,13 +89,10 @@ describe("Cassi", () => {
 
   describe("runTasks", () => {
     beforeEach(() => {
-      // Ensure tasks array is clear before each test in this block
       cassi.tasks = [];
-      // Mock newTask to return controllable mock tasks
       vi.spyOn(cassi.task, "newTask").mockImplementation(
         () => new MockTask(cassi)
       );
-      // Spy on console.log and ignore calls
       vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
@@ -117,9 +112,9 @@ describe("Cassi", () => {
     });
 
     test("should not run tasks that have already started", async () => {
-      const task1 = cassi.newTask("MockTask1"); // Should run
-      const task2 = cassi.newTask("MockTask2"); // Should not run
-      task2.startedAt = new Date(); // Mark task2 as started
+      const task1 = cassi.newTask("MockTask1");
+      const task2 = cassi.newTask("MockTask2");
+      task2.startedAt = new Date();
 
       const runSpy1 = vi.spyOn(task1, "run").mockResolvedValue();
       const runSpy2 = vi.spyOn(task2, "run").mockResolvedValue();
@@ -134,9 +129,9 @@ describe("Cassi", () => {
     });
 
     test("should not run tasks that have already finished", async () => {
-      const task1 = cassi.newTask("MockTask1"); // Should run
-      const task2 = cassi.newTask("MockTask2"); // Should not run
-      task2.finishedAt = new Date(); // Mark task2 as finished
+      const task1 = cassi.newTask("MockTask1");
+      const task2 = cassi.newTask("MockTask2");
+      task2.finishedAt = new Date();
 
       const runSpy1 = vi.spyOn(task1, "run").mockResolvedValue();
       const runSpy2 = vi.spyOn(task2, "run").mockResolvedValue();
@@ -165,7 +160,7 @@ describe("Cassi", () => {
       const runSpy3 = vi.spyOn(task3, "run").mockResolvedValue();
       const errorLogSpy = vi
         .spyOn(console, "error")
-        .mockImplementation(() => {}); // Spy on console.error but ignore calls
+        .mockImplementation(() => {});
 
       await cassi.runTasks();
 
@@ -183,7 +178,6 @@ describe("Cassi", () => {
       errorLogSpy.mockRestore();
     });
 
-    // Restore console.log spy after tests in this block
     afterEach(() => {
       vi.restoreAllMocks();
     });

@@ -1,7 +1,7 @@
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateAudioCodePrompt } from "../../model/models/EvaluateAudioCodePrompt.js";
-import { GenerateModelOptions } from "../../model/Models.js"; // Import added
+import { GenerateModelOptions } from "../../model/Models.js";
 import { Coder } from "./Coder.js";
 import { Tester } from "./Tester.js";
 import { RequirePassingTests } from "./RequirePassingTests.js";
@@ -30,7 +30,7 @@ export class AudioCode extends Task {
     const formattedSteps = this.evaluation.steps
       .map((step: string) => `- ${step}`)
       .join("\n");
-    const coderPrompt = `Summary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`;
+    const coderPrompt = `Prompt: ${this.evaluation.transcription}\n\nSummary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`;
     this.addSubtask(new Coder(this.cassi, this, coderPrompt));
     this.addSubtask(new Tester(this.cassi, this, ""));
     this.addSubtask(new RequirePassingTests(this.cassi, this));

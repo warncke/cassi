@@ -18,13 +18,12 @@ export const postPrompt = (server: Server) => {
 
     const promptEntry = server.prompts.shift();
     if (!promptEntry) {
-      // Should not happen due to the check above, but satisfies TypeScript
       res.status(500).json({ error: "Internal server error" });
       return;
     }
 
     promptEntry.prompt.response = response;
-    promptEntry.resolve(); // Resolve without passing the prompt object
+    promptEntry.resolve();
     res.status(200).json({ message: "Prompt resolved successfully" });
   };
 };

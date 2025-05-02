@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getPrompt } from "./getPrompt.js";
 import { Server } from "../Server.js";
-import Input from "../../prompt/prompts/Input.js"; // Use default import
+import Input from "../../prompt/prompts/Input.js";
 import { Request, Response } from "express";
 
-// Mock Server class minimally
 class MockServer {
   prompts: any[] = [];
 }
@@ -25,7 +24,6 @@ describe("getPrompt handler", () => {
     };
     resJsonSpy = vi.spyOn(mockRes, "json");
 
-    // Spy on console methods but ignore calls
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -37,7 +35,7 @@ describe("getPrompt handler", () => {
   });
 
   it("should return the first prompt when prompts array has one item", () => {
-    const testPrompt = new Input("Test Prompt 1"); // Use Input
+    const testPrompt = new Input("Test Prompt 1");
     mockServer.prompts = [{ prompt: testPrompt }];
     const handler = getPrompt(mockServer as unknown as Server);
     handler(mockReq as Request, mockRes as Response);
@@ -45,8 +43,8 @@ describe("getPrompt handler", () => {
   });
 
   it("should return the first prompt when prompts array has multiple items", () => {
-    const testPrompt1 = new Input("Test Prompt 1"); // Use Input
-    const testPrompt2 = new Input("Test Prompt 2"); // Use Input
+    const testPrompt1 = new Input("Test Prompt 1");
+    const testPrompt2 = new Input("Test Prompt 2");
     mockServer.prompts = [{ prompt: testPrompt1 }, { prompt: testPrompt2 }];
     const handler = getPrompt(mockServer as unknown as Server);
     handler(mockReq as Request, mockRes as Response);

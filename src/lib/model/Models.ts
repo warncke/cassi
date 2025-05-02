@@ -117,17 +117,14 @@ export abstract class Models {
         })
       );
 
-      // Clone messages from the previous response and ensure it's an array
       let nextMessages = llmResponse.messages ? [...llmResponse.messages] : [];
-      // Append tool responses to the new messages array
       toolResponses.forEach((toolResponsePart) => {
         nextMessages.push({
-          role: "tool", // Use 'tool' role for responses in Genkit
-          content: [toolResponsePart], // Content should be an array of ToolResponsePart
+          role: "tool",
+          content: [toolResponsePart],
         });
       });
-      generateOptions.messages = nextMessages; // Assign the updated array
-      // Clear the prompt field as responses are now in messages
+      generateOptions.messages = nextMessages;
       generateOptions.prompt = undefined;
     }
 

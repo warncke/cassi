@@ -3,8 +3,8 @@ import { RequirePassingTests } from "./RequirePassingTests.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Config } from "../../config/Config.js";
 import { User } from "../../user/User.js";
-import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
-import Confirm from "../../prompt/prompts/Confirm.js"; // Import Confirm
+import { Prompt } from "../../prompt/Prompt.js";
+import Confirm from "../../prompt/prompts/Confirm.js";
 
 vi.mock("../../cassi/Cassi.js");
 vi.mock("../../config/Config.js");
@@ -21,7 +21,7 @@ describe("RequirePassingTests", () => {
     mockConfig = new Config("dummyPath", mockUser);
     mockCassi = new Cassi(mockUser, "dummyPath", "dummyRepo");
     mockCassi.config = mockConfig;
-    mockCassi.user = mockUser; // Ensure the user property is assigned
+    mockCassi.user = mockUser;
 
     mockConfig.configData = {
       commands: {
@@ -70,22 +70,18 @@ describe("RequirePassingTests", () => {
         exitCode: 0,
       });
 
-    // Mock user confirming to continue
     (mockUser.prompt as Mock).mockImplementation(async (prompt: Prompt) => {
-      // Use Prompts type
       if (prompt instanceof Confirm) {
-        // Check the prompt directly
-        prompt.response = true; // Set response directly
+        prompt.response = true;
       }
     });
 
     await expect(task.initTask()).resolves.toBeUndefined();
     expect(task.invoke).toHaveBeenCalledTimes(2);
     expect(mockUser.prompt).toHaveBeenCalledTimes(1);
-    const promptArg = (mockUser.prompt as Mock).mock.calls[0][0] as Prompt; // Use Prompts type
-    expect(promptArg).toBeInstanceOf(Confirm); // Check the prompt directly
+    const promptArg = (mockUser.prompt as Mock).mock.calls[0][0] as Prompt;
+    expect(promptArg).toBeInstanceOf(Confirm);
     expect((promptArg as Confirm).message).toBe(
-      // Access message directly
       "Tests not passing in /fake/cwd. Fix and press y to continue"
     );
   });
@@ -97,12 +93,9 @@ describe("RequirePassingTests", () => {
       exitCode: 1,
     });
 
-    // Mock user aborting
     (mockUser.prompt as Mock).mockImplementation(async (prompt: Prompt) => {
-      // Use Prompts type
       if (prompt instanceof Confirm) {
-        // Check the prompt directly
-        prompt.response = false; // Set response directly
+        prompt.response = false;
       }
     });
 

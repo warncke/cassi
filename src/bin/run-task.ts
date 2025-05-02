@@ -7,7 +7,7 @@ import { Cassi } from "../lib/cassi/Cassi.js";
 import { User } from "../lib/user/User.js";
 import { Task } from "../lib/task/Task.js";
 import { Worktree } from "../lib/repository/Worktree.js";
-import { Prompt } from "../lib/prompt/Prompt.js"; // Added Prompts import
+import { Prompt } from "../lib/prompt/Prompt.js";
 
 const program = new Command();
 
@@ -51,11 +51,10 @@ async function run() {
   }
 
   async function promptFn(prompt: Prompt) {
-    // Updated type here
     const { CLIPromptHandler } = await import(
       "../lib/cli-prompt-handler/CLIPromptHandler.js"
     );
-    const handler = new CLIPromptHandler(prompt); // Updated variable name
+    const handler = new CLIPromptHandler(prompt);
     await handler.handlePrompt();
   }
 
@@ -76,8 +75,8 @@ async function run() {
   );
 
   const newTask = cassi.task.newTask(taskName, task, ...taskArgs);
-  task.addSubtask(newTask); // Add the new task as a subtask
-  await task.run(); // Run the main task (which will run the subtask)
+  task.addSubtask(newTask);
+  await task.run();
 }
 
 run().catch((error) => {

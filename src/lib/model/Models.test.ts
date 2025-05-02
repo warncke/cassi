@@ -1,30 +1,27 @@
-// Explicit imports instead of relying on globals/reference directive
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { z } from "zod";
 import { Models, GenerateModelOptions } from "./Models.js";
 import { Task } from "../task/Task.js";
-import { ToolDefinition } from "../tool/Tool.js"; // Imports the local definition
+import { ToolDefinition } from "../tool/Tool.js";
 import {
-  genkit, // Import genkit to mock it
+  genkit,
   GenkitError,
   GenerateResponse,
   MessageData,
   Part,
   ToolRequest,
-  ToolResponse, // Keep this import if used below, otherwise remove
+  ToolResponse,
   ToolRequestPart,
   ToolResponsePart,
 } from "genkit";
 
-// Mock the genkit function
 vi.mock("genkit", async (importOriginal) => {
   const original = await importOriginal<typeof import("genkit")>();
   return {
-    ...original, // Keep original exports
+    ...original,
     genkit: vi.fn().mockReturnValue({
-      // Mock the genkit() function itself
-      generate: vi.fn(), // Provide mock generate
-      defineTool: vi.fn((def, handler) => ({ ...def, handler })), // Provide mock defineTool
+      generate: vi.fn(),
+      defineTool: vi.fn((def, handler) => ({ ...def, handler })),
     }),
   };
 });
@@ -35,20 +32,16 @@ vi.mock("../task/Task.js", () => ({
   })),
 }));
 
-// Helper to create a Zod schema object from properties
 const createToolParameters = (
   properties: Record<string, z.ZodTypeAny>,
   required?: string[]
 ): z.ZodObject<any> => {
-  // Note: Zod automatically handles required/optional based on schema definition.
-  // The 'required' array isn't directly used here but kept for potential future logic.
   return z.object(properties);
 };
 
 class TestModel extends Models {
-  // Constructor now receives the mocked AI object directly via the mocked genkit call
   constructor(plugin: any, task: Task) {
-    super(plugin, task); // plugin arg is unused due to mock, but constructor requires it
+    super(plugin, task);
   }
 
   async generate(options: GenerateModelOptions): Promise<string> {
@@ -78,8 +71,8 @@ describe("Models", () => {
       const mockToolDef: ToolDefinition = {
         name: "testTool",
         description: "A test tool",
-        inputSchema: createToolParameters({}), // Use the helper for an empty object schema
-        outputSchema: z.object({}), // Explicitly define output schema
+        inputSchema: createToolParameters({}),
+        outputSchema: z.object({}),
       };
       const mockHandler = vi.fn().mockResolvedValue({ result: "ok" });
       const toolDefinitions: [ToolDefinition, (input: any) => Promise<any>][] =
@@ -96,7 +89,7 @@ describe("Models", () => {
 
     it("should throw error for invalid tool definition", () => {
       const invalidToolDefinitions: any = [
-        [{ description: "missing name" }, vi.fn()], // Missing name
+        [{ description: "missing name" }, vi.fn()],
       ];
       expect(() =>
         (testModel as any).initializeTools(invalidToolDefinitions)
@@ -114,11 +107,10 @@ describe("Models", () => {
         description: "A test tool",
         inputSchema: createToolParameters(
           {
-            param1: z.string(), // Use z.string() for the schema definition
+            param1: z.string(),
           }
-          // 'required' is implicitly handled by Zod; param1 is required by default
         ),
-        outputSchema: z.object({ result: z.string() }), // Define expected output schema
+        outputSchema: z.object({ result: z.string() }),
       };
       mockHandler = vi.fn().mockResolvedValue({ result: "tool success" });
       const toolDefinitions: [ToolDefinition, (input: any) => Promise<any>][] =
@@ -127,7 +119,6 @@ describe("Models", () => {
     });
 
     it("should return response directly if no tool requests", async () => {
-      // Removed : GenerateResponse annotation
       const mockResponse = {
         message: {
           role: "model",
@@ -138,14 +129,14 @@ describe("Models", () => {
           output: undefined,
           text: "Final response",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 10 },
-        toolRequests: [], // Explicitly empty
+        toolRequests: [],
       };
-      mockGenkitGenerate.mockResolvedValue(mockResponse as any); // Cast entire response
+      mockGenkitGenerate.mockResolvedValue(mockResponse as any);
 
       const generateOptions = { model: {} as any, prompt: "test prompt" };
       await testModel.generateWithTools(generateOptions);
@@ -163,7 +154,6 @@ describe("Models", () => {
           input: { param1: "value1" },
         },
       };
-      // Removed : GenerateResponse annotation
       const initialResponse = {
         message: {
           role: "model",
@@ -172,17 +162,16 @@ describe("Models", () => {
           toolResponseParts: [],
           data: undefined,
           output: undefined,
-          text: "", // Changed undefined to empty string
+          text: "",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 20 },
         messages: [{ role: "user", content: [{ text: "initial prompt" }] }],
         toolRequests: [toolRequest],
       };
-      // Removed : GenerateResponse annotation
       const finalResponse = {
         message: {
           role: "model",
@@ -193,14 +182,13 @@ describe("Models", () => {
           output: undefined,
           text: "Final response",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 30 },
         toolRequests: [],
         messages: [
-          // Include expected message history for the second call
           { role: "user", content: [{ text: "initial prompt" }] },
           {
             role: "tool",
@@ -218,8 +206,8 @@ describe("Models", () => {
         ],
       };
 
-      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any); // Cast entire response
-      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any); // Cast entire response
+      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any);
+      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any);
 
       const generateOptions = { model: {} as any, prompt: "initial prompt" };
       await testModel.generateWithTools(generateOptions);
@@ -229,13 +217,12 @@ describe("Models", () => {
       expect(mockHandler).toHaveBeenCalledTimes(1);
       expect(mockHandler).toHaveBeenCalledWith({ param1: "value1" });
 
-      // Verify the options passed to the second generate call
       const expectedSecondCallOptions = {
         model: {} as any,
         messages: [
-          { role: "user", content: [{ text: "initial prompt" }] }, // Original message history from initialResponse
+          { role: "user", content: [{ text: "initial prompt" }] },
           {
-            role: "tool", // Tool response added
+            role: "tool",
             content: [
               {
                 toolResponse: {
@@ -247,7 +234,7 @@ describe("Models", () => {
             ],
           },
         ],
-        prompt: undefined, // Prompt should be cleared when messages are used
+        prompt: undefined,
       };
       expect(mockGenkitGenerate).toHaveBeenNthCalledWith(
         2,
@@ -263,7 +250,6 @@ describe("Models", () => {
           input: {},
         },
       };
-      // Removed : GenerateResponse annotation
       const initialResponse = {
         message: {
           role: "model",
@@ -272,17 +258,16 @@ describe("Models", () => {
           toolResponseParts: [],
           data: undefined,
           output: undefined,
-          text: "", // Changed undefined to empty string
+          text: "",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 25 },
         messages: [{ role: "user", content: [{ text: "another prompt" }] }],
         toolRequests: [toolRequest],
       };
-      // Removed : GenerateResponse annotation
       const finalResponse = {
         message: {
           role: "model",
@@ -293,10 +278,10 @@ describe("Models", () => {
           output: undefined,
           text: "Final response",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 35 },
         toolRequests: [],
         messages: [
@@ -317,16 +302,15 @@ describe("Models", () => {
         ],
       };
 
-      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any); // Cast entire response
-      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any); // Cast entire response
+      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any);
+      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any);
 
       const generateOptions = { model: {} as any, prompt: "another prompt" };
       await testModel.generateWithTools(generateOptions);
 
       expect(mockGenkitGenerate).toHaveBeenCalledTimes(2);
-      expect(mockHandler).not.toHaveBeenCalled(); // Original handler shouldn't be called
+      expect(mockHandler).not.toHaveBeenCalled();
 
-      // Verify the options passed to the second generate call
       const expectedSecondCallOptions = {
         model: {} as any,
         messages: [
@@ -338,7 +322,7 @@ describe("Models", () => {
                 toolResponse: {
                   name: "nonExistentTool",
                   ref: "tool2",
-                  output: { error: "Tool not found: nonExistentTool" }, // Error response included
+                  output: { error: "Tool not found: nonExistentTool" },
                 },
               },
             ],
@@ -360,7 +344,6 @@ describe("Models", () => {
           input: { param1: "error case" },
         },
       };
-      // Removed : GenerateResponse annotation
       const initialResponse = {
         message: {
           role: "model",
@@ -369,17 +352,16 @@ describe("Models", () => {
           toolResponseParts: [],
           data: undefined,
           output: undefined,
-          text: "", // Changed undefined to empty string
+          text: "",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 40 },
         messages: [{ role: "user", content: [{ text: "error prompt" }] }],
         toolRequests: [toolRequest],
       };
-      // Removed : GenerateResponse annotation
       const finalResponse = {
         message: {
           role: "model",
@@ -390,10 +372,10 @@ describe("Models", () => {
           output: undefined,
           text: "Final response",
           media: [],
-          toolResponses: () => [], // Changed to function returning array
+          toolResponses: () => [],
           custom: {},
           metadata: {},
-        } as any, // Cast message to any
+        } as any,
         usage: { totalTokens: 50 },
         toolRequests: [],
         messages: [
@@ -405,7 +387,7 @@ describe("Models", () => {
                 toolResponse: {
                   name: "testTool",
                   ref: "tool3",
-                  output: { error: "Tool execution failed: Handler failed" }, // Match error structure
+                  output: { error: "Tool execution failed: Handler failed" },
                 },
               },
             ],
@@ -415,9 +397,9 @@ describe("Models", () => {
       };
 
       const handlerError = new Error("Handler failed");
-      mockHandler.mockRejectedValueOnce(handlerError); // Make the handler throw
-      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any); // Cast entire response
-      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any); // Cast entire response
+      mockHandler.mockRejectedValueOnce(handlerError);
+      mockGenkitGenerate.mockResolvedValueOnce(initialResponse as any);
+      mockGenkitGenerate.mockResolvedValueOnce(finalResponse as any);
 
       const generateOptions = { model: {} as any, prompt: "error prompt" };
       await testModel.generateWithTools(generateOptions);
@@ -426,7 +408,6 @@ describe("Models", () => {
       expect(mockHandler).toHaveBeenCalledTimes(1);
       expect(mockHandler).toHaveBeenCalledWith({ param1: "error case" });
 
-      // Verify the options passed to the second generate call
       const expectedSecondCallOptions = {
         model: {} as any,
         messages: [
@@ -439,7 +420,7 @@ describe("Models", () => {
                   name: "testTool",
                   ref: "tool3",
                   output: {
-                    error: `Tool execution failed: ${handlerError.message}`, // Error response included
+                    error: `Tool execution failed: ${handlerError.message}`,
                   },
                 },
               },

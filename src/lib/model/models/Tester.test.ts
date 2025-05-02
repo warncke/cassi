@@ -93,7 +93,7 @@ describe("Tester", () => {
     expect(generateWithToolsSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         model: options.model,
-        prompt: expect.any(String), // Check if prompt is any string
+        prompt: expect.any(String),
         tools: tester.tools,
         returnToolRequests: true,
         messages: options.messages,

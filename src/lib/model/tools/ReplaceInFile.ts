@@ -75,7 +75,7 @@ export class ReplaceInFile extends ModelTool {
       blockIndex++;
 
       const match = block.match(
-        /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n?>>>>>>> REPLACE$/ // Make final newline optional
+        /^<<<<<<< SEARCH\n([\s\S]*?)\n=======\n([\s\S]*?)\n?>>>>>>> REPLACE$/
       );
 
       if (!match) {

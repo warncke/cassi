@@ -42,7 +42,6 @@ describe("RunBuild Tool", () => {
       "Runs the build command specified in the cassi configuration."
     );
     expect(RunBuild.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = RunBuild.toolDefinition.inputSchema as z.ZodObject<any>;
     expect(Object.keys(inputSchema.shape).length).toBe(0);
   });

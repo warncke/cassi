@@ -161,7 +161,6 @@ describe("ListFiles", () => {
       "Lists all *.ts and *.json files within the current working directory."
     );
     expect(ListFiles.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = ListFiles.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(Object.keys(inputSchema.shape).length).toBe(0);

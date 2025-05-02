@@ -2,8 +2,8 @@ import { Task } from "../Task.js";
 import { StatusResult } from "simple-git";
 import { CommitMessage } from "../../model/models/CommitMessage.js";
 import { Prompt } from "../../prompt/Prompt.js";
-import Confirm from "../../prompt/prompts/Confirm.js"; // Default import
-import { gemini25FlashPreview0417 } from "@genkit-ai/googleai"; // Import the requested model
+import Confirm from "../../prompt/prompts/Confirm.js";
+import { gemini25FlashPreview0417 } from "@genkit-ai/googleai";
 
 export class GitCommitMerge extends Task {
   async initTask(): Promise<void> {
@@ -22,7 +22,7 @@ export class GitCommitMerge extends Task {
     const commitMessageModel = this.newModel("CommitMessage") as CommitMessage;
 
     const generateOptions = {
-      model: gemini25FlashPreview0417, // Use the requested model reference
+      model: gemini25FlashPreview0417,
       prompt: diff,
     };
 
@@ -31,15 +31,11 @@ export class GitCommitMerge extends Task {
     const commitMessage = this.getTaskIdShort() + ": " + text;
     console.log("Generated Commit Message:", commitMessage);
 
-    // Prompt user for confirmation
     const confirmPrompt = new Confirm(
       `Do you want to commit the following changes with the message below?\n\nDiff:\n${diff}\n\nCommit Message:\n${commitMessage}`
     );
-    // Send the prompt to the user. Assume the prompt handler (e.g., CLIPromptHandler)
-    // will throw an error or exit if the user denies the confirmation.
     await this.cassi.user.prompt(confirmPrompt);
 
-    // If prompt didn't throw/exit, proceed with commit
     console.log(
       "Commit confirmed by user (or prompt handler allows proceeding). Committing..."
     );

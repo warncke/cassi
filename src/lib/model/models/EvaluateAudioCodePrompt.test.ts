@@ -51,9 +51,8 @@ describe("EvaluateAudioCodePrompt Model", () => {
   it("should throw an error if audioBase64 is not a string", async () => {
     const options = {
       model: "mockModelRef" as any,
-      audioBase64: 12345, // Not a string
+      audioBase64: 12345,
     };
-    // Need to cast to any because TS knows it's wrong, but we're testing the runtime check
     await expect(evaluateInstance.generate(options as any)).rejects.toThrow(
       "EvaluateAudioCodePrompt requires a base64 audio string."
     );

@@ -48,8 +48,8 @@ describe("ReplaceInFile", () => {
     vi.clearAllMocks();
     vi.mocked(mockTask.getCwd).mockReturnValue("/mock/cwd");
     vi.mocked(mockTask.invoke).mockReset();
-    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {}); // Spy and ignore
-    vi.spyOn(console, "error").mockImplementation(() => {}); // Spy and ignore errors too
+    consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -61,7 +61,6 @@ describe("ReplaceInFile", () => {
     expect(ReplaceInFile.toolDefinition.name).toBe("REPLACE_IN_FILE");
     expect(ReplaceInFile.toolDefinition.description).toBeDefined();
     expect(ReplaceInFile.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = ReplaceInFile.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(inputSchema.shape).toHaveProperty("path");
@@ -90,10 +89,10 @@ Hello universe!
         return initialContent;
       }
       if (tool === "fs" && method === "mkdir") {
-        return undefined; // Simulate successful mkdir
+        return undefined;
       }
       if (tool === "fs" && method === "writeFile") {
-        return undefined; // Simulate successful writeFile
+        return undefined;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });
@@ -136,10 +135,10 @@ Third Line
         return initialContent;
       }
       if (tool === "fs" && method === "mkdir") {
-        return undefined; // Simulate successful mkdir
+        return undefined;
       }
       if (tool === "fs" && method === "writeFile") {
-        return undefined; // Simulate successful writeFile
+        return undefined;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });
@@ -166,7 +165,7 @@ Third Line
 
   it("toolMethod should handle deletion using an empty REPLACE block", async () => {
     const initialContent = "Line 1\nLine 2 to delete\nLine 3";
-    const finalContent = "Line 1\n\nLine 3"; // Note: Deletion results in empty line if newline was present
+    const finalContent = "Line 1\n\nLine 3";
     const diff = `<<<<<<< SEARCH
 Line 2 to delete
 =======
@@ -176,10 +175,10 @@ Line 2 to delete
         return initialContent;
       }
       if (tool === "fs" && method === "mkdir") {
-        return undefined; // Simulate successful mkdir
+        return undefined;
       }
       if (tool === "fs" && method === "writeFile" && args[0] === fullTestPath) {
-        return undefined; // Simulate successful writeFile
+        return undefined;
       }
       throw new Error(
         `Unexpected invoke call: ${tool}.${method} with args ${JSON.stringify(
@@ -193,16 +192,15 @@ Line 2 to delete
     const input = { path: testFilePath, diff };
     const result = await toolMethod(input);
 
-    // Assert calls in order
     expect(mockTask.invoke).toHaveBeenNthCalledWith(
-      1, // First call
+      1,
       "fs",
       "readFile",
       [],
       [fullTestPath]
     );
     expect(mockTask.invoke).toHaveBeenNthCalledWith(
-      2, // Second call (was 3)
+      2,
       "fs",
       "writeFile",
       [],
@@ -216,7 +214,7 @@ Line 2 to delete
     const diff = `<<<<<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE`;
     mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
       if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
-        return null; // Simulate file not found
+        return null;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });
@@ -247,7 +245,7 @@ Line 2 to delete
     const error = new Error("Permission denied");
     mockTask.invoke.mockImplementation(async (tool, method, _types, args) => {
       if (tool === "fs" && method === "readFile" && args[0] === fullTestPath) {
-        throw error; // Simulate read error
+        throw error;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });
@@ -282,10 +280,10 @@ Line 2 to delete
         return initialContent;
       }
       if (tool === "fs" && method === "mkdir") {
-        return undefined; // Simulate successful mkdir
+        return undefined;
       }
       if (tool === "fs" && method === "writeFile") {
-        throw error; // Simulate write error
+        throw error;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });
@@ -319,7 +317,7 @@ Content not present
 =======
 Replacement
 >>>>>>> REPLACE`;
-    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
+    mockTask.invoke.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -355,7 +353,7 @@ Line 4 not present
 =======
 Fourth Line
 >>>>>>> REPLACE`;
-    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
+    mockTask.invoke.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -385,7 +383,7 @@ Hello world!
 =======
 Hello world!
 >>>>>>> REPLACE`; // Replace with identical content
-    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
+    mockTask.invoke.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -411,7 +409,7 @@ Hello world!
   it("toolMethod should return error for invalid diff format (malformed block)", async () => {
     const initialContent = "Some content";
     const diff = `<<<&;<<< SEARCH\nfind me\n=======\nreplace me\n>>>>>>> REPLACE\n some extra text \n<<<<<<< SEARCH\nno end marker`;
-    mockTask.invoke.mockResolvedValue(initialContent); // Only readFile will be called
+    mockTask.invoke.mockResolvedValue(initialContent);
 
     const toolArgs = ReplaceInFile.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
@@ -456,10 +454,10 @@ Third Line
         return initialContent;
       }
       if (tool === "fs" && method === "mkdir") {
-        return undefined; // Simulate successful mkdir
+        return undefined;
       }
       if (tool === "fs" && method === "writeFile") {
-        return undefined; // Simulate successful writeFile
+        return undefined;
       }
       throw new Error(`Unexpected invoke call: ${tool}.${method}`);
     });

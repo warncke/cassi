@@ -92,27 +92,20 @@ describe("CLIPromptHandler", () => {
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
-  // TODO: This test needs review as CLIPromptHandler likely handles one prompt now.
   it("should handle a sequence of prompts (needs review)", async () => {
     const mockInput = new Input("Enter name:");
     const mockConfirm = new Confirm("Are you sure?");
-    // Passing only the first prompt to the constructor
     const handler = new CLIPromptHandler(mockInput);
 
     mockQuestion.mockResolvedValueOnce("Cline");
-    // Removed second mockResolvedValue as only one prompt is handled now
 
-    await handler.handlePrompt(); // Handles mockInput
+    await handler.handlePrompt();
 
-    // We expect only the first question now
     expect(mockQuestion).toHaveBeenCalledTimes(1);
     expect(mockQuestion).toHaveBeenNthCalledWith(1, "Enter name: ");
-    // expect(mockQuestion).toHaveBeenNthCalledWith(2, "Are you sure? (y/N) "); // This part is no longer valid
     expect(mockInput.response).toBe("Cline");
-    // expect(mockConfirm.response).toBe(true); // This part is no longer valid
-    expect(mockClose).toHaveBeenCalledTimes(1); // Should still close after one prompt
+    expect(mockClose).toHaveBeenCalledTimes(1);
 
-    // Need a separate test or mechanism to test the second prompt (mockConfirm) if needed
   });
 
   it("should handle unknown prompt types gracefully", async () => {
@@ -121,7 +114,6 @@ describe("CLIPromptHandler", () => {
       .mockImplementation(() => {});
 
     const unknownPrompt = { type: "unknown", message: "Unknown prompt" } as any;
-    // Pass the unknown prompt directly
     const handler = new CLIPromptHandler(unknownPrompt);
 
     await handler.handlePrompt();

@@ -1,14 +1,13 @@
-import { Prompt } from "../prompt/Prompt.js"; // Updated import
+import { Prompt } from "../prompt/Prompt.js";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import Input from "../prompt/prompts/Input.js"; // Keep specific types if needed
-import Confirm from "../prompt/prompts/Confirm.js"; // Keep specific types if needed
+import Input from "../prompt/prompts/Input.js";
+import Confirm from "../prompt/prompts/Confirm.js";
 
 export class CLIPromptHandler {
-  private prompt: Prompt; // Renamed property and updated type
+  private prompt: Prompt;
 
   constructor(prompt: Prompt) {
-    // Updated constructor parameter type
     this.prompt = prompt;
   }
 
@@ -23,7 +22,6 @@ export class CLIPromptHandler {
       const answer = await rl.question(`${prompt.message} (y/N) `);
       prompt.response = /^[yY](es)?$/.test(answer);
     } else {
-      // Handle unexpected prompt types
       console.warn(
         `Unknown prompt type encountered: ${
           Object.getPrototypeOf(prompt)?.constructor?.name

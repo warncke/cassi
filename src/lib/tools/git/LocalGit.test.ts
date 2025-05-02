@@ -232,7 +232,7 @@ describe("LocalGit", () => {
         root: false,
       };
 
-      const addMock = vi.mocked(mockGitInstance.add).mockResolvedValue(""); // Fix: add resolves with string
+      const addMock = vi.mocked(mockGitInstance.add).mockResolvedValue("");
       const commitMock = vi
         .mocked(mockGitInstance.commit)
         .mockResolvedValue(mockCommitResult);
@@ -262,7 +262,7 @@ describe("LocalGit", () => {
     it("should handle errors from git.commit", async () => {
       const commitMessage = "Test commit message";
       const mockError = new Error("Git commit failed");
-      vi.mocked(mockGitInstance.add).mockResolvedValue(""); // Fix: add resolves with string
+      vi.mocked(mockGitInstance.add).mockResolvedValue("");
       vi.mocked(mockGitInstance.commit).mockRejectedValue(mockError);
 
       await expect(localGit.commitAll(commitMessage)).rejects.toThrow(
@@ -283,7 +283,7 @@ describe("LocalGit", () => {
       const result = await localGit.rebase();
 
       expect(mockGitInstance.rebase).toHaveBeenCalledTimes(1);
-      expect(mockGitInstance.rebase).toHaveBeenCalledWith([]); // Expect empty array now
+      expect(mockGitInstance.rebase).toHaveBeenCalledWith([]);
       expect(result).toBe(mockRebaseResult);
     });
 

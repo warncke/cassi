@@ -43,7 +43,6 @@ describe("RunTestFile Tool", () => {
       "Runs tests for a specific file"
     );
     expect(RunTestFile.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = RunTestFile.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(inputSchema.shape).toHaveProperty("path");

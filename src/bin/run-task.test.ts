@@ -11,36 +11,35 @@ vi.mock("../lib/cli-prompt-handler/CLIPromptHandler.js");
 vi.mock("../lib/task/Task.js");
 vi.mock("../lib/repository/Worktree.js");
 
-const mockParse = vi.fn().mockReturnThis(); // Chain .parse()
+const mockParse = vi.fn().mockReturnThis();
 const mockOption = vi.fn().mockReturnThis();
-const mockArgument = vi.fn().mockReturnThis(); // Add mockArgument
+const mockArgument = vi.fn().mockReturnThis();
 const mockOpts = vi.fn();
-const mockArgs = vi.fn().mockReturnValue([]); // Add mockArgs
+const mockArgs = vi.fn().mockReturnValue([]);
 
 vi.mocked(Command).mockImplementation(
   () =>
     ({
       option: mockOption,
-      argument: mockArgument, // Add argument
+      argument: mockArgument,
       parse: mockParse,
       opts: mockOpts,
-      args: mockArgs(), // Add args
+      args: mockArgs(),
     } as any)
 );
 
 const mockExistsSync = vi.mocked(fs.existsSync);
 const mockAddWorktree = vi.fn();
 const mockCassiInit = vi.fn();
-const mockNewTaskRun = vi.fn(); // Mock for the created task's run method
-const mockNewTaskInstance = { run: mockNewTaskRun }; // Mock instance returned by newTask
-const mockNewTask = vi.fn().mockReturnValue(mockNewTaskInstance); // Mock for cassi.task.newTask
+const mockNewTaskRun = vi.fn();
+const mockNewTaskInstance = { run: mockNewTaskRun };
+const mockNewTask = vi.fn().mockReturnValue(mockNewTaskInstance);
 const mockCassi = vi.fn().mockImplementation(() => ({
   init: mockCassiInit,
   repository: {
     addWorktree: mockAddWorktree,
   },
   task: {
-    // Add task property
     newTask: mockNewTask,
   },
 }));
@@ -60,8 +59,8 @@ const mockCLIPromptHandler = vi.fn().mockImplementation(() => ({
 vi.mocked(CLIPromptHandler).mockImplementation(mockCLIPromptHandler);
 
 const { Task } = await import("../lib/task/Task.js");
-const mockAddSubtask = vi.fn(); // Mock for task.addSubtask
-const mockTaskRun = vi.fn(); // Mock for task.run
+const mockAddSubtask = vi.fn();
+const mockTaskRun = vi.fn();
 const mockTaskInstance = {
   taskId: null,
   worktree: null,
@@ -72,7 +71,7 @@ const mockTask = vi.fn().mockImplementation(() => mockTaskInstance);
 vi.mocked(Task).mockImplementation(mockTask);
 
 const { Worktree } = await import("../lib/repository/Worktree.js");
-const mockInitRepositoryBranch = vi.fn(); // Mock for initRepositoryBranch
+const mockInitRepositoryBranch = vi.fn();
 const mockWorktreeInstance = {
   initRepositoryBranch: mockInitRepositoryBranch,
 };
@@ -92,14 +91,12 @@ describe("run-task script", () => {
     vi.resetModules();
     vi.clearAllMocks();
 
-    // Reset mocks for commander
     mockOption.mockClear().mockReturnThis();
     mockArgument.mockClear().mockReturnThis();
     mockParse.mockClear().mockReturnThis();
     mockOpts.mockClear();
     mockArgs.mockClear().mockReturnValue([]);
 
-    // Reset mocks for Cassi and related components
     mockCassiInit.mockClear();
     mockAddWorktree.mockClear();
     mockNewTask.mockClear().mockReturnValue(mockNewTaskInstance);
@@ -109,36 +106,32 @@ describe("run-task script", () => {
       handlePrompt: vi.fn(),
     }));
     mockTask.mockClear().mockImplementation(() => mockTaskInstance);
-    mockAddSubtask.mockClear(); // Reset addSubtask mock
-    mockTaskRun.mockClear(); // Reset task.run mock
+    mockAddSubtask.mockClear();
+    mockTaskRun.mockClear();
     mockWorktree.mockClear().mockImplementation(() => mockWorktreeInstance);
-    mockInitRepositoryBranch.mockClear(); // Reset initRepositoryBranch mock
+    mockInitRepositoryBranch.mockClear();
     mockExistsSync.mockClear();
 
-    // Reset spies
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     processExitSpy = (vi.spyOn(process, "exit") as any).mockImplementation(
       () => {}
     );
 
-    // Re-apply mocks with cleared state for Command
     vi.mocked(Command).mockImplementation(
       () =>
         ({
           option: mockOption,
-          argument: mockArgument, // Ensure argument is included
+          argument: mockArgument,
           parse: mockParse,
           opts: mockOpts,
-          args: mockArgs(), // Ensure args is included
+          args: mockArgs(),
         } as any)
     );
 
-    // Reset mock instance states
     mockTaskInstance.taskId = null;
     mockTaskInstance.worktree = null;
 
-    // Re-apply other mocks (redundant but safe)
     vi.mocked(Cassi).mockImplementation(mockCassi);
     vi.mocked(User).mockImplementation(mockUser);
     vi.mocked(CLIPromptHandler).mockImplementation(mockCLIPromptHandler);
@@ -223,12 +216,12 @@ describe("run-task script", () => {
       configFile: "cassi.json",
     });
     mockExistsSync.mockReturnValue(true);
-    mockArgs.mockReturnValue(["SomeTask"]); // Need a task name
+    mockArgs.mockReturnValue(["SomeTask"]);
 
     await runRunTask();
 
     expect(mockAddWorktree).toHaveBeenCalledWith(mockWorktreeInstance);
-    expect(mockInitRepositoryBranch).toHaveBeenCalledOnce(); // Verify the call
+    expect(mockInitRepositoryBranch).toHaveBeenCalledOnce();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     expect(processExitSpy).not.toHaveBeenCalled();
   });
@@ -337,12 +330,12 @@ describe("run-task script", () => {
 
     expect(mockNewTask).toHaveBeenCalledWith(
       taskName,
-      mockTaskInstance, // The parent task instance
+      mockTaskInstance,
       ...taskArgs
     );
-    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance); // Check addSubtask call
-    expect(mockTaskRun).toHaveBeenCalledOnce(); // Check main task run call
-    expect(mockNewTaskRun).not.toHaveBeenCalled(); // Ensure subtask run wasn't called directly
+    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance);
+    expect(mockTaskRun).toHaveBeenCalledOnce();
+    expect(mockNewTaskRun).not.toHaveBeenCalled();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     expect(processExitSpy).not.toHaveBeenCalled();
   });
@@ -356,17 +349,17 @@ describe("run-task script", () => {
       configFile: "cassi.json",
     });
     mockExistsSync.mockReturnValue(true);
-    mockArgs.mockReturnValue([taskName]); // Only taskName
+    mockArgs.mockReturnValue([taskName]);
 
     await runRunTask();
 
     expect(mockNewTask).toHaveBeenCalledWith(
       taskName,
-      mockTaskInstance // The parent task instance
-    ); // No spread args
-    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance); // Check addSubtask call
-    expect(mockTaskRun).toHaveBeenCalledOnce(); // Check main task run call
-    expect(mockNewTaskRun).not.toHaveBeenCalled(); // Ensure subtask run wasn't called directly
+      mockTaskInstance
+    );
+    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance);
+    expect(mockTaskRun).toHaveBeenCalledOnce();
+    expect(mockNewTaskRun).not.toHaveBeenCalled();
     expect(consoleErrorSpy).not.toHaveBeenCalled();
     expect(processExitSpy).not.toHaveBeenCalled();
   });
@@ -389,8 +382,8 @@ describe("run-task script", () => {
     await runRunTask();
 
     expect(mockNewTask).toHaveBeenCalledWith(taskName, mockTaskInstance);
-    expect(mockAddSubtask).not.toHaveBeenCalled(); // Should fail before adding subtask
-    expect(mockTaskRun).not.toHaveBeenCalled(); // Main task run shouldn't be called
+    expect(mockAddSubtask).not.toHaveBeenCalled();
+    expect(mockTaskRun).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith(error);
     expect(processExitSpy).toHaveBeenCalledWith(1);
   });
@@ -410,7 +403,6 @@ describe("run-task script", () => {
       throw error;
     });
 
-    // Mock the main task's run to throw the error (simulating subtask failure)
     mockTaskRun.mockImplementation(async () => {
       throw error;
     });
@@ -418,9 +410,9 @@ describe("run-task script", () => {
     await runRunTask();
 
     expect(mockNewTask).toHaveBeenCalledWith(taskName, mockTaskInstance);
-    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance); // Subtask was added
-    expect(mockTaskRun).toHaveBeenCalledOnce(); // Main task run was called
-    expect(mockNewTaskRun).not.toHaveBeenCalled(); // Subtask run wasn't called directly by the script
+    expect(mockAddSubtask).toHaveBeenCalledWith(mockNewTaskInstance);
+    expect(mockTaskRun).toHaveBeenCalledOnce();
+    expect(mockNewTaskRun).not.toHaveBeenCalled();
     expect(consoleErrorSpy).toHaveBeenCalledWith(error);
     expect(processExitSpy).toHaveBeenCalledWith(1);
   });

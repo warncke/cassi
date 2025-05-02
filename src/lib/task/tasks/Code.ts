@@ -1,7 +1,7 @@
 import { Task } from "../Task.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { EvaluateCodePrompt } from "../../model/models/EvaluateCodePrompt.js";
-import { GenerateModelOptions } from "../../model/Models.js"; // Import added
+import { GenerateModelOptions } from "../../model/Models.js";
 import { Coder } from "./Coder.js";
 import { Tester } from "./Tester.js";
 import { RequirePassingTests } from "./RequirePassingTests.js";
@@ -44,7 +44,6 @@ export class Code extends Task {
     ) as EvaluateCodePrompt;
 
     const generateOptions: GenerateModelOptions = {
-      // Explicit type added
       model: gemini20Flash,
       prompt: this.prompt,
     };

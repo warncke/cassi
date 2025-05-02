@@ -16,16 +16,13 @@ vi.mock("./RequirePassingTests.js");
 vi.mock("./GitCommitMerge.js");
 vi.mock("../Task.js", async () => {
   const actual = await vi.importActual("../Task.js");
-  // Cast actual.Task to any to help TypeScript resolve the constructor type
   const BaseTask = actual.Task as any;
   return {
     ...actual,
     Task: class MockTask extends BaseTask {
-      // Extend the casted type
-      taskId: string | null = null; // Add taskId property
+      taskId: string | null = null;
       addSubtask = vi.fn();
       initWorktree = vi.fn().mockResolvedValue(undefined);
-      // Mock setTaskId to actually set the taskId property
       setTaskId = vi.fn((id: string) => {
         this.taskId = id;
       });
@@ -42,23 +39,20 @@ describe("Code Task", () => {
   let mockEvaluateModel: EvaluateCodePrompt;
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>; // Added console.warn spy
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    // Mock Cassi constructor properly if needed, assuming default mock is sufficient for now
     cassi = new (vi.mocked(Cassi))(
       undefined as any,
       undefined as any,
       undefined as any
-    ); // Adjust if Cassi constructor needs specific args
-    // Add mock repository and remWorktree
+    );
     cassi.repository = {
       remWorktree: vi.fn().mockResolvedValue(undefined),
     } as any;
     parentTask = null;
     codeTask = new Code(cassi, parentTask, "test prompt");
 
-    // Instantiate the mocked EvaluateCodePrompt correctly
     mockEvaluateModel = new (vi.mocked(EvaluateCodePrompt))(
       {} as any,
       codeTask
@@ -67,7 +61,7 @@ describe("Code Task", () => {
 
     consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {}); // Mock console.warn
+    consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
 
   afterEach(() => {

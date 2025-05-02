@@ -24,8 +24,6 @@ export class Tasks {
 
     for (const file of files) {
       if (file.endsWith(fileExtension) && !file.includes(".test.")) {
-        // Construct the import path relative to the current file's location
-        // Use path.join for cross-platform compatibility and ensure it's a file URL
         const filePathUrl = new URL(path.join(tasksDir, file), import.meta.url)
           .href;
         try {

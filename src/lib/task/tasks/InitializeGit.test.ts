@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { InitializeGit } from "./InitializeGit.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { Task } from "../Task.js";
-import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
+import { Prompt } from "../../prompt/Prompt.js";
 import Confirm from "../../prompt/prompts/Confirm.js";
 
 vi.mock("../../cassi/Cassi.js");
@@ -28,10 +28,8 @@ describe("InitializeGit Task", () => {
       },
       user: {
         prompt: vi.fn(async (prompt: Prompt) => {
-          // Use Prompts type
           if (prompt instanceof Confirm) {
-            // Check the prompt directly
-            prompt.response = true; // Set response directly
+            prompt.response = true;
           }
         }),
       },
@@ -122,7 +120,6 @@ describe("InitializeGit Task", () => {
     await initializeGitTask.initTask();
 
     expect(promptSpy).toHaveBeenCalledOnce();
-    // Check the prompt object directly
     expect(promptSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         message: "Current branch is 'develop'. Continue?",
@@ -136,10 +133,8 @@ describe("InitializeGit Task", () => {
     vi.spyOn(initializeGitTask, "invoke").mockResolvedValue(mockStatus);
     vi.spyOn(mockCassi.user, "prompt").mockImplementation(
       async (prompt: Prompt) => {
-        // Use Prompts type
         if (prompt instanceof Confirm) {
-          // Check the prompt directly
-          prompt.response = false; // Set response directly
+          prompt.response = false;
         }
       }
     );

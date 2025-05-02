@@ -78,7 +78,6 @@ describe("ExecuteCommand", () => {
     expect(ExecuteCommand.toolDefinition.name).toBe("EXECUTE_COMMAND");
     expect(ExecuteCommand.toolDefinition.description).toBeDefined();
     expect(ExecuteCommand.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = ExecuteCommand.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(inputSchema.shape).toHaveProperty("command");

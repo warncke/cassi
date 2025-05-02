@@ -42,7 +42,6 @@ describe("RunTestAll Tool", () => {
       "Runs all tests for project"
     );
     expect(RunTestAll.toolDefinition.inputSchema).toBeDefined();
-    // Cast to ZodObject to access shape
     const inputSchema = RunTestAll.toolDefinition
       .inputSchema as z.ZodObject<any>;
     expect(Object.keys(inputSchema.shape).length).toBe(0);

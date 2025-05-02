@@ -16,7 +16,7 @@ export const postTask = (server: Server) => {
       }
 
       const audioBuffer = Buffer.from(audioBase64, "base64");
-      const filePath = path.resolve("audio.opus"); // Save in the project root
+      const filePath = path.resolve("audio.opus");
 
       await writeFile(filePath, audioBuffer);
 

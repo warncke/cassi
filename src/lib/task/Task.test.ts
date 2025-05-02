@@ -376,7 +376,6 @@ describe("Task", () => {
     let processCwdSpy: ReturnType<typeof vi.spyOn>;
 
     beforeEach(() => {
-      // Ensure process.cwd is mocked for tests where worktreeDir throws
       processCwdSpy = vi.spyOn(process, "cwd").mockReturnValue(mockProcessCwd);
     });
 
@@ -386,7 +385,6 @@ describe("Task", () => {
 
     it("should return the result of worktreeDir() if it returns a path", () => {
       task = new Task(mockCassi);
-      // Mock the worktreeDir method directly
       vi.spyOn(task, "worktreeDir").mockReturnValue(mockWorktreePath);
 
       expect(task.getCwd()).toBe(mockWorktreePath);
@@ -396,7 +394,6 @@ describe("Task", () => {
     it("should return process.cwd() if worktreeDir() throws an error", () => {
       task = new Task(mockCassi);
       const worktreeError = new Error("Worktree not found");
-      // Mock worktreeDir to throw an error
       vi.spyOn(task, "worktreeDir").mockImplementation(() => {
         throw worktreeError;
       });
@@ -405,9 +402,6 @@ describe("Task", () => {
       expect(processCwdSpy).toHaveBeenCalledTimes(1);
     });
 
-    // The logic for checking parent tasks is now within worktreeDir(),
-    // so getCwd itself doesn't need explicit tests for parent hierarchy.
-    // We trust that worktreeDir() handles that correctly.
   });
 
   describe("worktreeDir", () => {
@@ -426,7 +420,7 @@ describe("Task", () => {
         .mockReturnValue(mockWorktreePath);
 
       const childTask = new Task(mockCassi, parentTask);
-      childTask.worktree = undefined; // Explicitly undefined
+      childTask.worktree = undefined;
 
       expect(childTask.worktreeDir()).toBe(mockWorktreePath);
       expect(parentWorktreeDirSpy).toHaveBeenCalledTimes(1);
@@ -446,9 +440,8 @@ describe("Task", () => {
 
     it("should throw an error if worktree exists but worktreeDir is undefined", () => {
       task = new Task(mockCassi);
-      // Simulate a Worktree object without the worktreeDir property
       task.worktree = {} as Worktree;
-      task.parentTask = null; // No parent to fall back on
+      task.parentTask = null;
 
       expect(() => task.worktreeDir()).toThrow(
         "Worktree directory not found for this task or any parent task."
@@ -478,18 +471,18 @@ describe("Task", () => {
     it("should handle nested parent tasks correctly, returning the first available worktreeDir", () => {
       const grandParentTask = new Task(mockCassi);
       grandParentTask.worktree = { worktreeDir: mockWorktreePath } as Worktree;
-      const grandParentSpy = vi.spyOn(grandParentTask, "worktreeDir"); // Spy but use original
+      const grandParentSpy = vi.spyOn(grandParentTask, "worktreeDir");
 
       const parentTask = new Task(mockCassi, grandParentTask);
       parentTask.worktree = undefined;
-      const parentSpy = vi.spyOn(parentTask, "worktreeDir"); // Spy but use original
+      const parentSpy = vi.spyOn(parentTask, "worktreeDir");
 
       const childTask = new Task(mockCassi, parentTask);
       childTask.worktree = undefined;
 
       expect(childTask.worktreeDir()).toBe(mockWorktreePath);
-      expect(parentSpy).toHaveBeenCalledTimes(1); // Called by child
-      expect(grandParentSpy).toHaveBeenCalledTimes(1); // Called by parent
+      expect(parentSpy).toHaveBeenCalledTimes(1);
+      expect(grandParentSpy).toHaveBeenCalledTimes(1);
 
       grandParentSpy.mockRestore();
       parentSpy.mockRestore();
@@ -505,18 +498,17 @@ describe("Task", () => {
       const parentSpy = vi
         .spyOn(parentTask, "worktreeDir")
         .mockImplementation(() => {
-          throw new Error("Intermediate parent error"); // Simulate error in parent
+          throw new Error("Intermediate parent error");
         });
 
       const childTask = new Task(mockCassi, parentTask);
       childTask.worktree = undefined;
 
-      // Even though the parent throws, the logic catches it and throws the final error
       expect(() => childTask.worktreeDir()).toThrow(
         "Worktree directory not found for this task or any parent task."
       );
-      expect(parentSpy).toHaveBeenCalledTimes(1); // Child calls parent
-      expect(grandParentSpy).not.toHaveBeenCalled(); // Grandparent is never reached
+      expect(parentSpy).toHaveBeenCalledTimes(1);
+      expect(grandParentSpy).not.toHaveBeenCalled();
 
       grandParentSpy.mockRestore();
       parentSpy.mockRestore();
@@ -605,7 +597,7 @@ describe("Task", () => {
         init: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn(),
         repositoryBranch: "main",
-        initRepositoryBranch: vi.fn(), // Added missing property
+        initRepositoryBranch: vi.fn(),
         name: "mock-worktree",
       } as Worktree;
       getWorktreeSpy = vi
@@ -686,7 +678,7 @@ describe("Task", () => {
     it('should return "XXXXXXXX" if taskId is null and parentTask exists but also has null taskId and no further parent', () => {
       const parentTask = new Task(mockCassi);
       parentTask.taskId = null;
-      parentTask.parentTask = null; // Explicitly no grandparent
+      parentTask.parentTask = null;
 
       task.parentTask = parentTask;
       task.taskId = null;
@@ -738,7 +730,7 @@ describe("Task", () => {
     it('should return the first 8 characters of "XXXXXXXX" if no taskId is found', () => {
       task.taskId = null;
       task.parentTask = null;
-      expect(task.getTaskIdShort()).toBe("XXXXXXXX"); // XXXXXXXX is 8 chars
+      expect(task.getTaskIdShort()).toBe("XXXXXXXX");
     });
 
     it('should return the first 8 characters of "XXXXXXXX" even if parent exists but has no taskId', () => {
@@ -761,7 +753,7 @@ describe("Task", () => {
         init: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn(),
         repositoryBranch: "main",
-        initRepositoryBranch: vi.fn(), // Added missing property
+        initRepositoryBranch: vi.fn(),
         name: "mock-worktree",
       } as Worktree;
     });
@@ -773,7 +765,7 @@ describe("Task", () => {
 
     it("should call parentTask.getWorkTree() if this.worktree is null and parentTask exists", () => {
       const parentTask = new Task(mockCassi);
-      parentTask.worktree = mockWorktree; // Parent has the worktree
+      parentTask.worktree = mockWorktree;
       const parentGetWorkTreeSpy = vi.spyOn(parentTask, "getWorkTree");
 
       task.parentTask = parentTask;
@@ -818,21 +810,21 @@ describe("Task", () => {
 
     it("should handle nested parent tasks, returning the first available worktree", () => {
       const grandParentTask = new Task(mockCassi);
-      grandParentTask.worktree = mockWorktree; // Grandparent has the worktree
+      grandParentTask.worktree = mockWorktree;
       const grandParentSpy = vi.spyOn(grandParentTask, "getWorkTree");
 
       const parentTask = new Task(mockCassi, grandParentTask);
-      parentTask.worktree = undefined; // Parent does not have it
+      parentTask.worktree = undefined;
       const parentSpy = vi.spyOn(parentTask, "getWorkTree");
 
       task.parentTask = parentTask;
-      task.worktree = undefined; // Child does not have it
+      task.worktree = undefined;
 
       const result = task.getWorkTree();
 
       expect(result).toBe(mockWorktree);
-      expect(parentSpy).toHaveBeenCalledTimes(1); // Child calls parent
-      expect(grandParentSpy).toHaveBeenCalledTimes(1); // Parent calls grandparent
+      expect(parentSpy).toHaveBeenCalledTimes(1);
+      expect(grandParentSpy).toHaveBeenCalledTimes(1);
 
       grandParentSpy.mockRestore();
       parentSpy.mockRestore();
@@ -876,7 +868,7 @@ describe("Task", () => {
 
     it("should return the top-level ancestor task in a multi-level hierarchy", () => {
       const grandParentTask = new Task(mockCassi);
-      grandParentTask.parentTask = null; // The root
+      grandParentTask.parentTask = null;
 
       const parentTask = new Task(mockCassi, grandParentTask);
 
@@ -891,8 +883,8 @@ describe("Task", () => {
 
     it("should return the task itself if the parent is explicitly set to null", () => {
       const parentTask = new Task(mockCassi);
-      task.parentTask = parentTask; // Initially has a parent
-      task.parentTask = null; // Parent removed
+      task.parentTask = parentTask;
+      task.parentTask = null;
       expect(task.getRootTask()).toBe(task);
     });
   });

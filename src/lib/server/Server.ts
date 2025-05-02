@@ -9,7 +9,7 @@ import { postTask } from "./handlers/postTask.js";
 interface PromptEntry {
   prompt: Prompt;
   promise: Promise<any>;
-  resolve: (value?: any) => void; // Make value optional
+  resolve: (value?: any) => void;
   reject: (reason?: any) => void;
 }
 
@@ -28,13 +28,13 @@ export class Server {
   async init(cassi: Cassi): Promise<void> {
     this.cassi = cassi;
     this.app = express();
-    this.app.use(cors()); // Enable CORS for all origins
-    this.app.use(express.json({ limit: "1mb" })); // Add this line to parse JSON bodies, limit to 1MB
+    this.app.use(cors());
+    this.app.use(express.json({ limit: "1mb" }));
     this.prompts = [];
 
     this.app.get("/prompt", getPrompt(this));
     this.app.post("/prompt", postPrompt(this));
-    this.app.post("/task", postTask(this) as RequestHandler); // Cast to RequestHandler
+    this.app.post("/task", postTask(this) as RequestHandler);
 
     await new Promise<void>((resolve) => {
       this.app!.listen(this.port, this.host, () => {
@@ -51,7 +51,7 @@ export class Server {
   }
 
   async addPrompt(prompt: Prompt): Promise<any> {
-    let resolve!: (value?: any) => void; // Make value optional
+    let resolve!: (value?: any) => void;
     let reject!: (reason?: any) => void;
     const promise = new Promise<any>((res, rej) => {
       resolve = res;

@@ -27,7 +27,7 @@ class MockTaskWithArgs extends Task {
   async run() {}
 }
 
-const mockCassi = { name: "MockCassi" } as unknown as Cassi; // Add a property for easier identification
+const mockCassi = { name: "MockCassi" } as unknown as Cassi;
 
 describe("Tasks", () => {
   let tasks: Tasks;

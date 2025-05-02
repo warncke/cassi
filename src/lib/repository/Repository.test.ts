@@ -43,26 +43,24 @@ describe("Repository", () => {
   test("getWorktree() should create and return a new Worktree", async () => {
     const mockInvoke = vi
       .fn()
-      // Mock the sequence of calls within worktree.init()
-      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
-      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
       .mockResolvedValueOnce({
-        current: "main", // Add the 'current' property
+        current: "main",
         stdout: "On branch main\nYour branch is up to date...",
         stderr: "",
-      }); // git status
+      });
     const mockGetCwd = vi
       .fn()
       .mockReturnValue(
         path.join(testDir, ".cassi", "worktrees", "test-task-id")
       );
     const mockCassi = {
-      tool: { invoke: mockInvoke }, // Use the mock function here
+      tool: { invoke: mockInvoke },
       model: { newInstance: vi.fn() },
     } as unknown as Cassi;
     const mockTask = new Task(mockCassi);
     mockTask.taskId = "test-task-id";
-    // Mock the methods directly on the task instance
     mockTask.invoke = mockInvoke;
     mockTask.getCwd = mockGetCwd;
 
@@ -76,13 +74,12 @@ describe("Repository", () => {
       path.join(testDir, ".cassi", "worktrees", "test-task-id")
     );
 
-    // Verify that worktree.init (which calls task.invoke) was called
-    expect(mockInvoke).toHaveBeenCalledTimes(3); // Now expects 3 calls
+    expect(mockInvoke).toHaveBeenCalledTimes(3);
     expect(mockInvoke).toHaveBeenNthCalledWith(
       1,
       "git",
       "addWorktree",
-      [testDir], // repositoryDir
+      [testDir],
       [worktree.worktreeDir, mockTask.taskId]
     );
     expect(mockInvoke).toHaveBeenNthCalledWith(
@@ -92,17 +89,16 @@ describe("Repository", () => {
       [mockTask.getCwd()],
       ["npm install"]
     );
-    // Add check for the 3rd call (git status)
     expect(mockInvoke).toHaveBeenNthCalledWith(
       3,
       "git",
       "status",
-      [testDir], // repositoryDir
+      [testDir],
       []
     );
 
     expect(repository.worktrees.get("test-task-id")).toBe(worktree);
-    expect(worktree.repositoryBranch).toBe("main"); // Check if branch was set
+    expect(worktree.repositoryBranch).toBe("main");
   });
 
   test("getWorktree() should throw if task.taskId is null", async () => {
@@ -116,21 +112,20 @@ describe("Repository", () => {
     await repository.init();
 
     await expect(repository.getWorktree(mockTask)).rejects.toThrow(
-      "Task ID is required to get or create a worktree." // Updated error message
+      "Task ID is required to get or create a worktree."
     );
   });
 
   test("getWorktree() should return existing worktree if called again with the same taskId", async () => {
     const mockInvoke = vi
       .fn()
-      // Mock the sequence of calls within worktree.init()
-      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // git addWorktree
-      .mockResolvedValueOnce({ stdout: "", stderr: "" }) // console exec npm install
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
+      .mockResolvedValueOnce({ stdout: "", stderr: "" })
       .mockResolvedValueOnce({
         current: "main",
         stdout: "On branch main\nYour branch is up to date...",
         stderr: "",
-      }); // git status
+      });
     const mockGetCwd = vi
       .fn()
       .mockReturnValue(
@@ -147,34 +142,29 @@ describe("Repository", () => {
 
     await repository.init();
 
-    // First call - should create and init
     const worktree1 = await repository.getWorktree(mockTask);
     expect(worktree1).toBeInstanceOf(Worktree);
-    expect(mockInvoke).toHaveBeenCalledTimes(3); // Init calls
+    expect(mockInvoke).toHaveBeenCalledTimes(3);
     expect(repository.worktrees.get("test-task-id")).toBe(worktree1);
 
-    // Reset mock call count for the next assertion
     mockInvoke.mockClear();
 
-    // Second call - should return existing worktree, no init
     const worktree2 = await repository.getWorktree(mockTask);
-    expect(worktree2).toBe(worktree1); // Should be the same instance
-    expect(mockInvoke).not.toHaveBeenCalled(); // worktree.init should not be called again
-    expect(repository.worktrees.size).toBe(1); // Still only one worktree in the map
+    expect(worktree2).toBe(worktree1);
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(repository.worktrees.size).toBe(1);
   });
 
   test("remWorktree() should remove the worktree from the map", async () => {
     const taskId = "task-to-remove";
-    // Add a mock delete function to the mock worktree
     const mockWorktree = {
       delete: vi.fn().mockResolvedValue(undefined),
     } as unknown as Worktree;
 
-    // Manually add a worktree to the map for testing removal
     repository.worktrees.set(taskId, mockWorktree);
     expect(repository.worktrees.has(taskId)).toBe(true);
 
-    await repository.remWorktree(taskId); // Now async
+    await repository.remWorktree(taskId);
 
     expect(repository.worktrees.has(taskId)).toBe(false);
   });
@@ -182,7 +172,7 @@ describe("Repository", () => {
   test("remWorktree() should call worktree.delete()", async () => {
     const taskId = "task-to-delete";
     const mockWorktree = {
-      delete: vi.fn().mockResolvedValue(undefined), // Mock the delete method
+      delete: vi.fn().mockResolvedValue(undefined),
     } as unknown as Worktree;
 
     repository.worktrees.set(taskId, mockWorktree);
@@ -191,17 +181,15 @@ describe("Repository", () => {
     await repository.remWorktree(taskId);
 
     expect(mockWorktree.delete).toHaveBeenCalledTimes(1);
-    expect(repository.worktrees.has(taskId)).toBe(false); // Also verify removal
+    expect(repository.worktrees.has(taskId)).toBe(false);
   });
 
   test("remWorktree() should not throw if the taskId does not exist", async () => {
-    // Add async here
     const taskId = "non-existent-task";
     expect(repository.worktrees.has(taskId)).toBe(false);
 
-    // remWorktree is now async, so we need to await it
     await expect(repository.remWorktree(taskId)).resolves.not.toThrow();
-    expect(repository.worktrees.has(taskId)).toBe(false); // Still false
+    expect(repository.worktrees.has(taskId)).toBe(false);
   });
 
   describe("addWorktree", () => {
@@ -220,16 +208,15 @@ describe("Repository", () => {
     test("should throw an error if the worktree task has a null taskId", () => {
       const mockCassi = {} as unknown as Cassi;
       const mockTask = new Task(mockCassi);
-      mockTask.taskId = "temp-valid-id"; // Start with a valid ID for constructor
+      mockTask.taskId = "temp-valid-id";
       const mockWorktree = new Worktree(repository, mockTask);
 
-      // Now set the taskId to null *after* Worktree creation
       mockWorktree.task.taskId = null;
 
       expect(() => repository.addWorktree(mockWorktree)).toThrow(
         "Task ID cannot be null when adding a Worktree."
       );
-      expect(repository.worktrees.size).toBe(0); // Ensure nothing was added
+      expect(repository.worktrees.size).toBe(0);
     });
   });
 });

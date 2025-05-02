@@ -164,7 +164,7 @@ Follow your instructions to perform the task given by PROMPT: ${prompt}
 `,
       tools: this.tools,
       returnToolRequests: true,
-      messages: initialMessages ?? [], // Initialize messages array
+      messages: initialMessages ?? [],
       ...restOptions,
     };
 

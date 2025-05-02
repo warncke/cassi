@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { ModelTool } from "./ModelTool.js";
-import { z } from "zod"; // Add z import
+import { z } from "zod";
 import { Model, ModelConstructor } from "../Model.js";
 import { Models, GenerateModelOptions } from "../Models.js";
 import { ToolDefinition } from "../../tool/Tool.js";
@@ -66,12 +66,12 @@ class ConcreteModelTool extends ModelTool {
     inputSchema: z.object({
       param1: z.string().describe("Test parameter 1"),
     }),
-    outputSchema: z.string(), // The toolMethod returns a string
+    outputSchema: z.string(),
   };
 
   static toolMethod = vi.fn(
     async (model: Models, input: { param1: string }) => {
-      const { param1 } = input; // Destructure input
+      const { param1 } = input;
       const modelName = model.constructor.name;
       return `Called with model ${modelName} and param1: ${param1}`;
     }
@@ -108,17 +108,17 @@ describe("ModelTool", () => {
     expect(toolDefinition).toEqual(ConcreteModelTool.toolDefinition);
     expect(typeof toolMethod).toBe("function");
 
-    const testInput = { param1: "hello world" }; // Pass input object
+    const testInput = { param1: "hello world" };
     const result = await toolMethod(testInput);
 
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledTimes(1);
     expect(ConcreteModelTool.toolMethod).toHaveBeenCalledWith(
       mockModelInstance,
-      testInput // Expect input object
+      testInput
     );
 
     expect(result).toBe(
-      `Called with model MockModelInstance and param1: ${testInput.param1}` // Use input object property
+      `Called with model MockModelInstance and param1: ${testInput.param1}`
     );
   });
 
@@ -127,10 +127,9 @@ describe("ModelTool", () => {
       static toolDefinition: ToolDefinition = {
         name: "incomplete",
         description: "",
-        inputSchema: z.object({}), // Use Zod schema
-        outputSchema: z.any(), // Use z.any() as output is undefined/error
+        inputSchema: z.object({}),
+        outputSchema: z.any(),
       };
-      // No toolMethod defined, so it should throw
     }
     const toolArgs = IncompleteModelTool.modelToolArgs(mockModelInstance);
     await expect(toolArgs[1]()).rejects.toThrow(
@@ -143,18 +142,17 @@ describe("ModelTool", () => {
 
     const toolArgs = ConcreteModelTool.modelToolArgs(mockModelInstance);
     const toolMethod = toolArgs[1];
-    const testInput = { param1: "logging test" }; // Use input object
+    const testInput = { param1: "logging test" };
 
     await toolMethod(testInput);
 
-    const expectedArgsSize = JSON.stringify(testInput).length; // Size of input object
+    const expectedArgsSize = JSON.stringify(testInput).length;
     expect(consoleLogSpy).toHaveBeenCalledTimes(2);
-    // The expected size is now 27 due to {"param1":"logging test"}
     expect(consoleLogSpy).toHaveBeenNthCalledWith(
       1,
       `Calling tool: ${ConcreteModelTool.toolDefinition.name}, Model: ${mockModelInstance.constructor.name}, Args count: 1, Args size: 27`
     );
-    const expectedResponse = `Called with model ${mockModelInstance.constructor.name} and param1: ${testInput.param1}`; // Use input object property
+    const expectedResponse = `Called with model ${mockModelInstance.constructor.name} and param1: ${testInput.param1}`;
     const expectedResponseLength = expectedResponse.length;
     expect(consoleLogSpy).toHaveBeenNthCalledWith(
       2,

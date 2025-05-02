@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ConfirmCwd } from "./ConfirmCwd.js";
 import { Cassi } from "../../cassi/Cassi.js";
 import { User } from "../../user/User.js";
-import { Prompt } from "../../prompt/Prompt.js"; // Import Prompts
+import { Prompt } from "../../prompt/Prompt.js";
 import Confirm from "../../prompt/prompts/Confirm.js";
 
 let mockUser: User;
@@ -35,13 +35,10 @@ describe("ConfirmCwd", () => {
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
-        // Use Prompts type
-        // Check the prompt directly
         if (prompt instanceof Confirm) {
           expect(prompt.message).toContain(expectedResolvedPath);
           prompt.response = true;
         } else {
-          // Fail test if it's not a Confirm prompt as expected
           expect(prompt).toBeInstanceOf(Confirm);
         }
       });
@@ -70,13 +67,10 @@ describe("ConfirmCwd", () => {
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
-        // Use Prompts type
-        // Check the prompt directly
         if (prompt instanceof Confirm) {
           expect(prompt.message).toContain(expectedResolvedPath);
           prompt.response = false;
         } else {
-          // Fail test if it's not a Confirm prompt as expected
           expect(prompt).toBeInstanceOf(Confirm);
         }
       });
