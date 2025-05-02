@@ -16,7 +16,7 @@ vi.mock("fs", () => ({
 }));
 vi.mock("path", () => ({
   default: {
-    join: vi.fn((...args) => args.join("/")), // Simple mock for path.join
+    join: vi.fn((...args) => args.join("/")),
   },
 }));
 
@@ -49,11 +49,11 @@ describe("getDir handler", () => {
       status: statusFn,
       json: jsonFn,
     };
-    mockReq = {}; // No specific request properties needed yet
+    mockReq = {};
   });
 
   afterEach(() => {
-    vi.resetAllMocks(); // Use resetAllMocks to clear mocks between tests
+    vi.resetAllMocks();
   });
 
   it("should return 200 and the list of ts files with their content", async () => {
@@ -64,7 +64,7 @@ describe("getDir handler", () => {
     mockReadFile
       .mockResolvedValueOnce(fakeContent1)
       .mockResolvedValueOnce(fakeContent2);
-    mockPathJoin.mockImplementation((...args) => args.join("/")); // Ensure path.join is mocked
+    mockPathJoin.mockImplementation((...args) => args.join("/"));
 
     const handler = getDir(mockServer as Server);
     await handler(mockReq as Request, mockRes as Response);
@@ -74,11 +74,11 @@ describe("getDir handler", () => {
       { id: 1, name: "src/file1.ts", content: fakeContent1 },
       { id: 2, name: "lib/file2.ts", content: fakeContent2 },
     ]);
-    expect(mockGlob).toHaveBeenCalledWith("**/*.ts", {
+    expect(mockGlob).toHaveBeenCalledWith("**/*", {
       ignore: ["node_modules/**", ".cassi/**", "dist/**"],
       cwd: "/fake/repo/dir",
       absolute: false,
-      nodir: true, // Added nodir check
+      nodir: true,
     });
     expect(mockReadFile).toHaveBeenCalledTimes(2);
     expect(mockReadFile).toHaveBeenCalledWith(
@@ -121,7 +121,7 @@ describe("getDir handler", () => {
       "Error getting directory listing:",
       error
     );
-    consoleErrorSpy.mockRestore(); // Restore the spy
+    consoleErrorSpy.mockRestore();
   });
 
   it("should return 500 if fs.readFile throws an error", async () => {

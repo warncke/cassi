@@ -197,7 +197,11 @@ describe("Repository", () => {
       const mockCassi = {} as unknown as Cassi;
       const mockTask = new Task(mockCassi);
       mockTask.taskId = "valid-task-id";
-      const mockWorktree = new Worktree(repository, mockTask);
+      const mockWorktree = new Worktree(
+        repository,
+        mockTask,
+        repository.fileInfo
+      );
 
       repository.addWorktree(mockWorktree);
 
@@ -209,7 +213,11 @@ describe("Repository", () => {
       const mockCassi = {} as unknown as Cassi;
       const mockTask = new Task(mockCassi);
       mockTask.taskId = "temp-valid-id";
-      const mockWorktree = new Worktree(repository, mockTask);
+      const mockWorktree = new Worktree(
+        repository,
+        mockTask,
+        repository.fileInfo
+      );
 
       mockWorktree.task.taskId = null;
 

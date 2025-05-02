@@ -10,15 +10,10 @@ export class ConfirmCwd extends Task {
   }
 
   public async initTask(): Promise<void> {
-    const cwd = await this.invoke("fs", "getCurrentWorkingDirectory", []);
-
-    const potentialRepoDir = path.resolve(
-      cwd,
-      this.cassi.repository.repositoryDir
-    );
+    const absoluteRepoDir = this.cassi.repository.repositoryDir;
 
     const confirmPrompt = new Confirm(
-      `Is this the correct repository directory? ${potentialRepoDir}`
+      `Is this the correct repository directory? ${absoluteRepoDir}`
     );
     console.log(`[ConfirmCwd] Calling user.prompt...`);
     await this.cassi.user.prompt(confirmPrompt);
@@ -28,6 +23,5 @@ export class ConfirmCwd extends Task {
       process.exit(1);
     }
 
-    this.cassi.repository.repositoryDir = potentialRepoDir;
   }
 }

@@ -24,7 +24,6 @@ async function run() {
       imports: [],
       exports: [],
       classes: [],
-      symbols: [],
     };
 
     for (const child of tree.rootNode.namedChildren) {
@@ -43,32 +42,6 @@ async function run() {
           break;
       }
     }
-
-    console.log(`<FILE name="${file}">`);
-    console.log("<IMPORTS>");
-    for (const importStatement of info.imports) {
-      console.log(
-        `import ${importStatement.symbols} from "${importStatement.from}"`
-      );
-    }
-    console.log("</IMPORTS>");
-    console.log("<EXPORTS>");
-    for (const exportStatement of info.exports) {
-      if (exportStatement.type === "function") {
-        console.log(exportStatement.signature);
-      } else if (exportStatement.type === "class") {
-        console.log(`class ${exportStatement.className} {`);
-        for (const field of exportStatement.fields) {
-          console.log(field);
-        }
-        for (const functionStatement of exportStatement.methods) {
-          console.log(functionStatement.signature);
-        }
-        console.log("}");
-      }
-    }
-    console.log("</EXPORTS>");
-    console.log("</FILE>");
   }
 }
 

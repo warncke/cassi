@@ -1,22 +1,36 @@
-import path from "path";
+import path from "node:path";
 import { Task } from "../task/Task.js";
 import { Repository } from "./Repository.js";
+import { FileInfo } from "../file-info/FileInfo.js";
 
 export class Worktree {
-  readonly repository: Repository;
-  readonly task: Task;
-  readonly worktreeDir: string;
+  public readonly repository: Repository;
+  public readonly task: Task;
+  public readonly worktreeDir: string;
+  public readonly fileInfo: FileInfo;
   public repositoryBranch!: string;
 
-  constructor(repository: Repository, task: Task, worktreeDir?: string) {
+  constructor(
+    repository: Repository,
+    task: Task,
+    repositoryFileInfo: FileInfo
+  ) {
     if (!task.taskId) {
       throw new Error("Task ID cannot be null when creating a Worktree.");
     }
     this.repository = repository;
     this.task = task;
-    this.worktreeDir =
-      worktreeDir ??
-      path.join(repository.repositoryDir, ".cassi", "worktrees", task.taskId);
+    this.worktreeDir = path.join(
+      repository.repositoryDir,
+      ".cassi",
+      "worktrees",
+      task.taskId
+    );
+    this.fileInfo = new FileInfo(
+      repository.repositoryDir,
+      this.worktreeDir,
+      repositoryFileInfo
+    );
   }
 
   async init(): Promise<void> {
@@ -69,6 +83,9 @@ export class Worktree {
   }
 
   async delete(): Promise<void> {
+    await this.fileInfo.deleteCache();
+
     await this.task.invoke("git", "remWorkTree", [], [this.worktreeDir]);
+    console.log(`Removed worktree and cache for ${this.task.taskId}`);
   }
 }

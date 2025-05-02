@@ -401,7 +401,6 @@ describe("Task", () => {
       expect(task.getCwd()).toBe(mockProcessCwd);
       expect(processCwdSpy).toHaveBeenCalledTimes(1);
     });
-
   });
 
   describe("worktreeDir", () => {
@@ -588,12 +587,15 @@ describe("Task", () => {
   describe("initWorktree", () => {
     let mockWorktree: Worktree;
     let getWorktreeSpy: any;
+    let mockFileInfo: any;
 
     beforeEach(() => {
+      mockFileInfo = { getInfo: vi.fn(), deleteCache: vi.fn() };
       mockWorktree = {
         repository: mockRepository,
         task: task,
         worktreeDir: "/mock/worktree/dir",
+        fileInfo: mockFileInfo,
         init: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn(),
         repositoryBranch: "main",
@@ -744,12 +746,15 @@ describe("Task", () => {
 
   describe("getWorkTree", () => {
     let mockWorktree: Worktree;
+    let mockFileInfo: any;
 
     beforeEach(() => {
+      mockFileInfo = { getInfo: vi.fn(), deleteCache: vi.fn() };
       mockWorktree = {
         repository: mockRepository,
         task: task,
         worktreeDir: "/mock/worktree/dir",
+        fileInfo: mockFileInfo,
         init: vi.fn().mockResolvedValue(undefined),
         delete: vi.fn(),
         repositoryBranch: "main",

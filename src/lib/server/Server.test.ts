@@ -409,10 +409,7 @@ describe("Server", () => {
     });
 
     it("should call the getDir handler", async () => {
-      // The actual logic is tested in getDir.test.ts
-      // This test just ensures the route calls the handler
       await getDirRouteHandler!(mockReq as Request, mockRes as Response);
-      // We expect the handler to be called, which in turn calls status/json
       expect(resStatusSpy).toHaveBeenCalled();
       expect(resJsonSpy).toHaveBeenCalled();
     });

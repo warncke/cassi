@@ -4,57 +4,61 @@ import { Worktree } from "./Worktree.js";
 import { Task } from "../task/Task.js";
 import { Repository } from "./Repository.js";
 import { User } from "../user/User.js";
+import { FileInfo } from "../file-info/FileInfo.js";
+
+vi.mock("../file-info/FileInfo.js");
 
 describe("Worktree", () => {
   it("should construct with Repository and Task, setting properties correctly", () => {
     const repositoryDir = "/path/to/repo";
     const taskId = "test-task-id";
     const mockUser = {} as User;
-    const mockRepository = { repositoryDir } as Repository;
+    const mockRepositoryFileInfo = new FileInfo(repositoryDir);
+    const mockRepository = {
+      repositoryDir,
+      fileInfo: mockRepositoryFileInfo,
+    } as Repository;
     const mockTask = { taskId } as Task;
 
-    const worktree = new Worktree(mockRepository, mockTask);
+    const worktree = new Worktree(
+      mockRepository,
+      mockTask,
+      mockRepositoryFileInfo
+    );
 
     expect(worktree).toBeInstanceOf(Worktree);
     expect(worktree.repository).toBe(mockRepository);
+    expect(FileInfo).toHaveBeenCalledWith(
+      repositoryDir,
+      expect.any(String),
+      mockRepositoryFileInfo
+    );
     expect(worktree.task).toBe(mockTask);
     expect(worktree.worktreeDir).toBe(
       path.join(repositoryDir, ".cassi", "worktrees", taskId)
     );
   });
 
-  it("should construct with an explicit worktreeDir if provided", () => {
-    const repositoryDir = "/path/to/repo";
-    const taskId = "test-task-id";
-    const explicitWorktreeDir = "/path/to/explicit/worktree";
-    const mockUser = {} as User;
-    const mockRepository = { repositoryDir } as Repository;
-    const mockTask = { taskId } as Task;
-
-    const worktree = new Worktree(
-      mockRepository,
-      mockTask,
-      explicitWorktreeDir
-    );
-
-    expect(worktree.worktreeDir).toBe(explicitWorktreeDir);
-  });
-
   it("should throw an error during construction if taskId is null", () => {
     const repositoryDir = "/path/to/repo";
     const mockUser = {} as User;
-    const mockRepository = { repositoryDir } as Repository;
+    const mockRepositoryFileInfo = new FileInfo(repositoryDir);
+    const mockRepository = {
+      repositoryDir,
+      fileInfo: mockRepositoryFileInfo,
+    } as Repository;
     const mockTask = { taskId: null } as Task;
 
-    expect(() => new Worktree(mockRepository, mockTask)).toThrow(
-      "Task ID cannot be null when creating a Worktree."
-    );
+    expect(
+      () => new Worktree(mockRepository, mockTask, mockRepositoryFileInfo)
+    ).toThrow("Task ID cannot be null when creating a Worktree.");
   });
 
   describe("init", () => {
     let mockRepository: Repository;
     let mockTask: Task;
     let worktree: Worktree;
+    let mockRepositoryFileInfo: FileInfo;
     const repositoryDir = "/test/repo";
     const taskId = "init-test-task";
     const worktreeDir = path.join(repositoryDir, ".cassi", "worktrees", taskId);
@@ -64,14 +68,20 @@ describe("Worktree", () => {
 
     beforeEach(() => {
       const mockUser = {} as User;
-      mockRepository = { repositoryDir } as Repository;
+      mockRepositoryFileInfo = new FileInfo(repositoryDir);
+      mockRepository = {
+        repositoryDir,
+        fileInfo: mockRepositoryFileInfo,
+      } as Repository;
       mockTask = {
         taskId: taskId,
         invoke: vi.fn().mockResolvedValue({ stdout: "", stderr: "" }),
         getCwd: vi.fn().mockReturnValue(cwd),
       } as unknown as Task;
 
-      worktree = new Worktree(mockRepository, mockTask);
+      worktree = new Worktree(mockRepository, mockTask, mockRepositoryFileInfo);
+
+      vi.clearAllMocks();
 
       consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -152,9 +162,16 @@ describe("Worktree", () => {
         invoke: vi.fn(),
         getCwd: vi.fn(),
       } as unknown as Task;
-      const repo = { repositoryDir } as Repository;
+      const repo = {
+        repositoryDir,
+        fileInfo: mockRepositoryFileInfo,
+      } as Repository;
       const validTaskForConstruction = { taskId: "temp-id" } as Task;
-      const tempWorktree = new Worktree(repo, validTaskForConstruction);
+      const tempWorktree = new Worktree(
+        repo,
+        validTaskForConstruction,
+        mockRepositoryFileInfo
+      );
       (tempWorktree as any).task = taskWithNullId;
 
       await expect(tempWorktree.init()).rejects.toThrow(
@@ -167,6 +184,7 @@ describe("Worktree", () => {
     let mockRepository: Repository;
     let mockTask: Task;
     let worktree: Worktree;
+    let mockRepositoryFileInfo: FileInfo;
     const repositoryDir = "/test/repo";
     const taskId = "init-branch-test-task";
     let consoleLogSpy: ReturnType<typeof vi.spyOn>;
@@ -174,14 +192,20 @@ describe("Worktree", () => {
 
     beforeEach(() => {
       const mockUser = {} as User;
-      mockRepository = { repositoryDir } as Repository;
+      mockRepositoryFileInfo = new FileInfo(repositoryDir);
+      mockRepository = {
+        repositoryDir,
+        fileInfo: mockRepositoryFileInfo,
+      } as Repository;
       mockTask = {
         taskId: taskId,
         invoke: vi.fn(),
         getCwd: vi.fn(),
       } as unknown as Task;
 
-      worktree = new Worktree(mockRepository, mockTask);
+      worktree = new Worktree(mockRepository, mockTask, mockRepositoryFileInfo);
+
+      vi.clearAllMocks();
 
       consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
       consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -246,14 +270,17 @@ describe("Worktree", () => {
     let mockRepository: Repository;
     let mockTask: Task;
     let worktree: Worktree;
+    let mockRepositoryFileInfo: FileInfo;
     const repositoryDir = "/test/repo";
     const taskId = "delete-test-task";
     const worktreeDir = path.join(repositoryDir, ".cassi", "worktrees", taskId);
 
     beforeEach(() => {
       const mockUser = {} as User;
+      mockRepositoryFileInfo = new FileInfo(repositoryDir);
       mockRepository = {
         repositoryDir,
+        fileInfo: mockRepositoryFileInfo,
       } as Repository;
       mockTask = {
         taskId: taskId,
@@ -261,16 +288,21 @@ describe("Worktree", () => {
         getCwd: vi.fn(),
       } as unknown as Task;
 
-      worktree = new Worktree(mockRepository, mockTask);
+      worktree = new Worktree(mockRepository, mockTask, mockRepositoryFileInfo);
+
+      vi.spyOn(worktree.fileInfo, "deleteCache").mockResolvedValue(undefined);
+
+      vi.clearAllMocks();
     });
 
     afterEach(() => {
       vi.restoreAllMocks();
     });
 
-    it("should call task.invoke with correct arguments for git remWorkTree", async () => {
+    it("should call fileInfo.deleteCache and task.invoke with correct arguments", async () => {
       await worktree.delete();
 
+      expect(worktree.fileInfo.deleteCache).toHaveBeenCalledTimes(1);
       expect(mockTask.invoke).toHaveBeenCalledTimes(1);
       expect(mockTask.invoke).toHaveBeenCalledWith(
         "git",
@@ -280,7 +312,7 @@ describe("Worktree", () => {
       );
     });
 
-    it("should still complete if task.invoke throws an error (errors handled by invoke)", async () => {
+    it("should call deleteCache even if task.invoke throws", async () => {
       const testError = new Error("Failed to remove worktree via invoke");
       (mockTask.invoke as ReturnType<typeof vi.fn>).mockRejectedValue(
         testError
@@ -288,6 +320,7 @@ describe("Worktree", () => {
 
       await expect(worktree.delete()).rejects.toThrow(testError);
 
+      expect(worktree.fileInfo.deleteCache).toHaveBeenCalledTimes(1);
       expect(mockTask.invoke).toHaveBeenCalledTimes(1);
       expect(mockTask.invoke).toHaveBeenCalledWith(
         "git",

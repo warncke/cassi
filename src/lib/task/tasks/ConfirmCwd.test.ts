@@ -21,22 +21,22 @@ describe("ConfirmCwd", () => {
 
   it("should instantiate correctly with default parentTask", () => {
     const task = new ConfirmCwd(mockCassi);
+    const expectedResolvedPath = path.resolve(initialMockRepoDir);
     expect(task).toBeInstanceOf(ConfirmCwd);
     expect(task.parentTask).toBeNull();
-    expect(mockCassi.repository.repositoryDir).toBe(initialMockRepoDir);
+    expect(mockCassi.repository.repositoryDir).toBe(expectedResolvedPath);
   });
 
-  it("initTask should run without errors and update repo dir when user confirms", async () => {
-    const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
+  it("initTask should run without errors when user confirms", async () => {
+    const expectedPathInPrompt = path.resolve(initialMockRepoDir);
     const task = new ConfirmCwd(mockCassi);
 
-    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
 
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
         if (prompt instanceof Confirm) {
-          expect(prompt.message).toContain(expectedResolvedPath);
+          expect(prompt.message).toContain(expectedPathInPrompt);
           prompt.response = true;
         } else {
           expect(prompt).toBeInstanceOf(Confirm);
@@ -45,30 +45,23 @@ describe("ConfirmCwd", () => {
 
     await expect(task.initTask()).resolves.toBeUndefined();
 
-    expect(invokeSpy).toHaveBeenCalledWith(
-      "fs",
-      "getCurrentWorkingDirectory",
-      []
-    );
     expect(promptSpy).toHaveBeenCalled();
 
-    expect(mockCassi.repository.repositoryDir).toBe(expectedResolvedPath);
   });
 
   it("initTask should exit if user denies the directory", async () => {
-    const expectedResolvedPath = path.resolve(mockCwd, initialMockRepoDir);
+    const expectedPathInPrompt = path.resolve(initialMockRepoDir);
     const mockExit = vi.spyOn(process, "exit").mockImplementation(() => {
       throw new Error("process.exit called");
     });
     const task = new ConfirmCwd(mockCassi);
 
-    const invokeSpy = vi.spyOn(task, "invoke").mockResolvedValue(mockCwd);
 
     const promptSpy = vi
       .spyOn(mockCassi.user, "prompt")
       .mockImplementation(async (prompt: Prompt) => {
         if (prompt instanceof Confirm) {
-          expect(prompt.message).toContain(expectedResolvedPath);
+          expect(prompt.message).toContain(expectedPathInPrompt);
           prompt.response = false;
         } else {
           expect(prompt).toBeInstanceOf(Confirm);
@@ -77,16 +70,12 @@ describe("ConfirmCwd", () => {
 
     await expect(task.initTask()).rejects.toThrow("process.exit called");
 
-    expect(invokeSpy).toHaveBeenCalledWith(
-      "fs",
-      "getCurrentWorkingDirectory",
-      []
-    );
     expect(promptSpy).toHaveBeenCalled();
 
     expect(mockExit).toHaveBeenCalledWith(1);
 
-    expect(mockCassi.repository.repositoryDir).toBe(initialMockRepoDir);
+    const initialResolvedPath = path.resolve(initialMockRepoDir);
+    expect(mockCassi.repository.repositoryDir).toBe(initialResolvedPath);
 
     mockExit.mockRestore();
   });

@@ -1,17 +1,20 @@
 import { User } from "../user/User.js";
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { Worktree } from "./Worktree.js";
 import { Task } from "../task/Task.js";
+import { FileInfo } from "../file-info/FileInfo.js";
 
 export class Repository {
-  repositoryDir: string;
-  user: User;
-  worktrees: Map<string, Worktree> = new Map();
+  public readonly repositoryDir: string;
+  public readonly user: User;
+  public readonly worktrees: Map<string, Worktree> = new Map();
+  public readonly fileInfo: FileInfo;
 
   constructor(repositoryDir: string, user: User) {
-    this.repositoryDir = repositoryDir;
+    this.repositoryDir = path.resolve(repositoryDir);
     this.user = user;
+    this.fileInfo = new FileInfo(this.repositoryDir);
   }
 
   async init(): Promise<void> {
@@ -30,7 +33,7 @@ export class Repository {
       return worktree;
     }
 
-    worktree = new Worktree(this, task);
+    worktree = new Worktree(this, task, this.fileInfo);
     this.worktrees.set(task.taskId, worktree);
     await worktree.init();
     return worktree;

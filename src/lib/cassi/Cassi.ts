@@ -6,6 +6,12 @@ import { Task } from "../task/Task.js";
 import { Tasks } from "../task/Tasks.js";
 import { Model } from "../model/Model.js";
 
+export type Foo = {
+  bar: string;
+};
+
+export const bam: string = "BAR";
+
 export class Cassi {
   config: Config;
   repository: Repository;
