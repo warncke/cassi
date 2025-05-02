@@ -14,10 +14,10 @@ interface PromptEntry {
 }
 
 export class Server {
-  private app: Express | null = null;
-  private cassi: Cassi | null = null;
-  private host: string;
-  private port: number;
+  public app: Express | null = null;
+  public cassi: Cassi | null = null;
+  public host: string;
+  public port: number;
   public prompts: PromptEntry[] = [];
 
   constructor(host: string = "localhost", port: number = 7777) {
@@ -29,7 +29,7 @@ export class Server {
     this.cassi = cassi;
     this.app = express();
     this.app.use(cors()); // Enable CORS for all origins
-    this.app.use(express.json()); // Add this line to parse JSON bodies
+    this.app.use(express.json({ limit: "1mb" })); // Add this line to parse JSON bodies, limit to 1MB
     this.prompts = [];
 
     this.app.get("/prompt", getPrompt(this));

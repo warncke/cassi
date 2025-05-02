@@ -20,6 +20,9 @@ export const postTask = (server: Server) => {
 
       await writeFile(filePath, audioBuffer);
 
+      server.cassi!.newTask("AudioCode", undefined, audioBase64);
+      server.cassi!.runTasks();
+
       res.status(201).json({ message: "Task received and audio saved" });
     } catch (error) {
       res.status(500).json({ error: "Internal Server Error" });

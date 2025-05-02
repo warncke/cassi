@@ -178,6 +178,17 @@ describe("Server", () => {
     expect(corsCallIndex).toBeLessThan(jsonCallIndex); // Ensure cors was called before json
   });
 
+  it("should configure express.json middleware with a 1mb limit", async () => {
+    await server.init(mockCassi);
+    const app = server.getApp();
+    expect(app).not.toBeNull();
+
+    // Verify that express.json was called with the correct options
+    expect((express as any).json).toHaveBeenCalledWith({ limit: "1mb" });
+    // Verify the middleware returned by express.json was actually used
+    expect(app!.use).toHaveBeenCalledWith(mockJsonMiddleware);
+  });
+
   it("should wait for the server to listen before resolving init", async () => {
     let listenCalled = false;
     let initResolved = false;

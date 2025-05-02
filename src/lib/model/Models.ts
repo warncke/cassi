@@ -11,7 +11,8 @@ import { ToolDefinition } from "../tool/Tool.js";
 
 export interface GenerateModelOptions extends GenerateOptions {
   model: ModelReference<any>;
-  prompt: string | any[];
+  prompt?: string | any[];
+  audioBase64?: string;
 }
 
 export abstract class Models {
