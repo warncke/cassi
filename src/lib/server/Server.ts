@@ -1,6 +1,8 @@
 import express, { Express, Request, Response } from "express";
 import { Prompt } from "../prompt/Prompt.js";
 import { Cassi } from "../cassi/Cassi.js";
+import { getPrompt } from "./handlers/getPrompt.js";
+import { postPrompt } from "./handlers/postPrompt.js";
 
 interface PromptEntry {
   prompt: Prompt;
@@ -27,38 +29,8 @@ export class Server {
     this.app.use(express.json()); // Add this line to parse JSON bodies
     this.prompts = [];
 
-    // Add the GET /prompt route
-    this.app.get("/prompt", (req: Request, res: Response) => {
-      const nextPromptEntry = this.prompts.length > 0 ? this.prompts[0] : null;
-      res.json(nextPromptEntry ? nextPromptEntry.prompt : null);
-    });
-
-    // Add the POST /prompt route
-    this.app.post("/prompt", (req: Request, res: Response) => {
-      if (this.prompts.length === 0) {
-        res.status(400).json({ error: "No pending prompts" });
-        return;
-      }
-
-      const { response } = req.body;
-      if (response === undefined) {
-        res
-          .status(400)
-          .json({ error: "Missing response property in request body" });
-        return;
-      }
-
-      const promptEntry = this.prompts.shift();
-      if (!promptEntry) {
-        // Should not happen due to the check above, but satisfies TypeScript
-        res.status(500).json({ error: "Internal server error" });
-        return;
-      }
-
-      promptEntry.prompt.response = response;
-      promptEntry.resolve(); // Resolve without passing the prompt object
-      res.status(200).json({ message: "Prompt resolved successfully" });
-    });
+    this.app.get("/prompt", getPrompt(this));
+    this.app.post("/prompt", postPrompt(this));
 
     await new Promise<void>((resolve) => {
       this.app!.listen(this.port, this.host, () => {
