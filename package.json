@@ -33,6 +33,7 @@
     ]
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
     "@types/fs-extra": "^11.0.4",
     "@types/glob": "^8.1.0",
     "@types/node": "^22.14.1",
@@ -50,6 +51,7 @@
     "ajv": "^8.17.1",
     "change-case": "^5.4.4",
     "commander": "^13.1.0",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "genkit": "^1.6.2",
     "simple-git": "^3.27.0",

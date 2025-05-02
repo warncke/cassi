@@ -1,8 +1,10 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, RequestHandler } from "express";
+import cors from "cors";
 import { Prompt } from "../prompt/Prompt.js";
 import { Cassi } from "../cassi/Cassi.js";
 import { getPrompt } from "./handlers/getPrompt.js";
 import { postPrompt } from "./handlers/postPrompt.js";
+import { postTask } from "./handlers/postTask.js";
 
 interface PromptEntry {
   prompt: Prompt;
@@ -26,11 +28,13 @@ export class Server {
   async init(cassi: Cassi): Promise<void> {
     this.cassi = cassi;
     this.app = express();
+    this.app.use(cors()); // Enable CORS for all origins
     this.app.use(express.json()); // Add this line to parse JSON bodies
     this.prompts = [];
 
     this.app.get("/prompt", getPrompt(this));
     this.app.post("/prompt", postPrompt(this));
+    this.app.post("/task", postTask(this) as RequestHandler); // Cast to RequestHandler
 
     await new Promise<void>((resolve) => {
       this.app!.listen(this.port, this.host, () => {

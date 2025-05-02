@@ -21,6 +21,15 @@ let getRouteHandler: ((req: Request, res: Response) => void) | null = null;
 let postRouteHandler: ((req: Request, res: Response) => void) | null = null; // Added for POST
 let listenCallback: (() => void) | null = null;
 
+// Mock cors
+const mockCorsMiddleware = vi.fn((req: any, res: any, next: any) => next());
+vi.mock("cors", () => ({
+  default: vi.fn(() => mockCorsMiddleware), // Mock the default export which is the cors function
+}));
+
+// Mock express.json middleware
+const mockJsonMiddleware = vi.fn((req: any, res: any, next: any) => next());
+
 vi.mock("express", () => {
   const mockApp = {
     use: vi.fn(), // Keep track of middleware usage
@@ -44,14 +53,16 @@ vi.mock("express", () => {
   };
   // Mock the default export (the factory function) and static properties like .json()
   const mockExpress = vi.fn(() => mockApp);
-  (mockExpress as any).json = vi.fn(
-    () => (req: any, res: any, next: any) => next()
-  ); // Mock express.json() middleware
+  // Mock express.json() to return our trackable middleware
+  (mockExpress as any).json = vi.fn(() => mockJsonMiddleware);
 
   return {
     default: mockExpress, // Use the enhanced mock function
   };
 });
+
+// Import cors *after* the mock definition
+import cors from "cors";
 
 describe("Server", () => {
   let consoleLogSpy: ReturnType<typeof vi.spyOn>;
@@ -142,6 +153,29 @@ describe("Server", () => {
     expect(consoleLogSpy).toHaveBeenCalledWith(
       `Server listening on http://${server.getHost()}:${server.getPort()}`
     );
+  });
+
+  it("should use cors middleware before express.json middleware", async () => {
+    await server.init(mockCassi);
+    const app = server.getApp();
+    expect(app).not.toBeNull();
+
+    // Check that both middlewares were used
+    expect(app!.use).toHaveBeenCalledWith(mockCorsMiddleware);
+    expect(app!.use).toHaveBeenCalledWith(mockJsonMiddleware);
+
+    // Check the order
+    const useCalls = (app!.use as ReturnType<typeof vi.fn>).mock.calls;
+    const corsCallIndex = useCalls.findIndex(
+      (call) => call[0] === mockCorsMiddleware
+    );
+    const jsonCallIndex = useCalls.findIndex(
+      (call) => call[0] === mockJsonMiddleware
+    );
+
+    expect(corsCallIndex).toBeGreaterThan(-1); // Ensure cors was called
+    expect(jsonCallIndex).toBeGreaterThan(-1); // Ensure json was called
+    expect(corsCallIndex).toBeLessThan(jsonCallIndex); // Ensure cors was called before json
   });
 
   it("should wait for the server to listen before resolving init", async () => {
