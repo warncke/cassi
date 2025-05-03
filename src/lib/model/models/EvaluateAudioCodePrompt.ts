@@ -5,7 +5,6 @@ import { Task } from "../../task/Task.js";
 const EvaluateAudioCodePromptSchema = z.object({
   summary: z.string(),
   modifiesFiles: z.boolean(),
-  steps: z.array(z.string()),
   transcription: z.string(),
 });
 export class EvaluateAudioCodePrompt extends Models {
@@ -39,9 +38,6 @@ The JSON object to OUTPUT is:
 {
     "summary": "(( INSERT a 3-5 word summary of the TASK DESCRIPTION that is as short as possible. do not include an punctuation.))",
     "modifiesFiles" (( INSERT boolean true if the TASK DESCRIPTION involves creating or modifying files or false if it does not)),
-    "steps": [
-          "(( BREAK down the TASK DESCRIPTION into steps and insert a step string for each step in the task. do not include tasks for writing tests or committing changes.))"
-     ],
      "transcription": "(( INSERT complete transcription of the audio TASK DESCRIPTION))"
 }
 `,

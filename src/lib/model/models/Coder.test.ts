@@ -2,14 +2,33 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Coder } from "./Coder.js";
 import { Task } from "../../task/Task.js";
 import { ModelReference } from "genkit/model";
-import { ExecuteCommand } from "../tools/ExecuteCommand.js";
-import { ReadFile } from "../tools/ReadFile.js";
-import { WriteFile } from "../tools/WriteFile.js";
-import { ReplaceInFile } from "../tools/ReplaceInFile.js";
-import { RunBuild } from "../tools/RunBuild.js";
-import { ListFiles } from "../tools/ListFiles.js";
+import { Worktree } from "../../repository/Worktree.js"; // Import Worktree type if needed for typing
 
-vi.mock("../../task/Task.js");
+// Replace the simple mock with a factory function mock for Task
+vi.mock("../../task/Task.js", () => {
+  const MockTask = vi.fn().mockImplementation((args) => {
+    // Return a mock object that includes the necessary properties, like worktree
+    // Define the mock worktree object separately for clarity
+    const mockWorktree = { worktreeDir: "/fake/worktree" } as Worktree;
+    return {
+      ...args, // Include any args passed to constructor if needed
+      // Provide the mock worktree property (might be used elsewhere)
+      worktree: mockWorktree,
+      // Provide the getWorkTree method as expected by Coder.generate -> getInterfaces
+      getWorkTree: vi.fn().mockReturnValue(mockWorktree),
+      // Add mocks for any other methods/properties of Task used by Coder if necessary
+      invoke: vi.fn(),
+      log: vi.fn(),
+      setTaskId: vi.fn(),
+      run: vi.fn(),
+      config: { get: vi.fn() },
+      repository: { repositoryDir: "/fake/repo" },
+      user: { prompt: vi.fn() },
+    };
+  });
+  return { Task: MockTask };
+});
+
 vi.mock("../Models.js", async (importOriginal) => {
   const actual = (await importOriginal()) as any;
   return {
@@ -34,10 +53,13 @@ vi.mock("../Models.js", async (importOriginal) => {
 describe("Coder", () => {
   let mockTask: Task;
   let mockPlugin: any;
+  // Removed duplicate declaration of mockTask
 
   beforeEach(() => {
+    // `new Task` now calls our mock factory, creating an instance with `worktree`
     mockTask = new Task({} as any);
     mockPlugin = {};
+    // No longer need to manually assign mockTask.worktree here
   });
 
   it("should instantiate correctly", () => {

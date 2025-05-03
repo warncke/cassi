@@ -27,11 +27,7 @@ export class Code extends Task {
 
     await this.initWorktree();
 
-    const formattedSteps = this.evaluation.steps
-      .map((step: string) => `- ${step}`)
-      .join("\n");
-    const coderPrompt = `${this.prompt}\n\nSummary: ${this.evaluation.summary}\n\nSteps:\n${formattedSteps}`;
-    this.addSubtask(new Coder(this.cassi, this, coderPrompt));
+    this.addSubtask(new Coder(this.cassi, this, this.prompt));
     this.addSubtask(new Tester(this.cassi, this, ""));
     this.addSubtask(new RequirePassingTests(this.cassi, this));
     this.addSubtask(new GitCommitMerge(this.cassi, this));
