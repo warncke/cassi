@@ -50,7 +50,7 @@ describe("ReplaceInFile", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ReplaceInFile.toolDefinition).toBeDefined();
-    expect(ReplaceInFile.toolDefinition.name).toBe("REPLACE_IN_FILE");
+    expect(ReplaceInFile.toolDefinition.name).toBe("ReplaceInFile");
     expect(ReplaceInFile.toolDefinition.description).toBeDefined();
     expect(ReplaceInFile.toolDefinition.inputSchema).toBeDefined();
     const inputSchema = ReplaceInFile.toolDefinition.inputSchema as z.ZodObject<

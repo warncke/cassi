@@ -75,7 +75,7 @@ describe("WriteFile", () => {
 
   it("should have correct toolDefinition", () => {
     expect(WriteFile.toolDefinition).toBeDefined();
-    expect(WriteFile.toolDefinition.name).toBe("WRITE_FILE");
+    expect(WriteFile.toolDefinition.name).toBe("WriteFile");
     expect(WriteFile.toolDefinition.description).toBeDefined();
     expect(WriteFile.toolDefinition.inputSchema).toBeDefined();
     const inputSchema = WriteFile.toolDefinition

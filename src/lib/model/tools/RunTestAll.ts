@@ -8,7 +8,7 @@ const runTestAllInputSchema = z.object({});
 
 export class RunTestAll extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "RUN_TEST_ALL",
+    name: "RunTestAll",
     description: "Runs all tests for project",
     inputSchema: runTestAllInputSchema,
     outputSchema: z.string(),

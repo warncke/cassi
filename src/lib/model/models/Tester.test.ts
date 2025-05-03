@@ -50,28 +50,24 @@ describe("Tester", () => {
   it("should initialize the correct tools", () => {
     const tester = new Tester(mockPlugin, mockTask);
     expect(tester.tools).toHaveLength(8);
-    expect(
-      tester.tools.some((tool) => tool[0].name === "EXECUTE_COMMAND")
-    ).toBe(true);
-    expect(tester.tools.some((tool) => tool[0].name === "READ_FILE")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "ExecuteCommand")).toBe(
       true
     );
-    expect(tester.tools.some((tool) => tool[0].name === "WRITE_FILE")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "ReadFile")).toBe(true);
+    expect(tester.tools.some((tool) => tool[0].name === "WriteFile")).toBe(
       true
     );
-    expect(
-      tester.tools.some((tool) => tool[0].name === "REPLACE_IN_FILE")
-    ).toBe(true);
-    expect(tester.tools.some((tool) => tool[0].name === "RUN_BUILD")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "ReplaceInFile")).toBe(
       true
     );
-    expect(tester.tools.some((tool) => tool[0].name === "LIST_FILES")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "RunBuild")).toBe(true);
+    expect(tester.tools.some((tool) => tool[0].name === "ListFiles")).toBe(
       true
     );
-    expect(tester.tools.some((tool) => tool[0].name === "RUN_TEST_FILE")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "RunTestFile")).toBe(
       true
     );
-    expect(tester.tools.some((tool) => tool[0].name === "RUN_TEST_ALL")).toBe(
+    expect(tester.tools.some((tool) => tool[0].name === "RunTestAll")).toBe(
       true
     );
   });

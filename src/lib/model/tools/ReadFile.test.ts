@@ -88,7 +88,7 @@ describe("ReadFile", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ReadFile.toolDefinition).toBeDefined();
-    expect(ReadFile.toolDefinition.name).toBe("READ_FILE");
+    expect(ReadFile.toolDefinition.name).toBe("ReadFile");
     expect(ReadFile.toolDefinition.description).toBeDefined();
     expect(ReadFile.toolDefinition.inputSchema).toBeDefined();
     const inputSchema = ReadFile.toolDefinition.inputSchema as z.ZodObject<any>;

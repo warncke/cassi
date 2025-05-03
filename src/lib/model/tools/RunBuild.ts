@@ -8,7 +8,7 @@ const runBuildInputSchema = z.object({});
 
 export class RunBuild extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "RUN_BUILD",
+    name: "RunBuild",
     description: "Runs the build command specified in the cassi configuration.",
     inputSchema: runBuildInputSchema,
     outputSchema: z.string(),

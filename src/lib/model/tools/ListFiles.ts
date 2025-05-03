@@ -8,7 +8,7 @@ export class ListFiles extends ModelTool {
   static parametersSchema = z.object({});
 
   static toolDefinition: ToolDefinition = {
-    name: "LIST_FILES",
+    name: "ListFiles",
     description:
       "Lists all *.ts and *.json files within the current working directory.",
     inputSchema: ListFiles.parametersSchema,

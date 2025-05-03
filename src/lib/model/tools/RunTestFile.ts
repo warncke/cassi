@@ -15,7 +15,7 @@ const runTestFileInputSchema = z.object({
 
 export class RunTestFile extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "RUN_TEST_FILE",
+    name: "RunTestFile",
     description: "Runs tests for a specific file",
     inputSchema: runTestFileInputSchema,
     outputSchema: z.string(),

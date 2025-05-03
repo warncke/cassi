@@ -37,7 +37,7 @@ describe("RunTestAll Tool", () => {
   });
 
   it("should have correct tool definition", () => {
-    expect(RunTestAll.toolDefinition.name).toBe("RUN_TEST_ALL");
+    expect(RunTestAll.toolDefinition.name).toBe("RunTestAll");
     expect(RunTestAll.toolDefinition.description).toBe(
       "Runs all tests for project"
     );

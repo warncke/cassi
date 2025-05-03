@@ -37,7 +37,7 @@ describe("RunBuild Tool", () => {
   });
 
   it("should have correct tool definition", () => {
-    expect(RunBuild.toolDefinition.name).toBe("RUN_BUILD");
+    expect(RunBuild.toolDefinition.name).toBe("RunBuild");
     expect(RunBuild.toolDefinition.description).toBe(
       "Runs the build command specified in the cassi configuration."
     );

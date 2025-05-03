@@ -75,7 +75,7 @@ describe("ExecuteCommand", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ExecuteCommand.toolDefinition).toBeDefined();
-    expect(ExecuteCommand.toolDefinition.name).toBe("EXECUTE_COMMAND");
+    expect(ExecuteCommand.toolDefinition.name).toBe("ExecuteCommand");
     expect(ExecuteCommand.toolDefinition.description).toBeDefined();
     expect(ExecuteCommand.toolDefinition.inputSchema).toBeDefined();
     const inputSchema = ExecuteCommand.toolDefinition

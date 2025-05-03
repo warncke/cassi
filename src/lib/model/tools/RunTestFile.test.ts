@@ -38,7 +38,7 @@ describe("RunTestFile Tool", () => {
   });
 
   it("should have correct tool definition", () => {
-    expect(RunTestFile.toolDefinition.name).toBe("RUN_TEST_FILE");
+    expect(RunTestFile.toolDefinition.name).toBe("RunTestFile");
     expect(RunTestFile.toolDefinition.description).toBe(
       "Runs tests for a specific file"
     );

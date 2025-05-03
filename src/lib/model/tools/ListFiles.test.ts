@@ -156,7 +156,7 @@ describe("ListFiles", () => {
 
   it("should have correct toolDefinition", () => {
     expect(ListFiles.toolDefinition).toBeDefined();
-    expect(ListFiles.toolDefinition.name).toBe("LIST_FILES");
+    expect(ListFiles.toolDefinition.name).toBe("ListFiles");
     expect(ListFiles.toolDefinition.description).toBe(
       "Lists all *.ts and *.json files within the current working directory."
     );

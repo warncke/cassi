@@ -14,7 +14,7 @@ const replaceInFileInputSchema = z.object({
 
 export class ReplaceInFile extends ModelTool {
   static toolDefinition: ToolDefinition = {
-    name: "REPLACE_IN_FILE",
+    name: "ReplaceInFile",
     description:
       "Request to replace content in an existing file. This tool should be used when you need to make targeted changes to specific parts of a file.",
     inputSchema: replaceInFileInputSchema,
