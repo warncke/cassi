@@ -4,6 +4,7 @@ import { FileInfoCache } from "./FileInfoCache.js";
 import type { FileInfoProvider } from "./providers/FileInfoProvider.js";
 import { AstProvider } from "./providers/AstProvider.js";
 import { InterfaceProvider } from "./providers/InterfaceProvider.js";
+import { InterfacePromptProvider } from "./providers/InterfacePromptProvider.js";
 import type { CacheEntry } from "./types.js";
 
 let globalFileInfoCache: FileInfoCache | null = null;
@@ -54,7 +55,10 @@ export class FileInfo {
     if (providersRegistered) return;
     FileInfo.registerProvider("ast", new AstProvider());
     FileInfo.registerProvider("interface", new InterfaceProvider());
-    console.log("Registered FileInfo providers: ast, interface");
+    FileInfo.registerProvider("interfacePrompt", new InterfacePromptProvider());
+    console.log(
+      "Registered FileInfo providers: ast, interface, interfacePrompt"
+    );
     providersRegistered = true;
   }
 
